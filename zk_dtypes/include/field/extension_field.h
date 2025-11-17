@@ -297,7 +297,7 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>> {
     //               = a[0]² + a[1]² * q + 2 * a[0] * a[1] * x
     //               = (a[0]² + a[1]² * q, 2 * a[0] * a[1])
     // where q is `Config::kNonResidue`.
-    // When q = -1, we can re-use intermediate additions to improve performance.
+    // When q = -1, we can reuse intermediate additions to improve performance.
 
     // v0 = a[0] - a[1]
     BaseField v0 = a[0] - a[1];

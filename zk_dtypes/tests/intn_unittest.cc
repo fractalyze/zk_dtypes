@@ -404,9 +404,10 @@ TYPED_TEST(IntNCastTest, DeviceCast) {
 
   const int kNumElems = 256;
   // Allocate device buffers and create device tensors.
-  IntN* src_device_buffer = (IntN*)device.allocate(kNumElems * sizeof(IntN));
-  DestType* dst_device_buffer =
-      (DestType*)device.allocate(kNumElems * sizeof(DestType));
+  IntN* src_device_buffer =
+      reinterpret_cast<IntN*>(device.allocate(kNumElems * sizeof(IntN)));
+  DestType* dst_device_buffer = reinterpret_cast<DestType*>(
+      device.allocate(kNumElems * sizeof(DestType)));
 
   Eigen::TensorMap<Eigen::Tensor<IntN, 1>, Eigen::Aligned> src_device(
       src_device_buffer, kNumElems);

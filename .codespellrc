@@ -1,0 +1,6 @@
+[codespell]
+skip =
+  MODULE.bazel.lock
+
+ignore-words-list =
+  arithmetics,
