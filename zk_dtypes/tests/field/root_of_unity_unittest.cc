@@ -1,0 +1,110 @@
+#include "zk_dtypes/include/field/root_of_unity.h"
+
+#include "gtest/gtest.h"
+
+#include "zk_dtypes/include/elliptic_curve/bn/bn254/fq.h"
+#include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
+#include "zk_dtypes/include/elliptic_curve/short_weierstrass/test/sw_curve_config.h"
+#include "zk_dtypes/include/field/babybear/babybear.h"
+#include "zk_dtypes/include/field/goldilocks/goldilocks.h"
+#include "zk_dtypes/include/field/koalabear/koalabear.h"
+#include "zk_dtypes/include/field/mersenne31/mersenne31.h"
+
+namespace zk_dtypes {
+namespace {
+
+using PrimeFieldTypes = testing::Types<
+    // clang-format off
+    // 8-bit prime fields
+    test::Fr,
+    // 32-bit prime fields
+    Babybear,
+    Koalabear,
+    Mersenne31,
+    // 64-bit prime fields
+    Goldilocks,
+    // 256-bit prime fields
+    bn254::Fq,
+    bn254::Fr
+    // clang-format on
+    >;
+
+namespace {
+
+template <typename PrimeField>
+class PrimeFieldBaseTest : public testing::Test {};
+
+}  // namespace
+
+TYPED_TEST_SUITE(PrimeFieldBaseTest, PrimeFieldTypes);
+
+TYPED_TEST(PrimeFieldBaseTest, Decompose) {
+  using F = TypeParam;
+
+  if constexpr (F::Config::kHasLargeSubgroupRootOfUnity) {
+    for (uint32_t i = 0; i <= F::Config::kTwoAdicity; ++i) {
+      for (uint32_t j = 0; j <= F::Config::kSmallSubgroupAdicity; ++j) {
+        uint64_t n = (uint64_t{1} << i) *
+                     std::pow(uint64_t{F::Config::kSmallSubgroupBase}, j);
+
+        ASSERT_TRUE(internal::Decompose<F>(n).ok());
+      }
+    }
+  } else {
+    GTEST_SKIP() << "No LargeSubgroupRootOfUnity";
+  }
+}
+
+TYPED_TEST(PrimeFieldBaseTest, TwoAdicRootOfUnity) {
+  using F = TypeParam;
+
+  if constexpr (F::Config::kHasTwoAdicRootOfUnity) {
+    F n = F(2).Pow(F::Config::kTwoAdicity);
+    ASSERT_TRUE(
+        F::FromUnchecked(F::Config::kTwoAdicRootOfUnity).Pow(n).IsOne());
+  } else {
+    GTEST_SKIP() << "No TwoAdicRootOfUnity";
+  }
+}
+
+TYPED_TEST(PrimeFieldBaseTest, LargeSubgroupOfUnity) {
+  using F = TypeParam;
+
+  if constexpr (F::Config::kHasLargeSubgroupRootOfUnity) {
+    F n =
+        F(2).Pow(F::Config::kTwoAdicity) *
+        F(F::Config::kSmallSubgroupBase).Pow(F::Config::kSmallSubgroupAdicity);
+    ASSERT_TRUE(
+        F::FromUnchecked(F::Config::kLargeSubgroupRootOfUnity).Pow(n).IsOne());
+  } else {
+    GTEST_SKIP() << "No LargeSubgroupRootOfUnity";
+  }
+}
+
+TYPED_TEST(PrimeFieldBaseTest, GetRootOfUnity) {
+  using F = TypeParam;
+
+  if constexpr (F::Config::kHasLargeSubgroupRootOfUnity) {
+    for (uint32_t i = 0; i <= F::Config::kTwoAdicity; ++i) {
+      for (uint32_t j = 0; j <= F::Config::kSmallSubgroupAdicity; ++j) {
+        uint64_t n = (uint64_t{1} << i) *
+                     std::pow(uint64_t{F::Config::kSmallSubgroupBase}, j);
+        absl::StatusOr<F> root = GetRootOfUnity<F>(n);
+        ASSERT_TRUE(root.ok());
+        ASSERT_TRUE(root->Pow(n).IsOne());
+      }
+    }
+  } else if constexpr (F::Config::kHasTwoAdicRootOfUnity) {
+    for (uint32_t i = 0; i <= F::Config::kTwoAdicity; ++i) {
+      uint64_t n = uint64_t{1} << i;
+      absl::StatusOr<F> root = GetRootOfUnity<F>(n);
+      ASSERT_TRUE(root.ok());
+      ASSERT_TRUE(root->Pow(n).IsOne());
+    }
+  } else {
+    GTEST_SKIP() << "No RootOfUnity";
+  }
+}
+
+}  // namespace
+}  // namespace zk_dtypes

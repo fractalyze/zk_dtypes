@@ -1,0 +1,371 @@
+#ifndef ZK_DTYPES_INCLUDE_FIELD_SMALL_PRIME_FIELD_H_
+#define ZK_DTYPES_INCLUDE_FIELD_SMALL_PRIME_FIELD_H_
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <string>
+#include <type_traits>
+
+#include "absl/log/check.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/numbers.h"
+#include "gtest/gtest_prod.h"
+
+#include "zk_dtypes/include/big_int.h"
+#include "zk_dtypes/include/byinverter.h"
+#include "zk_dtypes/include/field/finite_field.h"
+#include "zk_dtypes/include/field/prime_field.h"
+#include "zk_dtypes/include/pow.h"
+#include "zk_dtypes/include/random.h"
+
+namespace zk_dtypes {
+
+// If Config::kUseMontgomery is true, the operations are performed on montgomery
+// domain. Otherwise, the operations are performed on standard domain.
+template <typename _Config>
+class PrimeField<_Config, std::enable_if_t<(_Config::kModulusBits <= 64)>>
+    : public FiniteField<PrimeField<_Config>> {
+ public:
+  using UnderlyingType = std::conditional_t<
+      _Config::kModulusBits <= 32,
+      std::conditional_t<
+          _Config::kModulusBits <= 16,
+          std::conditional_t<_Config::kModulusBits <= 8, uint8_t, uint16_t>,
+          uint32_t>,
+      uint64_t>;
+
+  constexpr static bool kUseMontgomery = _Config::kUseMontgomery;
+  constexpr static size_t kModulusBits = _Config::kModulusBits;
+  constexpr static size_t kLimbNums = 1;
+  constexpr static size_t N = kLimbNums;
+  constexpr static size_t kBitWidth = 8 * sizeof(UnderlyingType);
+  constexpr static size_t kByteWidth = sizeof(UnderlyingType);
+
+  using Config = _Config;
+  using StdType = PrimeField<typename Config::StdConfig>;
+
+  constexpr PrimeField() = default;
+  template <typename T, std::enable_if_t<std::is_signed_v<T>>* = nullptr>
+  constexpr PrimeField(T value) {
+    if (value >= 0) {
+      *this = PrimeField(static_cast<UnderlyingType>(value));
+    } else {
+      *this = -PrimeField(static_cast<UnderlyingType>(-value));
+    }
+  }
+  template <typename T, std::enable_if_t<std::is_unsigned_v<T>>* = nullptr>
+  constexpr PrimeField(T value) : value_(value) {
+    DCHECK_LT(value_, Config::kModulus);
+    if constexpr (kUseMontgomery) {
+      operator*=(PrimeField::FromUnchecked(Config::kRSquared));
+    }
+  }
+
+  constexpr static uint32_t ExtensionDegree() { return 1; }
+
+  constexpr static PrimeField Zero() { return PrimeField(); }
+
+  constexpr static PrimeField One() {
+    return PrimeField::FromUnchecked(Config::kOne);
+  }
+
+  constexpr static PrimeField Min() { return Zero(); }
+
+  constexpr static PrimeField Max() {
+    return PrimeField::FromUnchecked(Config::kModulus - 1);
+  }
+
+  constexpr static PrimeField Random() {
+    return PrimeField::FromUnchecked(
+        Uniform<UnderlyingType>(0, Config::kModulus));
+  }
+
+  constexpr static PrimeField FromUnchecked(UnderlyingType value) {
+    PrimeField ret;
+    ret.value_ = value;
+    return ret;
+  }
+
+  // Convert a decimal string to a PrimeField.
+  static absl::StatusOr<PrimeField> FromDecString(std::string_view str) {
+    uint64_t ret_value;
+    if (!absl::SimpleAtoi(str, &ret_value)) {
+      return absl::InvalidArgumentError("failed to convert to uint64_t");
+    }
+    return PrimeField(ret_value);
+  }
+
+  // Convert a hexadecimal string to a PrimeField.
+  static absl::StatusOr<PrimeField> FromHexString(std::string_view str) {
+    uint64_t ret_value;
+    if (!absl::SimpleHexAtoi(str, &ret_value)) {
+      return absl::InvalidArgumentError("failed to convert to uint64_t");
+    }
+    return PrimeField(ret_value);
+  }
+
+  constexpr UnderlyingType value() const { return value_; }
+
+  constexpr bool IsZero() const { return value_ == 0; }
+
+  constexpr bool IsOne() const { return value_ == Config::kOne; }
+
+  // See
+  // https://github.com/Consensys/gnark-crypto/blob/43897fd/field/generator/internal/templates/element/base.go#L292-L308.
+  // Returns true if this element is lexicographically larger than (q-1)/2.
+  // This is equivalent to checking if value_ > ((Config::kModulus - 1) / 2).
+  constexpr bool LexicographicallyLargest() const {
+    constexpr UnderlyingType kHalfModulus = (Config::kModulus - 1) >> 1;
+    if constexpr (kUseMontgomery) {
+      return MontReduce().value() > kHalfModulus;
+    } else {
+      return value_ > kHalfModulus;
+    }
+  }
+
+  constexpr PrimeField operator+(PrimeField other) const {
+    UnderlyingType ret_value;
+    bool carry = false;
+    if constexpr (HasSpareBit()) {
+      ret_value = value_ + other.value_;
+    } else {
+      internal::AddResult<UnderlyingType> result =
+          internal::AddWithCarry(value_, other.value_, 0);
+      carry = result.carry;
+      ret_value = result.value;
+    }
+    Clamp(ret_value, carry);
+    return PrimeField::FromUnchecked(ret_value);
+  }
+
+  constexpr PrimeField& operator+=(PrimeField other) {
+    return *this = *this + other;
+  }
+
+  constexpr PrimeField Double() const {
+    if constexpr (HasSpareBit()) {
+      UnderlyingType ret_value = value_ << 1;
+      Clamp(ret_value, 0);
+      return PrimeField::FromUnchecked(ret_value);
+    } else {
+      return *this + *this;
+    }
+  }
+
+  constexpr PrimeField operator-(PrimeField other) const {
+    UnderlyingType ret_value;
+    if (other.value_ > value_) {
+      if constexpr (HasSpareBit()) {
+        ret_value = value_ + Config::kModulus - other.value_;
+      } else {
+        using PromotedUnderlyingType =
+            internal::make_promoted_t<UnderlyingType>;
+
+        ret_value =
+            PromotedUnderlyingType{value_} + Config::kModulus - other.value_;
+      }
+    } else {
+      ret_value = value_ - other.value_;
+    }
+    return PrimeField::FromUnchecked(ret_value);
+  }
+
+  constexpr PrimeField& operator-=(PrimeField other) {
+    return *this = *this - other;
+  }
+
+  constexpr PrimeField operator-() const {
+    if (value_ == 0) return Zero();
+    return PrimeField::FromUnchecked(Config::kModulus - value_);
+  }
+
+  constexpr PrimeField operator*(PrimeField other) const {
+    PrimeField ret;
+    if constexpr (kUseMontgomery) {
+      MontMul(*this, other, ret);
+    } else {
+      VerySlowMul(*this, other, ret);
+    }
+    return ret;
+  }
+
+  constexpr PrimeField& operator*=(PrimeField other) {
+    return *this = *this * other;
+  }
+
+  constexpr PrimeField Square() const { return *this * *this; }
+
+  template <typename T>
+  constexpr PrimeField Pow(T exponent) const {
+    if constexpr (std::is_same_v<T, PrimeField>) {
+      if constexpr (kUseMontgomery) {
+        return zk_dtypes::Pow(*this, BigInt<1>(exponent.MontReduce().value()));
+      } else {
+        return zk_dtypes::Pow(*this, BigInt<1>(exponent.value()));
+      }
+    } else {
+      static_assert(std::is_integral_v<T>, "exponent must be an integer");
+      return zk_dtypes::Pow(*this, static_cast<UnderlyingType>(exponent));
+    }
+  }
+
+  constexpr absl::StatusOr<PrimeField> operator/(PrimeField other) const {
+    absl::StatusOr<PrimeField> inv = other.Inverse();
+    if (!inv.ok()) return inv;
+    return operator*(*inv);
+  }
+
+  constexpr absl::StatusOr<PrimeField> Inverse() const {
+    BigInt<1> ret;
+    if constexpr (kUseMontgomery) {
+      constexpr BYInverter<1> inverter =
+          BYInverter<1>(Config::kModulus, Config::kRSquared);
+      if (!inverter.Invert(BigInt<1>(value_), ret)) {
+        return absl::InvalidArgumentError("division by zero");
+      }
+    } else {
+      constexpr BYInverter<1> inverter =
+          BYInverter<1>(Config::kModulus, Config::kOne);
+      if (!inverter.Invert(BigInt<1>(value_), ret)) {
+        return absl::InvalidArgumentError("division by zero");
+      }
+    }
+    return PrimeField::FromUnchecked(ret[0]);
+  }
+
+  constexpr bool operator==(PrimeField other) const {
+    return value_ == other.value_;
+  }
+
+  constexpr bool operator!=(PrimeField other) const {
+    return !operator==(other);
+  }
+
+  constexpr bool operator<(PrimeField other) const {
+    if constexpr (kUseMontgomery) {
+      return MontReduce() < other.MontReduce();
+    } else {
+      return value_ < other.value_;
+    }
+  }
+
+  constexpr bool operator>(PrimeField other) const {
+    if constexpr (kUseMontgomery) {
+      return MontReduce() > other.MontReduce();
+    } else {
+      return value_ > other.value_;
+    }
+  }
+
+  constexpr bool operator<=(PrimeField other) const {
+    if constexpr (kUseMontgomery) {
+      return MontReduce() <= other.MontReduce();
+    } else {
+      return value_ <= other.value_;
+    }
+  }
+
+  constexpr bool operator>=(PrimeField other) const {
+    if constexpr (kUseMontgomery) {
+      return MontReduce() >= other.MontReduce();
+    } else {
+      return value_ >= other.value_;
+    }
+  }
+
+  template <typename Config2 = Config,
+            std::enable_if_t<Config2::kUseMontgomery>* = nullptr>
+  StdType MontReduce() const {
+    using SignedUnderlyingType = std::make_signed_t<UnderlyingType>;
+    using PromotedSignedUnderlyingType =
+        internal::make_promoted_t<SignedUnderlyingType>;
+    UnderlyingType m = value_ * Config::kNPrime;
+    auto mn = (PromotedSignedUnderlyingType{m} * Config::kModulus) >>
+              (sizeof(UnderlyingType) * 8);
+    if (mn == 0) {
+      return StdType(0);
+    } else {
+      return StdType(Config::kModulus - static_cast<UnderlyingType>(mn));
+    }
+  }
+
+  std::string ToString() const {
+    if constexpr (kUseMontgomery) {
+      return MontReduce().ToString();
+    } else {
+      return absl::StrCat(value_);
+    }
+  }
+
+  std::string ToHexString(bool pad_zero = false) const {
+    if constexpr (kUseMontgomery) {
+      return MontReduce().ToHexString(pad_zero);
+    } else {
+      std::string str = absl::StrCat(absl::Hex(value_));
+      if (pad_zero) {
+        size_t total_hex_length = kByteWidth * 2;
+        if (str.size() < total_hex_length) {
+          return absl::StrCat(std::string(total_hex_length - str.size(), '0'),
+                              str);
+        }
+      }
+      return str;
+    }
+  }
+
+ private:
+  template <typename T>
+  FRIEND_TEST(PrimeFieldTypedTest, Operations);
+
+  // Does the modulus have a spare unused bit?
+  //
+  // This condition applies if
+  // (a) `modulus[biggest_limb_idx] >> 63 == 0`
+  constexpr static bool HasSpareBit() {
+    UnderlyingType biggest_limb = Config::kModulus;
+    return biggest_limb >> (kBitWidth - 1) == 0;
+  }
+
+  constexpr static void Clamp(UnderlyingType& value, bool carry = false) {
+    bool needs_to_clamp = value >= Config::kModulus;
+    if constexpr (!HasSpareBit()) {
+      needs_to_clamp |= carry;
+    }
+    if (needs_to_clamp) {
+      value -= Config::kModulus;
+    }
+  }
+
+  constexpr static void MontMul(PrimeField a, PrimeField b, PrimeField& c) {
+    using PromotedUnderlyingType = internal::make_promoted_t<UnderlyingType>;
+
+    auto t = PromotedUnderlyingType{a.value_} * b.value_;
+    UnderlyingType t_high = t >> (sizeof(UnderlyingType) * 8);
+
+    UnderlyingType m = static_cast<UnderlyingType>(t) * Config::kNPrime;
+    UnderlyingType mn_high = (PromotedUnderlyingType{m} *
+                              PromotedUnderlyingType{Config::kModulus}) >>
+                             (sizeof(UnderlyingType) * 8);
+
+    if (t_high >= mn_high) {
+      c = PrimeField::FromUnchecked(t_high - mn_high);
+    } else {
+      c = PrimeField::FromUnchecked(t_high + Config::kModulus - mn_high);
+    }
+  }
+
+  constexpr static void VerySlowMul(PrimeField a, PrimeField b, PrimeField& c) {
+    using PromotedUnderlyingType = internal::make_promoted_t<UnderlyingType>;
+
+    auto mul = PromotedUnderlyingType{a.value_} * b.value_ % Config::kModulus;
+    c = PrimeField::FromUnchecked(static_cast<UnderlyingType>(mul));
+  }
+
+  UnderlyingType value_;
+};
+
+}  // namespace zk_dtypes
+
+#endif  // ZK_DTYPES_INCLUDE_FIELD_SMALL_PRIME_FIELD_H_
