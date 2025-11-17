@@ -1,0 +1,5 @@
+# actionlint.yaml
+
+self-hosted-runner:
+  labels:
+    - zk_dtypes
