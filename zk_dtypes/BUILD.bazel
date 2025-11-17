@@ -123,6 +123,7 @@ cc_test(
         "tests/big_int_unittest.cc",
         "tests/bit_iterator_unittest.cc",
         "tests/byinverter_unittest.cc",
+        "tests/intn_unittest.cc",
     ],
     deps = [
         ":batch_inverse",
@@ -130,12 +131,14 @@ cc_test(
         ":bit_iterator",
         ":bn254_fr",
         ":byinverter",
+        ":intn",
         "@com_google_absl//absl/container:inlined_vector",
         "@com_google_absl//absl/status:status_matchers",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
+        "@eigen_archive//:eigen3",
     ],
 )
 
