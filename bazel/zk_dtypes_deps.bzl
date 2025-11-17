@@ -33,3 +33,12 @@ def zk_dtypes_deps():
         strip_prefix = "googletest-release-1.12.1",
         urls = ["https://github.com/google/googletest/archive/refs/tags/release-1.12.1.tar.gz"],
     )
+
+    EIGEN_COMMIT = "4c38131a16803130b66266a912029504f2cf23cd"
+    http_archive(
+        name = "eigen_archive",
+        build_file = "//third_party/eigen3:eigen_archive.BUILD",
+        sha256 = "1a432ccbd597ea7b9faa1557b1752328d6adc1a3db8969f6fe793ff704be3bf0",
+        strip_prefix = "eigen-{commit}".format(commit = EIGEN_COMMIT),
+        urls = ["https://gitlab.com/libeigen/eigen/-/archive/{commit}/eigen-{commit}.tar.gz".format(commit = EIGEN_COMMIT)],
+    )
