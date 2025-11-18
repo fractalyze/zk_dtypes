@@ -16,16 +16,11 @@
 """zk_dtypes dependencies."""
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 def zk_dtypes_deps():
     """zk_dtypes dependencies."""
-
-    http_archive(
-        name = "rules_cc",
-        urls = ["https://github.com/bazelbuild/rules_cc/archive/refs/tags/0.1.0.tar.gz"],
-        strip_prefix = "rules_cc-0.1.0",
-        sha256 = "4b12149a041ddfb8306a8fd0e904e39d673552ce82e4296e96fac9cbf0780e59",
-    )
+    protobuf_deps()
 
     http_archive(
         name = "com_google_absl",
