@@ -16,6 +16,7 @@
 """ Main zk_dtypes library. """
 
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load(":py_extension.bzl", "py_extension")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -462,4 +463,36 @@ cc_test(
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+##########
+# Python #
+##########
+
+cc_library(
+    name = "_zk_dtypes_ext_cc",
+    srcs = [
+        "_src/common.h",
+        "_src/dtypes.cc",
+        "_src/intn_numpy.h",
+        "_src/numpy.cc",
+        "_src/numpy.h",
+        "_src/ufuncs.h",
+    ],
+    deps = [
+        ":intn",
+        "//third_party/py/numpy:headers",
+        "@eigen_archive//:eigen3",
+        "@rules_python//python/cc:current_py_cc_headers",
+    ],
+    alwayslink = True,
+)
+
+py_extension(
+    name = "_zk_dtypes_ext",
+    copts = select({
+        "@rules_cc//cc/compiler:msvc-cl": [],
+        "//conditions:default": ["-fvisibility=hidden"],
+    }),
+    deps = [":_zk_dtypes_ext_cc"],
 )

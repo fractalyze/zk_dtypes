@@ -55,9 +55,31 @@ pytest --pyargs zk_dtypes/tests
 
 To build from source, clone the repository and run:
 
-```shell
-pip install .
-```
+1. **Build the Extension Module**
+
+   Run the appropriate Bazel command for your operating system to compile the
+   C++ extension module:
+
+   - Windows:
+
+     ```shell
+     bazel build //zk_dtypes:_zk_dtypes_ext.pyd
+     ```
+
+   - Non-Windows (Linux/macOS):
+
+     ```shell
+     bazel build //zk_dtypes:_zk_dtypes_ext.so
+     ```
+
+1. **Install the Package**
+
+   After the extension module is successfully built, install the package using
+   pip from the repository root:
+
+   ```shell
+   pip install .
+   ```
 
 ## Example Usage
 

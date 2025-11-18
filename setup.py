@@ -16,64 +16,42 @@
 
 """Setuptool-based build for zk_dtypes."""
 
-import fnmatch
+import os
 import platform
-import numpy as np
-from setuptools import Extension
+import shutil
 from setuptools import setup
-from setuptools.command.build_py import build_py as build_py_orig
+from distutils.command.build import build
 
 if platform.system() == "Windows":
-  COMPILE_ARGS = [
-      "/std:c++17",
-      "/DEIGEN_MPL2_ONLY",
-      "/EHsc",
-      "/bigobj",
-  ]
+  FILE = "_zk_dtypes_ext.pyd"
 else:
-  COMPILE_ARGS = [
-      "-std=c++17",
-      "-DEIGEN_MPL2_ONLY",
-      "-fvisibility=hidden",
-      # -ftrapping-math is necessary because NumPy looks at floating point
-      # exception state to determine whether to emit, e.g., invalid value
-      # warnings. Without this setting, on Mac ARM we see spurious "invalid
-      # value" warnings when running the tests.
-      "-ftrapping-math",
-  ]
+  FILE = "_zk_dtypes_ext.so"
 
-exclude = ["third_party*"]
+BAZEL_OUTPUT_FILE = f"bazel-bin/zk_dtypes/{FILE}"
+TARGET_FILE_IN_PACKAGE = f"zk_dtypes/{FILE}"
 
 
-class build_py(build_py_orig):  # pylint: disable=invalid-name
+class CustomBuildCommand(build):
 
-  def find_package_modules(self, package, package_dir):
-    modules = super().find_package_modules(package, package_dir)
-    return [  # pylint: disable=g-complex-comprehension
-        (pkg, mod, file)
-        for (pkg, mod, file) in modules
-        if not any(
-            fnmatch.fnmatchcase(pkg + "." + mod, pat=pattern)
-            for pattern in exclude
-        )
-    ]
+  def run(self):
+    if not os.path.exists(BAZEL_OUTPUT_FILE):
+      raise FileNotFoundError(
+          f"Bazel C Extension output not found: {BAZEL_OUTPUT_FILE}."
+      )
+
+    build.run(self)
+
+    dst_path = os.path.join(self.build_lib, "zk_dtypes", FILE)
+    shutil.copyfile(BAZEL_OUTPUT_FILE, dst_path)
 
 
 setup(
-    ext_modules=[
-        Extension(
-            "zk_dtypes._zk_dtypes_ext",
-            [
-                "zk_dtypes/_src/dtypes.cc",
-                "zk_dtypes/_src/numpy.cc",
-            ],
-            include_dirs=[
-                "bazel-zk_dtypes/external/eigen_archive/",
-                ".",
-                np.get_include(),
-            ],
-            extra_compile_args=COMPILE_ARGS,
-        )
-    ],
-    cmdclass={"build_py": build_py},
+    name="zk_dtypes",
+    package_data={
+        "zk_dtypes": [FILE],
+    },
+    cmdclass={
+        "build": CustomBuildCommand,
+    },
+    zip_safe=False,
 )
