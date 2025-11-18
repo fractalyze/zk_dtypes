@@ -1,4 +1,0 @@
-recursive-include zk_dtypes *.h
-include bazel-zk_dtypes/external/eigen_archive/Eigen/Core
-recursive-include bazel-zk_dtypes/external/eigen_archive/Eigen/src/plugins *.h
-recursive-include bazel-zk_dtypes/external/eigen_archive/Eigen/src/Core *.h
