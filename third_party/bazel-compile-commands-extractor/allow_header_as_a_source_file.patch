@@ -1,0 +1,13 @@
+diff --git a/refresh.template.py b/refresh.template.py
+index 05d1dda..0689e23 100644
+--- a/refresh.template.py
++++ b/refresh.template.py
+@@ -568,7 +568,7 @@ def _get_files(compile_action):
+         source_index = compile_action.arguments.index('/c') + 1
+ 
+     source_file = compile_action.arguments[source_index]
+-    assert source_file.endswith(_get_files.source_extensions), f"Source file candidate, {source_file}, seems to be wrong.\nSelected from {compile_action.arguments}.\nPlease file an issue with this information!"
++    # assert source_file.endswith(_get_files.source_extensions), f"Source file candidate, {source_file}, seems to be wrong.\nSelected from {compile_action.arguments}.\nPlease file an issue with this information!"
+ 
+     # Warn gently about missing files
+     if not os.path.isfile(source_file):
