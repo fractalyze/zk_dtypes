@@ -514,7 +514,7 @@ class BigInt {
 
 template <size_t N>
 std::ostream& operator<<(std::ostream& os, const BigInt<N>& big_int) {
-  return os << big_int.ToHexString(true);
+  return os << big_int.ToString();
 }
 
 template <size_t N>
