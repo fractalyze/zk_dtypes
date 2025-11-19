@@ -22,6 +22,18 @@ __all__ = [
     "int4",
     "uint2",
     "uint4",
+    # Small prime field types
+    "babybear",
+    "babybear_std",
+    "goldilocks",
+    "goldilocks_std",
+    "koalabear",
+    "koalabear_std",
+    "mersenne31",
+    "mersenne31_std",
+    # Big prime field types
+    "bn254_sf",
+    "bn254_sf_std",
 ]
 
 from typing import Type
@@ -31,11 +43,31 @@ from zk_dtypes._zk_dtypes_ext import int2
 from zk_dtypes._zk_dtypes_ext import int4
 from zk_dtypes._zk_dtypes_ext import uint2
 from zk_dtypes._zk_dtypes_ext import uint4
+from zk_dtypes._zk_dtypes_ext import babybear
+from zk_dtypes._zk_dtypes_ext import babybear_std
+from zk_dtypes._zk_dtypes_ext import goldilocks
+from zk_dtypes._zk_dtypes_ext import goldilocks_std
+from zk_dtypes._zk_dtypes_ext import koalabear
+from zk_dtypes._zk_dtypes_ext import koalabear_std
+from zk_dtypes._zk_dtypes_ext import mersenne31
+from zk_dtypes._zk_dtypes_ext import mersenne31_std
+from zk_dtypes._zk_dtypes_ext import bn254_sf
+from zk_dtypes._zk_dtypes_ext import bn254_sf_std
 import numpy as np
 
 int2: Type[np.generic]
 int4: Type[np.generic]
 uint2: Type[np.generic]
 uint4: Type[np.generic]
+babybear: Type[np.generic]
+babybear_std: Type[np.generic]
+goldilocks: Type[np.generic]
+goldilocks_std: Type[np.generic]
+koalabear: Type[np.generic]
+koalabear_std: Type[np.generic]
+mersenne31: Type[np.generic]
+mersenne31_std: Type[np.generic]
+bn254_sf: Type[np.generic]
+bn254_sf_std: Type[np.generic]
 
 del np, Type
