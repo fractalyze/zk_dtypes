@@ -26,6 +26,7 @@ limitations under the License.
 #include "absl/log/check.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/numbers.h"
+#include "absl/strings/str_cat.h"
 #include "gtest/gtest_prod.h"
 
 #include "zk_dtypes/include/big_int.h"
