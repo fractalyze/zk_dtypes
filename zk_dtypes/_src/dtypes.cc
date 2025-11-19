@@ -27,7 +27,13 @@ limitations under the License.
 // Place `<locale>` before <Python.h> to avoid a build failure in macOS.
 #include <Python.h>
 
+#include "zk_dtypes/_src/field_numpy.h"
 #include "zk_dtypes/_src/intn_numpy.h"
+#include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
+#include "zk_dtypes/include/field/babybear/babybear.h"
+#include "zk_dtypes/include/field/goldilocks/goldilocks.h"
+#include "zk_dtypes/include/field/koalabear/koalabear.h"
+#include "zk_dtypes/include/field/mersenne31/mersenne31.h"
 #include "zk_dtypes/include/intn.h"
 
 namespace zk_dtypes {
@@ -92,6 +98,146 @@ struct TypeDescriptor<uint4> : IntNTypeDescriptor<uint4> {
   static constexpr char kNpyDescrByteorder = '=';
 };
 
+template <>
+struct TypeDescriptor<Babybear> : FieldTypeDescriptor<Babybear> {
+  typedef Babybear T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "babybear";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.babybear";
+  static constexpr const char* kTpDoc =
+      "babybear field values on montgomery domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'b';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<BabybearStd> : FieldTypeDescriptor<BabybearStd> {
+  typedef BabybearStd T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "babybear_std";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.babybear_std";
+  static constexpr const char* kTpDoc =
+      "babybear field values on standard domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'B';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<Goldilocks> : FieldTypeDescriptor<Goldilocks> {
+  typedef Goldilocks T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "goldilocks";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.goldilocks";
+  static constexpr const char* kTpDoc =
+      "goldilocks field values on montgomery domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'g';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<GoldilocksStd> : FieldTypeDescriptor<GoldilocksStd> {
+  typedef GoldilocksStd T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "goldilocks_std";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.goldilocks_std";
+  static constexpr const char* kTpDoc =
+      "goldilocks field values on standard domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'G';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<Koalabear> : FieldTypeDescriptor<Koalabear> {
+  typedef Koalabear T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "koalabear";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.koalabear";
+  static constexpr const char* kTpDoc =
+      "koalabear field values on montgomery domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'k';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<KoalabearStd> : FieldTypeDescriptor<KoalabearStd> {
+  typedef KoalabearStd T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "koalabear_std";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.koalabear_std";
+  static constexpr const char* kTpDoc =
+      "koalabear field values on standard domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'K';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<Mersenne31> : FieldTypeDescriptor<Mersenne31> {
+  typedef Mersenne31 T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "mersenne31";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.mersenne31";
+  static constexpr const char* kTpDoc =
+      "mersenne31 field values on montgomery domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'm';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<Mersenne31Std> : FieldTypeDescriptor<Mersenne31Std> {
+  typedef Mersenne31Std T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "mersenne31_std";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.mersenne31_std";
+  static constexpr const char* kTpDoc =
+      "mersenne31 field values on standard domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'M';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<bn254::Fr> : FieldTypeDescriptor<bn254::Fr> {
+  typedef bn254::Fr T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "bn254_sf";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.bn254_sf";
+  static constexpr const char* kTpDoc =
+      "bn254 scalar field values on montgomery domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'b';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<bn254::FrStd> : FieldTypeDescriptor<bn254::FrStd> {
+  typedef bn254::FrStd T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "bn254_sf_std";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.bn254_sf_std";
+  static constexpr const char* kTpDoc =
+      "bn254 scalar field values on standard domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'B';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
 namespace {
 
 // Performs a NumPy array cast from type 'From' to 'To' via `Via`.
@@ -144,7 +290,17 @@ bool Initialize() {
   if (!RegisterIntNDtype<int2>(numpy.get()) ||
       !RegisterIntNDtype<uint2>(numpy.get()) ||
       !RegisterIntNDtype<int4>(numpy.get()) ||
-      !RegisterIntNDtype<uint4>(numpy.get())) {
+      !RegisterIntNDtype<uint4>(numpy.get()) ||
+      !RegisterFieldDtype<Babybear>(numpy.get()) ||
+      !RegisterFieldDtype<BabybearStd>(numpy.get()) ||
+      !RegisterFieldDtype<Goldilocks>(numpy.get()) ||
+      !RegisterFieldDtype<GoldilocksStd>(numpy.get()) ||
+      !RegisterFieldDtype<Koalabear>(numpy.get()) ||
+      !RegisterFieldDtype<KoalabearStd>(numpy.get()) ||
+      !RegisterFieldDtype<Mersenne31>(numpy.get()) ||
+      !RegisterFieldDtype<Mersenne31Std>(numpy.get()) ||
+      !RegisterFieldDtype<bn254::Fr>(numpy.get()) ||
+      !RegisterFieldDtype<bn254::FrStd>(numpy.get())) {
     return false;
   }
 
@@ -182,7 +338,17 @@ extern "C" EXPORT_SYMBOL PyObject* PyInit__zk_dtypes_ext() {
   if (!InitModuleType<int2>(m.get(), "int2") ||
       !InitModuleType<int4>(m.get(), "int4") ||
       !InitModuleType<uint2>(m.get(), "uint2") ||
-      !InitModuleType<uint4>(m.get(), "uint4")) {
+      !InitModuleType<uint4>(m.get(), "uint4") ||
+      !InitModuleType<Babybear>(m.get(), "babybear") ||
+      !InitModuleType<BabybearStd>(m.get(), "babybear_std") ||
+      !InitModuleType<Goldilocks>(m.get(), "goldilocks") ||
+      !InitModuleType<GoldilocksStd>(m.get(), "goldilocks_std") ||
+      !InitModuleType<Koalabear>(m.get(), "koalabear") ||
+      !InitModuleType<KoalabearStd>(m.get(), "koalabear_std") ||
+      !InitModuleType<Mersenne31>(m.get(), "mersenne31") ||
+      !InitModuleType<Mersenne31Std>(m.get(), "mersenne31_std") ||
+      !InitModuleType<bn254::Fr>(m.get(), "bn254_sf") ||
+      !InitModuleType<bn254::FrStd>(m.get(), "bn254_sf_std")) {
     return nullptr;
   }
 
