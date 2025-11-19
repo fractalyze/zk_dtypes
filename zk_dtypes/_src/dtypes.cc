@@ -27,8 +27,6 @@ limitations under the License.
 // Place `<locale>` before <Python.h> to avoid a build failure in macOS.
 #include <Python.h>
 
-#include "Eigen/Core"
-
 #include "zk_dtypes/_src/intn_numpy.h"
 #include "zk_dtypes/include/intn.h"
 
