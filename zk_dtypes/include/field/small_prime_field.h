@@ -89,9 +89,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kModulusBits <= 64)>>
 
   constexpr static PrimeField Min() { return Zero(); }
 
-  constexpr static PrimeField Max() {
-    return PrimeField::FromUnchecked(Config::kModulus - 1);
-  }
+  constexpr static PrimeField Max() { return PrimeField(-1); }
 
   constexpr static PrimeField Random() {
     return PrimeField::FromUnchecked(
