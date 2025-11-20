@@ -544,6 +544,18 @@ py_test(
 )
 
 py_test(
+    name = "ec_point_test",
+    srcs = ["tests/ec_point_test.py"],
+    main = "tests/ec_point_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
     name = "iinfo_test",
     srcs = ["tests/iinfo_test.py"],
     main = "tests/iinfo_test.py",
