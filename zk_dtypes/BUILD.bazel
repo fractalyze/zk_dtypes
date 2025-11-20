@@ -16,6 +16,7 @@
 """ Main zk_dtypes library. """
 
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 load(":py_extension.bzl", "py_extension")
 
 package(
@@ -506,4 +507,59 @@ py_extension(
         "//conditions:default": ["-fvisibility=hidden"],
     }),
     deps = [":_zk_dtypes_ext_cc"],
+)
+
+py_library(
+    name = "zk_dtypes_py",
+    srcs = [
+        "__init__.py",
+        "_iinfo.py",
+    ],
+    data = [":_zk_dtypes_ext"],
+)
+
+py_library(
+    name = "test_utils",
+    testonly = True,
+    srcs = [
+        "tests/conftest.py",
+        "tests/multi_thread_utils.py",
+    ],
+    imports = ["tests"],
+)
+
+py_test(
+    name = "field_test",
+    srcs = ["tests/field_test.py"],
+    main = "tests/field_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "iinfo_test",
+    srcs = ["tests/iinfo_test.py"],
+    main = "tests/iinfo_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "intn_test",
+    srcs = ["tests/intn_test.py"],
+    main = "tests/intn_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
 )
