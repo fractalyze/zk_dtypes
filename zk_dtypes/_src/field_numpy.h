@@ -30,6 +30,9 @@ limitations under the License.
 #include "zk_dtypes/_src/int_caster.h"
 #include "zk_dtypes/_src/ufuncs.h"
 #include "zk_dtypes/include/big_int.h"
+#include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
+#include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
+#include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
 #include "zk_dtypes/include/field/prime_field.h"
 
 namespace zk_dtypes {
@@ -175,10 +178,10 @@ class PrimeFieldIntCaster
   T value_;
 };
 
-// Converts a Python object to a field value. Returns true on success,
+// Converts a Python object to a prime field value. Returns true on success,
 // returns false and reports a Python error on failure.
 template <typename T>
-bool CastToField(PyObject* arg, T* output) {
+bool CastToPrimeField(PyObject* arg, T* output) {
   PrimeFieldIntCaster<T> caster;
   if constexpr (T::Config::kModulusBits <= 64) {
     if (!caster.CastInt(arg)) return false;
@@ -187,6 +190,41 @@ bool CastToField(PyObject* arg, T* output) {
   }
   *output = caster.value();
   return true;
+}
+
+template <typename T>
+bool CastToField(PyObject* arg, T* output) {
+  if constexpr (T::ExtensionDegree() == 1) {
+    return CastToPrimeField<T>(arg, output);
+  } else {
+    using BaseField = typename T::BaseField;
+
+    if (!PyTuple_Check(arg)) {
+      PyErr_Format(PyExc_TypeError,
+                   "expected a tuple for extension field, got %s",
+                   Py_TYPE(arg)->tp_name);
+      return false;
+    }
+
+    Py_ssize_t size = PyTuple_Size(arg);
+    if (size != T::ExtensionDegree()) {
+      PyErr_Format(PyExc_TypeError, "expected %d arguments, got %d",
+                   T::ExtensionDegree(), size);
+      return false;
+    }
+
+    std::array<BaseField, T::ExtensionDegree()> values;
+    for (size_t i = 0; i < T::ExtensionDegree(); ++i) {
+      PyObject* arg_i = PyTuple_GetItem(arg, i);
+      BaseField base_field;
+      if (!CastToField(arg_i, &base_field)) {
+        return false;
+      }
+      values[i] = base_field;
+    }
+    *output = T(values);
+    return true;
+  }
 }
 
 // Constructs a new PyField.
@@ -261,15 +299,51 @@ PyObject* PyField_nb_subtract(PyObject* a, PyObject* b) {
 }
 
 template <typename T>
+Safe_PyObjectPtr PyEcPoint_FromValue(T x);
+
+template <typename T>
+PyObject* PyField_nb_ec_multiply(T x, PyObject* b) {
+  PyErr_SetString(PyExc_TypeError, "invalid argument for multiplication");
+  return nullptr;
+}
+
+template <typename T, typename U, typename... Args>
+PyObject* PyField_nb_ec_multiply(T x, PyObject* b) {
+  U y;
+  if (PyEcPoint_Value(b, &y)) {
+    return PyEcPoint_FromValue(x * y).release();
+  }
+  return PyField_nb_ec_multiply<T, Args...>(x, b);
+}
+
+template <typename T>
 PyObject* PyField_nb_multiply(PyObject* a, PyObject* b) {
-  T x, y;
-  if (PyField_Value(a, &x) && PyField_Value(b, &y)) {
-    return PyField_FromValue(x * y).release();
-  } else {
+  T x;
+  if (!PyField_Value(a, &x)) {
     PyErr_Format(PyExc_TypeError, "expected %s as argument for multiplication",
                  TypeDescriptor<T>::kTypeName);
     return nullptr;
   }
+  T y;
+  if (PyField_Value(b, &y)) {
+    return PyField_FromValue(x * y).release();
+  } else {
+    if constexpr (std::is_same_v<T, bn254::Fr>) {
+      return PyField_nb_ec_multiply<bn254::Fr, bn254::G1AffinePoint,
+                                    bn254::G1JacobianPoint, bn254::G1PointXyzz,
+                                    bn254::G2AffinePoint,
+                                    bn254::G2JacobianPoint, bn254::G2PointXyzz>(
+          x, b);
+    } else if constexpr (std::is_same_v<T, bn254::FrStd>) {
+      return PyField_nb_ec_multiply<
+          bn254::FrStd, bn254::G1AffinePointStd, bn254::G1JacobianPointStd,
+          bn254::G1PointXyzzStd, bn254::G2AffinePointStd,
+          bn254::G2JacobianPointStd, bn254::G2PointXyzzStd>(x, b);
+    }
+  }
+
+  PyErr_SetString(PyExc_TypeError, "invalid argument for multiplication");
+  return nullptr;
 }
 
 template <typename T>
@@ -413,18 +487,30 @@ PyObject* PyField_Str(PyObject* self) {
   return PyUnicode_FromString(s.c_str());
 }
 
+template <typename T>
+uint64_t PyField_Hash_Impl(T x) {
+  if constexpr (T::ExtensionDegree() == 1) {
+    uint64_t hash = static_cast<uint64_t>(x.value());
+    if constexpr (T::Config::kModulusBits > 64) {
+      for (size_t i = 1; i < T::kLimbNums; ++i) {
+        hash ^= x[i];
+      }
+    }
+    return hash;
+  } else {
+    uint64_t hash = PyField_Hash_Impl(x[0]);
+    for (size_t i = 1; i < T::ExtensionDegree(); ++i) {
+      hash ^= PyField_Hash_Impl(x[i]);
+    }
+    return hash;
+  }
+}
+
 // Hash function for PyField.
 template <typename T>
 Py_hash_t PyField_Hash(PyObject* self) {
   T x = PyField_Value_Unchecked<T>(self);
-
-  uint64_t hash = static_cast<uint64_t>(x.value());
-  if constexpr (T::Config::kModulusBits > 64) {
-    for (size_t i = 1; i < T::kLimbNums; ++i) {
-      hash ^= x[i];
-    }
-  }
-
+  uint64_t hash = PyField_Hash_Impl(x);
   // Hash functions must not return -1.
   return hash == -1 ? static_cast<Py_hash_t>(-2) : static_cast<Py_hash_t>(hash);
 }

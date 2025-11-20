@@ -475,6 +475,7 @@ cc_library(
     srcs = [
         "_src/common.h",
         "_src/dtypes.cc",
+        "_src/ec_point_numpy.h",
         "_src/field_numpy.h",
         "_src/int_caster.cc",
         "_src/int_caster.h",
@@ -487,6 +488,8 @@ cc_library(
         ":babybear",
         ":big_int",
         ":bn254_fr",
+        ":bn254_g1",
+        ":bn254_g2",
         ":goldilocks",
         ":intn",
         ":koalabear",

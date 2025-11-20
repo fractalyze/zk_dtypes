@@ -34,6 +34,19 @@ __all__ = [
     # Big prime field types
     "bn254_sf",
     "bn254_sf_std",
+    # Elliptic curve types
+    "bn254_g1_affine",
+    "bn254_g1_affine_std",
+    "bn254_g1_jacobian",
+    "bn254_g1_jacobian_std",
+    "bn254_g1_xyzz",
+    "bn254_g1_xyzz_std",
+    "bn254_g2_affine",
+    "bn254_g2_affine_std",
+    "bn254_g2_jacobian",
+    "bn254_g2_jacobian_std",
+    "bn254_g2_xyzz",
+    "bn254_g2_xyzz_std",
 ]
 
 from typing import Type
@@ -53,6 +66,19 @@ from zk_dtypes._zk_dtypes_ext import mersenne31
 from zk_dtypes._zk_dtypes_ext import mersenne31_std
 from zk_dtypes._zk_dtypes_ext import bn254_sf
 from zk_dtypes._zk_dtypes_ext import bn254_sf_std
+from zk_dtypes._zk_dtypes_ext import bn254_g1_affine
+from zk_dtypes._zk_dtypes_ext import bn254_g1_affine_std
+from zk_dtypes._zk_dtypes_ext import bn254_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import bn254_g1_jacobian_std
+from zk_dtypes._zk_dtypes_ext import bn254_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import bn254_g1_xyzz_std
+from zk_dtypes._zk_dtypes_ext import bn254_g2_affine
+from zk_dtypes._zk_dtypes_ext import bn254_g2_affine_std
+from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian
+from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian_std
+from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz
+from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz_std
+
 import numpy as np
 
 int2: Type[np.generic]
@@ -69,5 +95,17 @@ mersenne31: Type[np.generic]
 mersenne31_std: Type[np.generic]
 bn254_sf: Type[np.generic]
 bn254_sf_std: Type[np.generic]
+bn254_g1_affine: Type[np.generic]
+bn254_g1_affine_std: Type[np.generic]
+bn254_g1_jacobian: Type[np.generic]
+bn254_g1_jacobian_std: Type[np.generic]
+bn254_g1_xyzz: Type[np.generic]
+bn254_g1_xyzz_std: Type[np.generic]
+bn254_g2_affine: Type[np.generic]
+bn254_g2_affine_std: Type[np.generic]
+bn254_g2_jacobian: Type[np.generic]
+bn254_g2_jacobian_std: Type[np.generic]
+bn254_g2_xyzz: Type[np.generic]
+bn254_g2_xyzz_std: Type[np.generic]
 
 del np, Type
