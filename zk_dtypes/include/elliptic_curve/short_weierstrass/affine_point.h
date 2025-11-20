@@ -95,6 +95,9 @@ class AffinePoint<
   constexpr JacobianPoint operator+(const JacobianPoint& other) const {
     return other + *this;
   }
+  constexpr PointXyzz operator+(const PointXyzz& other) const {
+    return other + *this;
+  }
   constexpr AffinePoint& operator+=(const AffinePoint& other) {
     LOG(FATAL) << "Invalid call to operator+=; this exists only to allow "
                   "compilation with reduction. See in_process_communicator.cc "
@@ -105,6 +108,9 @@ class AffinePoint<
     return ToJacobian() - other;
   }
   constexpr JacobianPoint operator-(const JacobianPoint& other) const {
+    return -(other - *this);
+  }
+  constexpr PointXyzz operator-(const PointXyzz& other) const {
     return -(other - *this);
   }
   constexpr AffinePoint operator-() const { return {x_, -y_}; }
