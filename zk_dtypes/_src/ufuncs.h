@@ -90,17 +90,17 @@ bool RegisterUFunc(PyObject* numpy, const char* name) {
 
 namespace ufuncs {
 
-template <typename T>
+template <typename T, typename U = T>
 struct Add {
-  T operator()(T a, T b) { return a + b; }
+  auto operator()(T a, U b) { return a + b; }
 };
-template <typename T>
+template <typename T, typename U = T>
 struct Subtract {
-  T operator()(T a, T b) { return a - b; }
+  auto operator()(T a, U b) { return a - b; }
 };
-template <typename T>
+template <typename T, typename U = T>
 struct Multiply {
-  T operator()(T a, T b) { return a * b; }
+  auto operator()(T a, U b) { return a * b; }
 };
 template <typename T>
 struct TrueDivide {
