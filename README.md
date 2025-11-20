@@ -28,6 +28,18 @@ used in Zero Knowledge libraries inspired by
 
   - `bn254_sf`
   - `bn254_sf_std`
+  - `bn254_g1_affine`
+  - `bn254_g1_affine_std`
+  - `bn254_g1_jacobian`
+  - `bn254_g1_jacobian_std`
+  - `bn254_g1_xyzz`
+  - `bn254_g1_xyzz_std`
+  - `bn254_g2_affine`
+  - `bn254_g2_affine_std`
+  - `bn254_g2_jacobian`
+  - `bn254_g2_jacobian_std`
+  - `bn254_g2_xyzz`
+  - `bn254_g2_xyzz_std`
 
 ## Prerequisite
 
