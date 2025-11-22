@@ -1,0 +1,49 @@
+[project]
+name = "zk_dtypes"
+dynamic = ["version"] # Load from zk_dtypes.__version__.
+description = "zk_dtypes is a stand-alone implementation of several NumPy dtype extensions used in Zero Knowledge."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "LICENSE.chromium", "LICENSE.eigen"]
+authors = [{ name = "zk_dtypes authors", email = "contact@fractalyze.io" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Intended Audience :: Science/Research",
+]
+keywords = []
+
+# pip dependencies of the project
+dependencies = ["numpy>=2.3.5"]
+
+[project.urls]
+homepage = "https://github.com/fractalyze/zk_dtypes"
+repository = "https://github.com/fractalyze/zk_dtypes"
+# Other: `documentation`, `changelog`
+
+[project.optional-dependencies]
+# Development deps (unittest, linting, formatting,...)
+# Installed through `pip install .[dev]`
+dev = ["absl-py", "pytest", "pytest-xdist", "pylint", "pyink"]
+
+[tool.pyink]
+# Formatting configuration to follow Google style-guide
+line-length = 80
+preview = true
+pyink-indentation = 2
+pyink-use-majority-quotes = true
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["zk_dtypes"]
+include-package-data = false
+
+[tool.setuptools.dynamic]
+version = { attr = "zk_dtypes.__version__" }
+
+[tool.setuptools.package-data]
+zk_dtypes = ["py.typed"]
