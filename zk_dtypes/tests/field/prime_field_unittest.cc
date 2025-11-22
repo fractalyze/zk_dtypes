@@ -64,6 +64,16 @@ TYPED_TEST(PrimeFieldTypedTest, One) {
   EXPECT_FALSE(F::Zero().IsOne());
 }
 
+TYPED_TEST(PrimeFieldTypedTest, Max) {
+  using F = TypeParam;
+  EXPECT_EQ(F::Max(), F(F::Config::kModulus - 1));
+}
+
+TYPED_TEST(PrimeFieldTypedTest, Min) {
+  using F = TypeParam;
+  EXPECT_EQ(F::Min(), F(0));
+}
+
 TYPED_TEST(PrimeFieldTypedTest, Operations) {
   using F = TypeParam;
   using UnderlyingType = typename F::UnderlyingType;

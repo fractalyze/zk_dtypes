@@ -247,6 +247,24 @@ class BigInt {
 
   constexpr explicit operator uint64_t() const { return limbs_[0]; }
 
+  BigInt operator-() const {
+    BigInt ret = *this;
+
+    for (size_t i = 0; i < N; ++i) {
+      ret[i] = ~ret[i];
+    }
+
+    uint64_t carry = 1;
+    for (size_t i = 0; i < N; ++i) {
+      internal::AddResult<uint64_t> add_result =
+          internal::AddWithCarry(ret[i], carry);
+      ret[i] = add_result.value;
+      carry = add_result.carry;
+      if (carry == 0) break;
+    }
+    return ret;
+  }
+
   constexpr BigInt operator+(const BigInt& other) const {
     BigInt ret;
     Add(*this, other, ret);
@@ -514,7 +532,7 @@ class BigInt {
 
 template <size_t N>
 std::ostream& operator<<(std::ostream& os, const BigInt<N>& big_int) {
-  return os << big_int.ToHexString(true);
+  return os << big_int.ToString();
 }
 
 template <size_t N>
