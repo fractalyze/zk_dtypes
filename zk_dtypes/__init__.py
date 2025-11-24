@@ -1,3 +1,4 @@
+# Copyright 2022 The ml_dtypes Authors.
 # Copyright 2025 The zk_dtypes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +14,28 @@
 # limitations under the License.
 # ==============================================================================
 
-workspace(name = "zk_dtypes")
+__version__ = "0.0.1"
+__all__ = [
+    "__version__",
+    "iinfo",
+    "int2",
+    "int4",
+    "uint2",
+    "uint4",
+]
 
-load("//bazel:zk_dtypes_deps.bzl", "zk_dtypes_deps")
+from typing import Type
 
-zk_dtypes_deps()
+from zk_dtypes._iinfo import iinfo
+from zk_dtypes._zk_dtypes_ext import int2
+from zk_dtypes._zk_dtypes_ext import int4
+from zk_dtypes._zk_dtypes_ext import uint2
+from zk_dtypes._zk_dtypes_ext import uint4
+import numpy as np
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+int2: Type[np.generic]
+int4: Type[np.generic]
+uint2: Type[np.generic]
+uint4: Type[np.generic]
 
-# Hedron's Compile Commands Extractor for Bazel
-# https://github.com/hedronvision/bazel-compile-commands-extractor
-http_archive(
-    name = "hedron_compile_commands",
-    strip_prefix = "bazel-compile-commands-extractor-ed994039a951b736091776d677f324b3903ef939",
-    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/ed994039a951b736091776d677f324b3903ef939.tar.gz",
-)
+del np, Type

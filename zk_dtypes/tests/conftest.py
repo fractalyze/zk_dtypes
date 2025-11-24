@@ -1,3 +1,4 @@
+# Copyright 2024 The ml_dtypes Authors.
 # Copyright 2025 The zk_dtypes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +14,10 @@
 # limitations under the License.
 # ==============================================================================
 
-workspace(name = "zk_dtypes")
+"""pytest configuration file."""
 
-load("//bazel:zk_dtypes_deps.bzl", "zk_dtypes_deps")
+import pathlib
+import sys
 
-zk_dtypes_deps()
-
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-# Hedron's Compile Commands Extractor for Bazel
-# https://github.com/hedronvision/bazel-compile-commands-extractor
-http_archive(
-    name = "hedron_compile_commands",
-    strip_prefix = "bazel-compile-commands-extractor-ed994039a951b736091776d677f324b3903ef939",
-    url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/ed994039a951b736091776d677f324b3903ef939.tar.gz",
-)
+# Add zk_dtypes/tests folder to discover multi_thread_utils.py module
+sys.path.insert(0, str(pathlib.Path(__file__).absolute().parent))
