@@ -47,3 +47,24 @@ version = { attr = "zk_dtypes.__version__" }
 
 [tool.setuptools.package-data]
 zk_dtypes = ["py.typed"]
+
+[tool.cibuildwheel]
+before-test = "pip install absl-py pytest"
+test-command = "pytest {project}/zk_dtypes/tests"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+before-all = """
+    ARCH="$(uname -m)"
+    if [ "$ARCH" = "aarch64" ]; then
+      BAZELISK_ARCH=arm64
+    else
+      BAZELISK_ARCH=amd64
+    fi
+
+    BAZELISK_VERSION=v1.27.0
+    BAZELISK_URL="https://github.com/bazelbuild/bazelisk/releases/download/${BAZELISK_VERSION}/bazelisk-linux-${BAZELISK_ARCH}"
+    curl -fLo bazelisk "$BAZELISK_URL"
+    chmod +x bazelisk
+    mv bazelisk /usr/local/bin/bazel
+"""
