@@ -445,7 +445,7 @@ class BigInt {
   }
 
   constexpr static uint64_t Add(const BigInt& a, const BigInt& b, BigInt& c) {
-    internal::AddResult<uint64_t> add_result;
+    internal::AddResult<uint64_t> add_result = {};
     for (size_t i = 0; i < N; ++i) {
       add_result = internal::AddWithCarry(a[i], b[i], add_result.carry);
       c[i] = add_result.value;
@@ -454,7 +454,7 @@ class BigInt {
   }
 
   constexpr static uint64_t Sub(const BigInt& a, const BigInt& b, BigInt& c) {
-    internal::SubResult<uint64_t> sub_result;
+    internal::SubResult<uint64_t> sub_result = {};
     for (size_t i = 0; i < N; ++i) {
       sub_result = internal::SubWithBorrow(a[i], b[i], sub_result.borrow);
       c[i] = sub_result.value;
@@ -464,8 +464,8 @@ class BigInt {
 
   constexpr static internal::MulResult<BigInt> Mul(const BigInt& a,
                                                    const BigInt& b) {
-    internal::MulResult<BigInt> ret;
-    internal::MulResult<uint64_t> mul_result;
+    internal::MulResult<BigInt> ret = {};
+    internal::MulResult<uint64_t> mul_result = {};
     for (size_t i = 0; i < N; ++i) {
       for (size_t j = 0; j < N; ++j) {
         uint64_t& limb = (i + j) >= N ? ret.hi[(i + j) - N] : ret.lo[i + j];

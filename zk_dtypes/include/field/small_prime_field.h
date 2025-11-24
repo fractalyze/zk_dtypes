@@ -97,7 +97,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kModulusBits <= 64)>>
   }
 
   constexpr static PrimeField FromUnchecked(UnderlyingType value) {
-    PrimeField ret;
+    PrimeField ret = {};
     ret.value_ = value;
     return ret;
   }
@@ -377,7 +377,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kModulusBits <= 64)>>
     c = PrimeField::FromUnchecked(static_cast<UnderlyingType>(mul));
   }
 
-  UnderlyingType value_;
+  UnderlyingType value_ = {};
 };
 
 }  // namespace zk_dtypes
