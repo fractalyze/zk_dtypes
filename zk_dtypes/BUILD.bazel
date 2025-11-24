@@ -16,6 +16,8 @@
 """ Main zk_dtypes library. """
 
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
+load(":py_extension.bzl", "py_extension")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -461,5 +463,118 @@ cc_test(
         ":sw_test_curve_config",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+##########
+# Python #
+##########
+
+cc_library(
+    name = "_zk_dtypes_ext_cc",
+    srcs = [
+        "_src/common.h",
+        "_src/dtypes.cc",
+        "_src/ec_point_numpy.h",
+        "_src/field_numpy.h",
+        "_src/int_caster.cc",
+        "_src/int_caster.h",
+        "_src/intn_numpy.h",
+        "_src/numpy.cc",
+        "_src/numpy.h",
+        "_src/ufuncs.h",
+    ],
+    deps = [
+        ":babybear",
+        ":big_int",
+        ":bn254_fr",
+        ":bn254_g1",
+        ":bn254_g2",
+        ":goldilocks",
+        ":intn",
+        ":koalabear",
+        ":mersenne31",
+        "//third_party/py/numpy:headers",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/types:span",
+        "@eigen_archive//:eigen3",
+        "@rules_python//python/cc:current_py_cc_headers",
+    ],
+    alwayslink = True,
+)
+
+py_extension(
+    name = "_zk_dtypes_ext",
+    copts = select({
+        "@rules_cc//cc/compiler:msvc-cl": [],
+        "//conditions:default": ["-fvisibility=hidden"],
+    }),
+    deps = [":_zk_dtypes_ext_cc"],
+)
+
+py_library(
+    name = "zk_dtypes_py",
+    srcs = [
+        "__init__.py",
+        "_iinfo.py",
+    ],
+    data = [":_zk_dtypes_ext"],
+)
+
+py_library(
+    name = "test_utils",
+    testonly = True,
+    srcs = [
+        "tests/conftest.py",
+        "tests/multi_thread_utils.py",
+    ],
+    imports = ["tests"],
+)
+
+py_test(
+    name = "field_test",
+    srcs = ["tests/field_test.py"],
+    main = "tests/field_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "ec_point_test",
+    srcs = ["tests/ec_point_test.py"],
+    main = "tests/ec_point_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "iinfo_test",
+    srcs = ["tests/iinfo_test.py"],
+    main = "tests/iinfo_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "intn_test",
+    srcs = ["tests/intn_test.py"],
+    main = "tests/intn_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
     ],
 )

@@ -72,6 +72,16 @@ template <typename T>
 constexpr bool IsEcPoint =
     IsAffinePoint<T> || IsJacobianPoint<T> || IsPointXyzz<T>;
 
+template <typename T>
+struct AddResult {
+  using Type = T;
+};
+
+template <typename Curve>
+struct AddResult<AffinePoint<Curve>> {
+  using Type = JacobianPoint<Curve>;
+};
+
 template <typename ScalarField, typename Curve,
           std::enable_if_t<std::is_same_v<
               ScalarField, typename Curve::ScalarField>>* = nullptr>

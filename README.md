@@ -13,6 +13,34 @@ used in Zero Knowledge libraries inspired by
   - `uint2`
   - `uint4`
 
+- Field:
+
+  - `babybear`
+  - `babybear_std`
+  - `goldilocks`
+  - `goldilocks_std`
+  - `koalabear`
+  - `koalabear_std`
+  - `mersenne31`
+  - `mersenne31_std`
+
+- Elliptic curve:
+
+  - `bn254_sf`
+  - `bn254_sf_std`
+  - `bn254_g1_affine`
+  - `bn254_g1_affine_std`
+  - `bn254_g1_jacobian`
+  - `bn254_g1_jacobian_std`
+  - `bn254_g1_xyzz`
+  - `bn254_g1_xyzz_std`
+  - `bn254_g2_affine`
+  - `bn254_g2_affine_std`
+  - `bn254_g2_jacobian`
+  - `bn254_g2_jacobian_std`
+  - `bn254_g2_xyzz`
+  - `bn254_g2_xyzz_std`
+
 ## Prerequisite
 
 1. Follow the [bazel installation guide](https://bazel.build/install).
@@ -55,25 +83,49 @@ pytest --pyargs zk_dtypes/tests
 
 To build from source, clone the repository and run:
 
-```shell
-pip install .
-```
+1. **Build the Extension Module**
+
+   Run the appropriate Bazel command for your operating system to compile the
+   C++ extension module:
+
+   - Windows:
+
+     ```shell
+     bazel build //zk_dtypes:_zk_dtypes_ext.pyd
+     ```
+
+   - Non-Windows (Linux/macOS):
+
+     ```shell
+     bazel build //zk_dtypes:_zk_dtypes_ext.so
+     ```
+
+1. **Install the Package**
+
+   After the extension module is successfully built, install the package using
+   pip from the repository root:
+
+   ```shell
+   pip install .
+   ```
 
 ## Example Usage
 
 ```python
->>> from zk_dtypes import uint4
+>>> from zk_dtypes import babybear
 >>> import numpy as np
->>> np.zeros(4, dtype=uint4)
-array([0, 0, 0, 0], dtype=uint4)
+>>> a = np.array([-1, -3, 2**30, 7], dtype=babybear)
+>>> b = np.array([5, 2, 4, 10], dtype=babybear)
+>>> a + b
+array([4, 2013265920, 1073741828, 17], dtype=babybear)
 ```
 
 Importing `zk_dtypes` also registers the data types with numpy, so that they may
 be referred to by their string name:
 
 ```python
->>> np.dtype('uint4')
-dtype(uint4)
+>>> np.dtype('babybear')
+dtype(babybear)
 ```
 
 ## License

@@ -116,6 +116,8 @@ TEST(BigIntTest, Operations) {
   EXPECT_EQ(*(a / divisor),
             *BigInt<2>::FromDecString("1000000000100000000080000000"));
   EXPECT_EQ(*(a % divisor), BigInt<2>(91235312));
+  EXPECT_EQ(
+      -a, *BigInt<2>::FromDecString("340158910131926117784464730888556976144"));
 }
 
 TEST(BigIntTest, BitsLEConversion) {

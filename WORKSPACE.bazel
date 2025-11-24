@@ -15,9 +15,42 @@
 
 workspace(name = "zk_dtypes")
 
+# # Initialize hermetic Python
+load("//third_party/py:python_init_rules.bzl", "python_init_rules")
+
+python_init_rules()
+
+load("//third_party/py:python_init_repositories.bzl", "python_init_repositories")
+
+python_init_repositories(
+    requirements = {
+        "3.11": "//:requirements_lock_3_11.txt",
+    },
+)
+
+load("//third_party/py:python_init_toolchains.bzl", "python_init_toolchains")
+
+python_init_toolchains()
+
+load("//third_party/py:python_init_pip.bzl", "python_init_pip")
+
+python_init_pip()
+
+load("@pypi//:requirements.bzl", "install_deps")
+
+install_deps()
+
 load("//bazel:zk_dtypes_deps.bzl", "zk_dtypes_deps")
 
 zk_dtypes_deps()
+
+load("@rules_java//java:rules_java_deps.bzl", "rules_java_dependencies")
+
+rules_java_dependencies()
+
+load("@rules_java//java:repositories.bzl", "rules_java_toolchains")
+
+rules_java_toolchains()
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
@@ -25,6 +58,8 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # https://github.com/hedronvision/bazel-compile-commands-extractor
 http_archive(
     name = "hedron_compile_commands",
+    patch_args = ["-p1"],
+    patches = ["//third_party/bazel-compile-commands-extractor:allow_header_as_a_source_file.patch"],
     strip_prefix = "bazel-compile-commands-extractor-ed994039a951b736091776d677f324b3903ef939",
     url = "https://github.com/hedronvision/bazel-compile-commands-extractor/archive/ed994039a951b736091776d677f324b3903ef939.tar.gz",
 )

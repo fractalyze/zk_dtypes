@@ -90,21 +90,28 @@ bool RegisterUFunc(PyObject* numpy, const char* name) {
 
 namespace ufuncs {
 
-template <typename T>
+template <typename T, typename U = T>
 struct Add {
-  T operator()(T a, T b) { return a + b; }
+  auto operator()(T a, U b) { return a + b; }
 };
-template <typename T>
+template <typename T, typename U = T>
 struct Subtract {
-  T operator()(T a, T b) { return a - b; }
+  auto operator()(T a, U b) { return a - b; }
 };
-template <typename T>
+template <typename T, typename U = T>
 struct Multiply {
-  T operator()(T a, T b) { return a * b; }
+  auto operator()(T a, U b) { return a * b; }
 };
 template <typename T>
 struct TrueDivide {
-  T operator()(T a, T b) { return a / b; }
+  T operator()(T a, T b) {
+    if (b.IsZero()) {
+      PyErr_WarnEx(PyExc_RuntimeWarning,
+                   "divide by zero encountered in true_divide", 1);
+      return T(0);
+    }
+    return *(a / b);
+  }
 };
 
 template <typename T>
@@ -141,6 +148,60 @@ struct Remainder {
     }
     return v;
   }
+};
+
+template <typename T>
+struct Negative {
+  T operator()(T a) { return -a; }
+};
+
+template <typename T>
+struct Power {
+  T operator()(T a, uint32_t b) {
+    if (b < 0) {
+      if (a.IsZero()) {
+        PyErr_WarnEx(PyExc_RuntimeWarning,
+                     "inverse of zero encountered in power", 1);
+        return T(0);
+      }
+      return a.Inverse()->Pow(static_cast<uint32_t>(-b));
+    } else {
+      return a.Pow(b);
+    }
+  }
+};
+
+template <typename T>
+struct Eq {
+  npy_bool operator()(T a, T b) { return a == b; }
+};
+template <typename T>
+struct Ne {
+  npy_bool operator()(T a, T b) { return a != b; }
+};
+template <typename T>
+struct Lt {
+  npy_bool operator()(T a, T b) { return a < b; }
+};
+template <typename T>
+struct Gt {
+  npy_bool operator()(T a, T b) { return a > b; }
+};
+template <typename T>
+struct Le {
+  npy_bool operator()(T a, T b) { return a <= b; }
+};
+template <typename T>
+struct Ge {
+  npy_bool operator()(T a, T b) { return a >= b; }
+};
+template <typename T>
+struct Maximum {
+  T operator()(T a, T b) { return a > b ? a : b; }
+};
+template <typename T>
+struct Minimum {
+  T operator()(T a, T b) { return a < b ? a : b; }
 };
 
 }  // namespace ufuncs
