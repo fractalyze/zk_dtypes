@@ -78,7 +78,7 @@ To test your installation, you can run the following:
 
 ```shell
 pip install absl-py pytest
-pytest --pyargs zk_dtypes/tests
+pytest zk_dtypes/tests
 ```
 
 To build from source, clone the repository and run:
