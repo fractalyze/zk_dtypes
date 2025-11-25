@@ -28,6 +28,7 @@ import warnings
 from absl.testing import absltest
 from absl.testing import parameterized
 import zk_dtypes
+from zk_dtypes._pfinfo import pfinfo
 from multi_thread_utils import multi_threaded
 import numpy as np
 
@@ -74,19 +75,6 @@ VALUES = {
     bn254_sf_std: random.sample(range(-100, 100), 4),
 }
 
-MODULI = {
-    babybear: BABYBEAR_MODULUS,
-    babybear_std: BABYBEAR_MODULUS,
-    goldilocks: GOLDILOCKS_MODULUS,
-    goldilocks_std: GOLDILOCKS_MODULUS,
-    koalabear: KOALABEAR_MODULUS,
-    koalabear_std: KOALABEAR_MODULUS,
-    mersenne31: MERSENNE31_MODULUS,
-    mersenne31_std: MERSENNE31_MODULUS,
-    bn254_sf: BN254_SF_MODULUS,
-    bn254_sf_std: BN254_SF_MODULUS,
-}
-
 
 @contextlib.contextmanager
 def ignore_warning(**kw):
@@ -98,7 +86,7 @@ def ignore_warning(**kw):
 # Normalize [-P, P] to [0, P)
 def normalize(scalar_type, value):
   if value < 0:
-    value += MODULI[scalar_type]
+    value += pfinfo(scalar_type).modulus
   return value
 
 
@@ -231,7 +219,7 @@ class ScalarTest(parameterized.TestCase):
 
   @parameterized.product(scalar_type=FIELD_TYPES)
   def testPowerOp(self, scalar_type):
-    if MODULI[scalar_type] > 2**64:
+    if pfinfo(scalar_type).modulus > 2**64:
       self.skipTest("Modulus is too large to support")
 
     for v in VALUES[scalar_type]:
@@ -243,7 +231,7 @@ class ScalarTest(parameterized.TestCase):
           out = scalar_type(v) ** w
           self.assertIsInstance(out, scalar_type)
           self.assertEqual(
-              scalar_type(pow(v, w, MODULI[scalar_type])), out, msg=(v, w)
+              scalar_type(pow(v, w, pfinfo(scalar_type).modulus)), out, msg=(v, w)
           )
 
   CAST_DTYPES = [
@@ -331,7 +319,7 @@ class ArrayTest(parameterized.TestCase):
       ufunc=[np.nonzero, np.argmax, np.argmin],
   )
   def testUnaryPredicateUfunc(self, scalar_type, ufunc):
-    if MODULI[scalar_type] > 2**64:
+    if pfinfo(scalar_type).modulus > 2**64:
       self.skipTest("Modulus is too large to support")
 
     x = np.array(
@@ -357,7 +345,7 @@ class ArrayTest(parameterized.TestCase):
       ],
   )
   def testPredicateUfuncs(self, scalar_type, ufunc):
-    if MODULI[scalar_type] > 2**64:
+    if pfinfo(scalar_type).modulus > 2**64:
       self.skipTest("Modulus is too large to support")
 
     x = np.array(

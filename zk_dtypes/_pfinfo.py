@@ -47,31 +47,43 @@ def _get_bn_scalar_field_modulus(x):
 
 
 class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
+  storage_bits: int
   modulus_bits: int
   modulus: int
+  is_montgomery: bool
   dtype: np.dtype
 
   def __init__(self, pf_type):
     if pf_type == _babybear_dtype or pf_type == _babybear_std_dtype:
-      self.dtype = _babybear_dtype
+      self.dtype = pf_type
+      self.storage_bits = 32
       self.modulus_bits = 31
       self.modulus = 2**31 - 2**27 + 1
+      self.is_montgomery = pf_type == _babybear_dtype
     elif pf_type == _goldilocks_dtype or pf_type == _goldilocks_std_dtype:
-      self.dtype = _goldilocks_dtype
+      self.dtype = pf_type
+      self.storage_bits = 64
       self.modulus_bits = 64
       self.modulus = 2**64 - 2**32 + 1
+      self.is_montgomery = pf_type == _goldilocks_dtype
     elif pf_type == _koalabear_dtype or pf_type == _koalabear_std_dtype:
-      self.dtype = _koalabear_dtype
+      self.dtype = pf_type
+      self.storage_bits = 32
       self.modulus_bits = 31
       self.modulus = 2**31 - 2**24 + 1
+      self.is_montgomery = pf_type == _koalabear_dtype
     elif pf_type == _mersenne31_dtype or pf_type == _mersenne31_std_dtype:
-      self.dtype = _mersenne31_dtype
+      self.dtype = pf_type
+      self.storage_bits = 32
       self.modulus_bits = 31
       self.modulus = 2**31 - 1
+      self.is_montgomery = pf_type == _mersenne31_dtype
     elif pf_type == _bn254_sf_dtype or pf_type == _bn254_sf_std_dtype:
-      self.dtype = _bn254_sf_dtype
+      self.dtype = pf_type
+      self.storage_bits = 256
       self.modulus_bits = 254
       self.modulus = _get_bn_scalar_field_modulus(_BN254_PARAM)
+      self.is_montgomery = pf_type == _bn254_sf_dtype
     else:
       raise ValueError(f"Unknown prime field type: {pf_type}")
 
