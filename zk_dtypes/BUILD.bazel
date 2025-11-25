@@ -517,6 +517,7 @@ py_library(
     srcs = [
         "__init__.py",
         "_iinfo.py",
+        "_pfinfo.py",
     ],
     data = [":_zk_dtypes_ext"],
 )
