@@ -52,10 +52,18 @@ class BigIntCaster : public IntCaster {
 
       constexpr size_t kByteLen = N * 8;
       std::array<uint8_t, N * 8> bytes;
+#if PY_VERSION_HEX >= 0x030D0000  // Python 3.13 or later
+      int ret = _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(obj),
+                                    bytes.data(), kByteLen,
+                                    /*little_endian=*/true,
+                                    /*is_signed=*/sign == -1,
+                                    /*with_exceptions=*/true);
+#else
       int ret = _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(obj),
                                     bytes.data(), kByteLen,
                                     /*little_endian=*/true,
                                     /*is_signed=*/sign == -1);
+#endif
       if (ret == -1) {
         // Error already set by _PyLong_AsByteArray.
         return false;

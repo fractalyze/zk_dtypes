@@ -22,7 +22,7 @@ namespace zk_dtypes::internal {
 
 template <typename T>
 struct AddResult {
-  T value;
+  T value{0};
   T carry{0};
 
   constexpr AddResult() = default;
@@ -37,7 +37,7 @@ struct AddResult {
 
 template <typename T>
 struct SubResult {
-  T value;
+  T value{0};
   T borrow{0};
 
   constexpr SubResult() = default;
@@ -67,7 +67,7 @@ struct MulResult {
 
 template <typename T>
 struct DivResult {
-  T quotient;
+  T quotient{0};
   T remainder{0};
 
   constexpr DivResult() = default;

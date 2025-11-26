@@ -59,5 +59,7 @@ build:avx_windows --copt=/arch=AVX
 build:avx2_windows --copt=/arch=AVX2
 build:avx512_windows --copt=/arch=AVX512
 
+build:linux --cxxopt=-Wno-sign-compare
+
 # Load rc file with user-specific options.
 try-import %workspace%/.bazelrc.user

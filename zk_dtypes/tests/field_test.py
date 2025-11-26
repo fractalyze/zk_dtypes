@@ -18,10 +18,12 @@
 
 # pylint: disable=g-complex-comprehension
 
+import contextlib
 import copy
 import operator
 import pickle
 import random
+import warnings
 
 from absl.testing import absltest
 from absl.testing import parameterized
@@ -84,6 +86,13 @@ MODULI = {
     bn254_sf: BN254_SF_MODULUS,
     bn254_sf_std: BN254_SF_MODULUS,
 }
+
+
+@contextlib.contextmanager
+def ignore_warning(**kw):
+  with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", **kw)
+    yield
 
 
 # Normalize [-P, P] to [0, P)
@@ -383,6 +392,7 @@ class ArrayTest(parameterized.TestCase):
           np.divide,
       ],
   )
+  @ignore_warning(category=RuntimeWarning, message="divide by zero encountered")
   def testBinaryUfuncs(self, scalar_type, ufunc):
     y = np.array(VALUES[scalar_type], dtype=scalar_type)
     y_result = ufunc(y, y)
