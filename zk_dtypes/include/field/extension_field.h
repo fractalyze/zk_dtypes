@@ -29,13 +29,16 @@ limitations under the License.
 
 #include "zk_dtypes/include/always_false.h"
 #include "zk_dtypes/include/field/finite_field.h"
+#include "zk_dtypes/include/field/quadratic_extension_field_operation.h"
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/str_join.h"
 
 namespace zk_dtypes {
 
 template <typename _Config>
-class ExtensionField : public FiniteField<ExtensionField<_Config>> {
+class ExtensionField
+    : public FiniteField<ExtensionField<_Config>>,
+      public QuadraticExtensionFieldOperation<ExtensionField<_Config>> {
  public:
   using Config = _Config;
   using BaseField = typename Config::BaseField;
@@ -124,35 +127,11 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>> {
     return false;
   }
 
-  constexpr ExtensionField operator+(const ExtensionField& other) const {
-    ExtensionField ret;
-    for (size_t i = 0; i < std::size(values_); ++i) {
-      ret[i] = values_[i] + other[i];
-    }
-    return ret;
-  }
-
   constexpr ExtensionField& operator+=(const ExtensionField& other) {
     for (size_t i = 0; i < std::size(values_); ++i) {
       values_[i] += other[i];
     }
     return *this;
-  }
-
-  constexpr ExtensionField Double() const {
-    ExtensionField ret;
-    for (size_t i = 0; i < std::size(values_); ++i) {
-      ret[i] = values_[i].Double();
-    }
-    return ret;
-  }
-
-  constexpr ExtensionField operator-(const ExtensionField& other) const {
-    ExtensionField ret;
-    for (size_t i = 0; i < std::size(values_); ++i) {
-      ret[i] = values_[i] - other[i];
-    }
-    return ret;
   }
 
   constexpr ExtensionField& operator-=(const ExtensionField& other) {
@@ -162,24 +141,7 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>> {
     return *this;
   }
 
-  constexpr ExtensionField operator-() const {
-    ExtensionField ret;
-    for (size_t i = 0; i < std::size(values_); ++i) {
-      ret[i] = -values_[i];
-    }
-    return ret;
-  }
-
-  constexpr ExtensionField operator*(const ExtensionField& other) const {
-    if constexpr (N == 2) {
-      ExtensionField ret;
-      DoMul2(*this, other, ret);
-      return ret;
-    } else {
-      static_assert(AlwaysFalse<ExtensionField>, "Mul not implemented");
-    }
-    return ExtensionField::Zero();
-  }
+  using QuadraticExtensionFieldOperation<ExtensionField<_Config>>::operator*;
 
   constexpr ExtensionField operator*(const BaseField& other) const {
     ExtensionField ret;
@@ -190,27 +152,11 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>> {
   }
 
   constexpr ExtensionField& operator*=(const ExtensionField& other) {
-    if constexpr (N == 2) {
-      DoMul2(*this, other, *this);
-      return *this;
-    } else {
-      static_assert(AlwaysFalse<ExtensionField>, "Mul not implemented");
-    }
-    return *this = operator*(other);
+    return *this = *this * other;
   }
 
   constexpr ExtensionField& operator*=(const BaseField& other) {
-    for (size_t i = 0; i < std::size(values_); ++i) {
-      values_[i] *= other;
-    }
-    return *this;
-  }
-
-  constexpr ExtensionField Square() const {
-    if constexpr (N == 2) {
-      return DoSquare2(*this);
-    }
-    return operator*(*this);
+    return *this = *this * other;
   }
 
   template <size_t N>
@@ -221,14 +167,6 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>> {
   template <typename T, std::enable_if_t<std::is_integral_v<T>>* = nullptr>
   constexpr ExtensionField Pow(T exponent) const {
     return zk_dtypes::Pow(*this, BigInt<1>(exponent));
-  }
-
-  constexpr absl::StatusOr<ExtensionField> Inverse() const {
-    if constexpr (N == 2) {
-      return DoInverse2(*this);
-    }
-    return absl::UnimplementedError(
-        absl::Substitute("Inverse not implemented for $0", N));
   }
 
   constexpr BaseField& operator[](size_t i) {
@@ -272,93 +210,29 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>> {
                    });
   }
 
+  // ExtensionFieldOperation methods
+  std::array<BaseField, N> ToBaseField() const { return values_; }
+  ExtensionField FromBaseFields(const std::array<BaseField, N>& values) const {
+    return ExtensionField(values);
+  }
+  size_t DegreeOverBasePrimeField() const {
+    return N * BaseField::ExtensionDegree();
+  }
+  const BaseField& NonResidue() const { return Config::kNonResidue; }
+
  private:
-  constexpr static void DoMul2(const ExtensionField& a, const ExtensionField& b,
-                               ExtensionField& c) {
-    // clang-format off
-    // (a[0], a[1]) * (b[0], b[1])
-    //   = (a[0] + a[1] * x) * (b[0] + b[1] * x)
-    //   = a[0] * b[0] + (a[0] * b[1] + a[1] * b[0]) * x + a[1] * b[1] * x²
-    //   = a[0] * b[0] + a[1] * b[1] * x² + (a[0] * b[1] + a[1] * b[0]) * x
-    //   = a[0] * b[0] + a[1] * b[1] * q + (a[0] * b[1] + a[1] * b[0]) * x
-    //   = (a[0] * b[0] + a[1] * b[1] * q, a[0] * b[1] + a[1] * b[0])
-    // where q is `Config::kNonResidue`.
-    // clang-format on
-    if constexpr (ExtensionDegree() == 2) {
-      BaseField c0 = a[0] * b[0] + a[1] * b[1] * Config::kNonResidue;
-      c[1] = a[0] * b[1] + a[1] * b[0];
-      c[0] = c0;
-    } else {
-      // See https://www.math.u-bordeaux.fr/~damienrobert/csi/book/book.pdf
-      // Karatsuba multiplication;
-      // Guide to Pairing-based cryptography, Algorithm 5.16.
-      // v0 = a[0] * b[0]
-      BaseField v0 = a[0] * b[0];
-      // v1 = a[1] * b[1]
-      BaseField v1 = a[1] * b[1];
-
-      // c[1] = (a[0] + a[1]) * (b[0] + b[1]) - v0 - v1
-      // c[1] = a[0] * b[1] + a[1] * b[0]
-      c[1] = (a[0] + a[1]) * (b[0] + b[1]) - v0 - v1;
-      // c[0] = a[0] * b[0] + a[1] * b[1] * q
-      c[0] = v0 + v1 * Config::kNonResidue;
-    }
-  }
-
-  constexpr static ExtensionField DoSquare2(const ExtensionField& a) {
-    // (a[0], a[1])² = (a[0] + a[1] * x)²
-    //               = a[0]² + 2 * a[0] * a[1] * x + a[1]² * x²
-    //               = a[0]² + a[1]² * x² + 2 * a[0] * a[1] * x
-    //               = a[0]² + a[1]² * q + 2 * a[0] * a[1] * x
-    //               = (a[0]² + a[1]² * q, 2 * a[0] * a[1])
-    // where q is `Config::kNonResidue`.
-    // When q = -1, we can reuse intermediate additions to improve performance.
-
-    // v0 = a[0] - a[1]
-    BaseField v0 = a[0] - a[1];
-    // v1 = a[0] * a[1]
-    BaseField v1 = a[0] * a[1];
-    if constexpr (Config::kNonResidue == BaseField(-1)) {
-      // When the non-residue is -1, we save 2 intermediate additions,
-      // and use one fewer intermediate variable
-      // (a[0]² - a[1]², 2 * a[0] * a[1])
-      return {v0 * (a[0] + a[1]), v1.Double()};
-    } else {
-      // v2 = a[0] - a[1] * q
-      BaseField v2 = a[0] - a[1] * Config::kNonResidue;
-
-      // v0 = (v0 * v2)
-      //    = (a[0] - a[1]) * (a[0] - a[1] * q)
-      //    = a[0]² - a[0] * a[1] * q - a[0] * a[1] + a[1]² * q
-      //    = a[0]² - (q + 1) * a[0] * a[1] + a[1]² * q
-      //    = a[0]² + a[1]² * q - (q + 1) * a[0] * a[1]
-      v0 *= v2;
-
-      // clang-format off
-      // a[0] = v0 + (q + 1) * a[0] * a[1]
-      //      = a[0]² + a[1]² * q - (q + 1) * a[0] * a[1] + (q + 1) * a[0] * a[1]
-      //      = a[0]² + a[1]² * q
-      // clang-format on
-      // a[1] = 2 * c0 * c1
-      return {v0 + (Config::kNonResidue + 1) * v1, v1.Double()};
-    }
-  }
-
-  constexpr static absl::StatusOr<ExtensionField> DoInverse2(
-      const ExtensionField& a) {
-    // See https://www.math.u-bordeaux.fr/~damienrobert/csi/book/book.pdf
-    // Guide to Pairing-based Cryptography, Algorithm 5.19.
-    // v1 = a[1]²
-    BaseField v1 = a[1].Square();
-    // v0 = a[0]² - q * v1
-    BaseField v0 = a[0].Square() - v1 * Config::kNonResidue;
-
-    absl::StatusOr<BaseField> v0_inv = v0.Inverse();
-    if (!v0_inv.ok()) return v0_inv.status();
-    return ExtensionField{a[0] * (*v0_inv), -a[1] * (*v0_inv)};
-  }
-
   std::array<BaseField, N> values_;
+};
+
+template <typename Config>
+class ExtensionFieldOperationTraits<ExtensionField<Config>> {
+ public:
+  using BaseField = typename Config::BaseField;
+  constexpr static size_t kDegree = Config::kDegreeOverBaseField;
+
+  constexpr static bool kHasHint = true;
+  constexpr static bool kNonResidueIsMinusOne =
+      Config::kNonResidue == BaseField(-1);
 };
 
 template <typename Config>

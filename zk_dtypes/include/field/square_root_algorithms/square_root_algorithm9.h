@@ -23,7 +23,7 @@ limitations under the License.
 namespace zk_dtypes {
 
 template <typename F>
-constexpr absl::StatusOr<F> ComputeAlgorithm9SquareRoot(const F& a) {
+absl::StatusOr<F> ComputeAlgorithm9SquareRoot(const F& a) {
   // F is quadratic extension field where non-quadratic non-residue i² = -1.
   //
   // Finds x such that x² = a.
@@ -38,7 +38,7 @@ constexpr absl::StatusOr<F> ComputeAlgorithm9SquareRoot(const F& a) {
   F alpha = a1.Square() * a;
   constexpr auto exponent2 = BasePrimeField::Config::kModulus + 1;
   F a0 = alpha.Pow(exponent2);
-  constexpr auto neg_one = -F::One();
+  auto neg_one = -F::One();
   if (a0 == neg_one) {
     return absl::NotFoundError("No square root exists");
   }
