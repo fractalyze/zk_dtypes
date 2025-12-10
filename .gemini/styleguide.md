@@ -101,6 +101,13 @@ ______________________________________________________________________
 - **Pre-commit hooks:** Recommended for enforcing format and lint locally.
 - **CI:** All PRs must pass lint, format, and tests before merge.
 
+______________________________________________________________________
+
+## License
+
+Every file (that could be exceptional case, such as empty BUILD.bazel) should
+have license notice in the top.
+
 [.pylintrc]: /.pylintrc
 [angular commit convention]: https://github.com/angular/angular/blob/main/contributing-docs/commit-message-guidelines.md
 [commit message guideline]: https://github.com/fractalyze/.github/blob/main/COMMIT_MESSAGE_GUIDELINE.md
