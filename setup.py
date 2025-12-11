@@ -24,19 +24,15 @@ from setuptools import setup
 
 if platform.system() == "Windows":
   FILE = "_zk_dtypes_ext.pyd"
-  COMPILE_ARGS = [
-      "/std:c++17",
-      "/DEIGEN_MPL2_ONLY",
-      "/EHsc",
-      "/bigobj",
-  ]
+  PLATFORM_ARGS = ["/std:c++17", "/EHsc", "/bigobj"]
+  DEFINE_PREFIX = "/D"
 else:
   FILE = "_zk_dtypes_ext.so"
-  COMPILE_ARGS = [
-      "-std=c++17",
-      "-DEIGEN_MPL2_ONLY",
-      "-fvisibility=hidden",
-  ]
+  PLATFORM_ARGS = ["-std:c++17", "-fvisibility=hidden"]
+  DEFINE_PREFIX = "-D"
+
+DEFINES = ["EIGEN_MPL2_ONLY", "ZK_DTYPES_USE_ABSL"]
+COMPILE_ARGS = PLATFORM_ARGS + [f"{DEFINE_PREFIX}{d}" for d in DEFINES]
 
 
 def get_sources():
