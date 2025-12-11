@@ -231,7 +231,9 @@ class ScalarTest(parameterized.TestCase):
           out = scalar_type(v) ** w
           self.assertIsInstance(out, scalar_type)
           self.assertEqual(
-              scalar_type(pow(v, w, pfinfo(scalar_type).modulus)), out, msg=(v, w)
+              scalar_type(pow(v, w, pfinfo(scalar_type).modulus)),
+              out,
+              msg=(v, w),
           )
 
   CAST_DTYPES = [

@@ -42,8 +42,9 @@ _bn254_sf_std_dtype = np.dtype(bn254_sf_std)
 
 _BN254_PARAM = 4965661367192848881
 
+
 def _get_bn_scalar_field_modulus(x):
-  return 36*x**4 + 36*x**3 + 18*x**2 + 6*x + 1
+  return 36 * x**4 + 36 * x**3 + 18 * x**2 + 6 * x + 1
 
 
 class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
