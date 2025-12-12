@@ -70,7 +70,7 @@ constexpr absl::StatusOr<F> ComputeTonelliShanksSquareRoot(const F& a) {
     F z = BasePrimeField::FromUnchecked(
         BasePrimeField::Config::kTwoAdicRootOfUnity);
     // v = s
-    size_t v = size_t{F::Config::kTwoAdicity};
+    size_t v = size_t{BasePrimeField::Config::kTwoAdicity};
     do {
       size_t k = 0;
 
@@ -81,7 +81,7 @@ constexpr absl::StatusOr<F> ComputeTonelliShanksSquareRoot(const F& a) {
         ++k;
       }
 
-      if (k == size_t{F::Config::kTwoAdicity}) {
+      if (k == size_t{BasePrimeField::Config::kTwoAdicity}) {
         // If k == s, then no square root exists because:
         //   a^(2ˢ * T) = xᵖ⁻¹ = 1
         // implies a is a quadratic non-residue.
