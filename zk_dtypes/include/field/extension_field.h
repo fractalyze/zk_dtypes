@@ -28,6 +28,8 @@ limitations under the License.
 #include "absl/strings/substitute.h"
 
 #include "zk_dtypes/include/always_false.h"
+#include "zk_dtypes/include/big_int.h"
+#include "zk_dtypes/include/field/cubic_extension_field_operation.h"
 #include "zk_dtypes/include/field/finite_field.h"
 #include "zk_dtypes/include/field/quadratic_extension_field_operation.h"
 #include "zk_dtypes/include/pow.h"
@@ -35,10 +37,31 @@ limitations under the License.
 
 namespace zk_dtypes {
 
+// Forward declaration
 template <typename _Config>
-class ExtensionField
-    : public FiniteField<ExtensionField<_Config>>,
-      public QuadraticExtensionFieldOperation<ExtensionField<_Config>> {
+class ExtensionField;
+
+// Selects the appropriate extension field operation based on degree.
+template <typename Config, size_t Degree>
+struct ExtensionFieldOperationSelector {
+  static_assert(AlwaysFalse<Config>,
+                "Unsupported extension degree. Only 2 and 3 are supported.");
+};
+
+template <typename Config>
+struct ExtensionFieldOperationSelector<Config, 2> {
+  using Type = QuadraticExtensionFieldOperation<ExtensionField<Config>>;
+};
+
+template <typename Config>
+struct ExtensionFieldOperationSelector<Config, 3> {
+  using Type = CubicExtensionFieldOperation<ExtensionField<Config>>;
+};
+
+template <typename _Config>
+class ExtensionField : public FiniteField<ExtensionField<_Config>>,
+                       public ExtensionFieldOperationSelector<
+                           _Config, _Config::kDegreeOverBaseField>::Type {
  public:
   using Config = _Config;
   using BaseField = typename Config::BaseField;
@@ -67,6 +90,8 @@ class ExtensionField
 
   template <typename T, std::enable_if_t<std::is_unsigned_v<T>>* = nullptr>
   constexpr ExtensionField(T value) : ExtensionField({BigInt<N>(value)}) {}
+
+  constexpr ExtensionField(const BaseField& value) { values_[0] = value; }
 
   constexpr ExtensionField(std::initializer_list<BaseField> values) {
     DCHECK_LE(values.size(), N);
@@ -97,6 +122,45 @@ class ExtensionField
       ret[i] = BaseField::Random();
     }
     return ret;
+  }
+
+  // Returns precomputed Frobenius coefficients for all φᴱ (E = 1, ..., N - 1):
+  // coeffs[E - 1][i - 1] = ξ^(i * (pᴱ - 1) / n) for i = 1, ..., N - 1.
+  //
+  // For Fp3: a = (a₁, a₂, a₃, a₄) where
+  //   a₁ = ξ^((p - 1) / 3), a₂ = ξ^(2(p - 1) / 3)
+  //   a₃ = ξ^((p² - 1) / 3), a₄ = ξ^(2(p² - 1) / 3)
+  // - φ¹(x) = (x₀, x₁ * a₁, x₂ * a₂)
+  // - φ²(x) = (x₀, x₁ * a₃, x₂ * a₄)
+  //
+  // See:
+  // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.2.-optimized-computation-when
+  static const std::array<std::array<BaseField, N - 1>, N - 1>&
+  GetFrobeniusCoeffs() {
+    static const auto coeffs = []() {
+      // Use larger BigInt to avoid overflow when computing pᵉ.
+      constexpr size_t kLimbNums = BasePrimeField::kLimbNums * N;
+      BigInt<kLimbNums> p(BasePrimeField::Config::kModulus);
+      BaseField nr = Config::kNonResidue;
+
+      std::array<std::array<BaseField, N - 1>, N - 1> result{};
+      // p_e = pᵉ, computed iteratively
+      BigInt<kLimbNums> p_e = p;
+      BigInt<kLimbNums> n_big(N);
+      for (size_t e = 1; e < N; ++e) {
+        // qₑ = (pᵉ - 1) / n
+        auto q_e = ((p_e - 1) / n_big).value();
+        BaseField nr_q_e = zk_dtypes::Pow(nr, q_e);
+
+        result[e - 1][0] = nr_q_e;
+        for (size_t i = 1; i < N - 1; ++i) {
+          result[e - 1][i] = result[e - 1][i - 1] * nr_q_e;
+        }
+        p_e = p_e * p;
+      }
+      return result;
+    }();
+    return coeffs;
   }
 
   constexpr const std::array<BaseField, N>& values() const { return values_; }
@@ -141,7 +205,9 @@ class ExtensionField
     return *this;
   }
 
-  using QuadraticExtensionFieldOperation<ExtensionField<_Config>>::operator*;
+  using ExtensionFieldOperationBase = typename ExtensionFieldOperationSelector<
+      _Config, _Config::kDegreeOverBaseField>::Type;
+  using ExtensionFieldOperationBase::operator*;
 
   constexpr ExtensionField operator*(const BaseField& other) const {
     ExtensionField ret;

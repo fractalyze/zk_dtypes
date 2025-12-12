@@ -202,7 +202,9 @@ cc_library(
 cc_library(
     name = "extension_field_operations",
     hdrs = [
+        "include/field/cubic_extension_field_operation.h",
         "include/field/extension_field_operation.h",
+        "include/field/frobenius.h",
         "include/field/quadratic_extension_field_operation.h",
     ],
     # NOTE(chokobole): The dependency "@com_google_absl//absl/status:statusor" is deliberately omitted.
@@ -241,6 +243,15 @@ cc_library(
     name = "goldilocks",
     hdrs = ["include/field/goldilocks/goldilocks.h"],
     deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "goldilocks3",
+    hdrs = ["include/field/goldilocks/goldilocks3.h"],
+    deps = [
+        ":extension_field",
+        ":goldilocks",
+    ],
 )
 
 cc_library(
@@ -315,6 +326,7 @@ cc_test(
         ":bn254_fq2",
         ":bn254_fr",
         ":goldilocks",
+        ":goldilocks3",
         ":koalabear",
         ":mersenne31",
         ":random",

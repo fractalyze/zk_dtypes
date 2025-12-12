@@ -122,18 +122,6 @@ class QuadraticExtensionFieldOperation
 #endif
     return static_cast<const Derived&>(*this).FromBaseFields(y);
   }
-
-#if defined(ZK_DTYPES_USE_ABSL)
-  absl::StatusOr<Derived> operator/(const Derived& other) const {
-    absl::StatusOr<Derived> inv = other.Inverse();
-    if (!inv.ok()) return inv.status();
-    return *this * inv.value();
-  }
-#else
-  Derived operator/(const Derived& other) const {
-    return *this * other.Inverse();
-  }
-#endif
 };
 
 }  // namespace zk_dtypes

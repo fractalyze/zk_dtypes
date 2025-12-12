@@ -16,6 +16,7 @@ limitations under the License.
 #include "gtest/gtest.h"
 
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/fq2.h"
+#include "zk_dtypes/include/field/goldilocks/goldilocks3.h"
 
 namespace zk_dtypes {
 namespace {
@@ -73,7 +74,7 @@ TYPED_TEST(Fq2TypedTest, Operations) {
 template <typename T>
 class ExtensionFieldTypedTest : public testing::Test {};
 
-using ExtensionFieldTypes = testing::Types<bn254::Fq2>;
+using ExtensionFieldTypes = testing::Types<bn254::Fq2, Goldilocks3>;
 TYPED_TEST_SUITE(ExtensionFieldTypedTest, ExtensionFieldTypes);
 
 TYPED_TEST(ExtensionFieldTypedTest, Zero) {
@@ -92,6 +93,9 @@ TYPED_TEST(ExtensionFieldTypedTest, One) {
 
 TYPED_TEST(ExtensionFieldTypedTest, SquareRoot) {
   using ExtF = TypeParam;
+  if constexpr (std::is_same_v<ExtF, Goldilocks3>) {
+    GTEST_SKIP() << "Skipping test because Goldilocks3 has large trace value.";
+  }
 
   ExtF a = ExtF::Random();
   ExtF a2 = a.Square();
@@ -115,13 +119,14 @@ TYPED_TEST(ExtensionFieldTypedTest, Inverse) {
 TYPED_TEST(ExtensionFieldTypedTest, MontReduce) {
   using ExtF = TypeParam;
   using ExtFStd = typename ExtF::StdType;
-  using BaseF = typename ExtF::BaseField;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
 
-  ExtF a = {BaseF(1), BaseF(2)};
+  ExtF a = ExtF::Random();
   ExtFStd reduced = a.MontReduce();
 
-  EXPECT_EQ(reduced[0], BaseF(1).MontReduce());
-  EXPECT_EQ(reduced[1], BaseF(2).MontReduce());
+  for (size_t i = 0; i < kDegree; ++i) {
+    EXPECT_EQ(reduced[i], a[i].MontReduce());
+  }
 }
 
 }  // namespace
