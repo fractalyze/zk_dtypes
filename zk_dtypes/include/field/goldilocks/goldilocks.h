@@ -23,7 +23,7 @@ limitations under the License.
 namespace zk_dtypes {
 
 struct GoldilocksBaseConfig {
-  constexpr static size_t kModulusBits = 63;
+  constexpr static size_t kModulusBits = 64;
   constexpr static uint64_t kModulus = UINT64_C(18446744069414584321);
 
   constexpr static uint64_t kRSquared = UINT64_C(18446744065119617025);
