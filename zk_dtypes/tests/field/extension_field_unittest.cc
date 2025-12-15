@@ -22,59 +22,19 @@ namespace zk_dtypes {
 namespace {
 
 template <typename T>
-class Fq2TypedTest : public testing::Test {};
-
-using Fq2Types = testing::Types<bn254::Fq2, bn254::Fq2Std>;
-TYPED_TEST_SUITE(Fq2TypedTest, Fq2Types);
-
-TYPED_TEST(Fq2TypedTest, Operations) {
-  using ExtF = TypeParam;
-  using BaseF = typename ExtF::BaseField;
-
-  // clang-format off
-  ExtF a = {
-      *BaseF::FromHexString(
-          "0xb94db59332f8a619901d39188315c421beafb516eb8a3ab56ceed7df960ede2"),
-      *BaseF::FromHexString(
-          "0xecec51689891ef3f7ff39040036fd0e282687d392abe8f011589f1c755500a2"),
-  };
-  ExtF b = {
-      *BaseF::FromHexString(
-          "0x2fd5bb90b6043853a651f3e930e7c549f448e5562cbc823bbe2a84a67830e1d"),
-      *BaseF::FromHexString(
-          "0x284f3562b7cda2c9f329ac7019d4778a9bfb820f4639687e4573eadfed505d97"),
-  };
-  EXPECT_EQ(a + b, ExtF({
-      *BaseF::FromHexString(
-          "0xe9237123e8fcde6d366f2d01b3fd896bb2f89a6d1846bcf12b195c860e3fbff"),
-      *BaseF::FromHexString(
-          "0x6b9ac066025219432d89fbd988a1c3b2ca09f51707386e11aabfde58a2860f2"),
-  }));
-  EXPECT_EQ(a.Double(), ExtF({
-      *BaseF::FromHexString(
-          "0x1729b6b2665f14c33203a7231062b88437d5f6a2dd714756ad9ddafbf2c1dbc4"),
-      *BaseF::FromHexString(
-          "0x1d9d8a2d13123de7effe7208006dfa1c504d0fa72557d1e022b13e38eaaa0144"),
-  }));
-  EXPECT_EQ(a - b, ExtF({
-      *BaseF::FromHexString(
-          "0x8977fa027cf46dc5e9cb452f522dfed7ca66cfc0becdb879aec453391dddfc5"),
-      *BaseF::FromHexString(
-          "0x16e3de26b2ed1c53bd25d24a67e3dde123ac7055b4e44aff080540536081a052"),
-  }));
-  EXPECT_EQ(a * b, ExtF({
-      *BaseF::FromHexString(
-          "0x25908f85559394401b8ced51130b426c319a22feb86b4b36e2b5aa6de4ab5ebf"),
-      *BaseF::FromHexString(
-          "0x283abe3026369b6da48074048233145a1c88dce48308e952c948eff8e8f0bc51"),
-  }));
-  // clang-format on
-}
-
-template <typename T>
 class ExtensionFieldTypedTest : public testing::Test {};
 
-using ExtensionFieldTypes = testing::Types<bn254::Fq2, Goldilocks3>;
+using ExtensionFieldTypes = testing::Types<
+    // clang-format off
+    // 64-bit extension fields
+    Goldilocks3,
+    Goldilocks3Std,
+    // 256-bit extension fields
+    bn254::Fq2,
+    bn254::Fq2Std
+    // clang-format on
+    >;
+
 TYPED_TEST_SUITE(ExtensionFieldTypedTest, ExtensionFieldTypes);
 
 TYPED_TEST(ExtensionFieldTypedTest, Zero) {
@@ -91,9 +51,85 @@ TYPED_TEST(ExtensionFieldTypedTest, One) {
   EXPECT_FALSE(ExtF::Zero().IsOne());
 }
 
+TYPED_TEST(ExtensionFieldTypedTest, Add) {
+  using ExtF = TypeParam;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+
+  ExtF a = ExtF::Random();
+  ExtF b = ExtF::Random();
+  ExtF c = a + b;
+
+  // (a + b)ᵢ = aᵢ + bᵢ
+  for (size_t i = 0; i < kDegree; ++i) {
+    EXPECT_EQ(c[i], a[i] + b[i]);
+  }
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, Sub) {
+  using ExtF = TypeParam;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+
+  ExtF a = ExtF::Random();
+  ExtF b = ExtF::Random();
+  ExtF c = a - b;
+
+  // (a - b)ᵢ = aᵢ - bᵢ
+  for (size_t i = 0; i < kDegree; ++i) {
+    EXPECT_EQ(c[i], a[i] - b[i]);
+  }
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, Double) {
+  using ExtF = TypeParam;
+
+  ExtF a = ExtF::Random();
+
+  // a + a = a.Double()
+  EXPECT_EQ(a + a, a.Double());
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, Square) {
+  using ExtF = TypeParam;
+
+  ExtF a = ExtF::Random();
+
+  // a * a = a.Square()
+  EXPECT_EQ(a * a, a.Square());
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, Mul) {
+  using ExtF = TypeParam;
+  using BaseF = typename ExtF::BaseField;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+
+  ExtF a = ExtF::Random();
+  ExtF b = ExtF::Random();
+  ExtF c = a * b;
+
+  // Schoolbook multiplication in Fp[u] / (uⁿ - ξ)
+  // c = Σᵢ Σⱼ aᵢbⱼu^(i+j) mod (uⁿ - ξ)
+  // When i + j >= n, u^(i+j) = u^(i+j-n) · ξ
+  BaseF non_residue = ExtF::Config::kNonResidue;
+  ExtF expected;
+  for (size_t i = 0; i < kDegree; ++i) {
+    for (size_t j = 0; j < kDegree; ++j) {
+      size_t idx = i + j;
+      if (idx < kDegree) {
+        expected[idx] += a[i] * b[j];
+      } else {
+        // u^(i+j) = ξ · u^(i+j-n)
+        expected[idx - kDegree] += a[i] * b[j] * non_residue;
+      }
+    }
+  }
+
+  EXPECT_EQ(c, expected);
+}
+
 TYPED_TEST(ExtensionFieldTypedTest, SquareRoot) {
   using ExtF = TypeParam;
-  if constexpr (std::is_same_v<ExtF, Goldilocks3>) {
+  if constexpr (std::is_same_v<ExtF, Goldilocks3> ||
+                std::is_same_v<ExtF, Goldilocks3Std>) {
     GTEST_SKIP() << "Skipping test because Goldilocks3 has large trace value.";
   }
 
@@ -118,14 +154,18 @@ TYPED_TEST(ExtensionFieldTypedTest, Inverse) {
 
 TYPED_TEST(ExtensionFieldTypedTest, MontReduce) {
   using ExtF = TypeParam;
-  using ExtFStd = typename ExtF::StdType;
-  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+  if constexpr (!ExtF::kUseMontgomery) {
+    GTEST_SKIP() << "Skipping test for non-Montgomery types.";
+  } else {
+    using ExtFStd = typename ExtF::StdType;
+    constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
 
-  ExtF a = ExtF::Random();
-  ExtFStd reduced = a.MontReduce();
+    ExtF a = ExtF::Random();
+    ExtFStd reduced = a.MontReduce();
 
-  for (size_t i = 0; i < kDegree; ++i) {
-    EXPECT_EQ(reduced[i], a[i].MontReduce());
+    for (size_t i = 0; i < kDegree; ++i) {
+      EXPECT_EQ(reduced[i], a[i].MontReduce());
+    }
   }
 }
 
