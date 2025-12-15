@@ -29,6 +29,7 @@ cc_library(
     hdrs = ["include/all_types.h"],
     deps = [
         ":babybear",
+        ":babybear4",
         ":bn254_fq",
         ":bn254_fq2",
         ":bn254_fr",
@@ -37,6 +38,7 @@ cc_library(
         ":goldilocks",
         ":goldilocks3",
         ":koalabear",
+        ":koalabear4",
         ":mersenne31",
     ],
 )
@@ -187,6 +189,15 @@ cc_library(
 )
 
 cc_library(
+    name = "babybear4",
+    hdrs = ["include/field/babybear/babybear4.h"],
+    deps = [
+        ":babybear",
+        ":extension_field",
+    ],
+)
+
+cc_library(
     name = "big_prime_field",
     hdrs = ["include/field/big_prime_field.h"],
     deps = [
@@ -223,6 +234,7 @@ cc_library(
         "include/field/extension_field_operation.h",
         "include/field/frobenius.h",
         "include/field/quadratic_extension_field_operation.h",
+        "include/field/quartic_extension_field_operation.h",
     ],
     # NOTE(chokobole): The dependency "@com_google_absl//absl/status:statusor" is deliberately omitted.
     # This prevents ZKIR (which uses this library for code generation) from incurring an unwanted
@@ -281,6 +293,15 @@ cc_library(
     name = "koalabear",
     hdrs = ["include/field/koalabear/koalabear.h"],
     deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "koalabear4",
+    hdrs = ["include/field/koalabear/koalabear4.h"],
+    deps = [
+        ":extension_field",
+        ":koalabear",
+    ],
 )
 
 cc_library(

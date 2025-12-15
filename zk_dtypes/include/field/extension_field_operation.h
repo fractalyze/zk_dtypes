@@ -79,6 +79,44 @@ class ExtensionFieldOperation {
     return static_cast<const Derived&>(*this).FromBaseFields(y);
   }
 
+  // Polynomial interpolation using inverse Vandermonde matrix.
+  //
+  // Given N evaluation points v = {v₀, v₁, ..., vₙ₋₁}, compute
+  // N polynomial coefficients c = {c₀, c₁, ..., cₙ₋₁} using:
+  //   c = V⁻¹ * v
+  //
+  // Derived class must implement:
+  //   - GetVandermondeInverseMatrix() returning N×N matrix
+  template <size_t N>
+  std::array<BaseField, N> Interpolate(
+      const std::array<BaseField, N>& v) const {
+    const auto& matrix =
+        static_cast<const Derived&>(*this).GetVandermondeInverseMatrix();
+
+    std::array<BaseField, N> c;
+    for (size_t i = 0; i < N; ++i) {
+      c[i] = matrix[i][0] * v[0];
+      for (size_t j = 1; j < N; ++j) {
+        c[i] += matrix[i][j] * v[j];
+      }
+    }
+    return c;
+  }
+
+  // Reduce polynomial coefficients using uⁿ = ξ
+  // c[0..2n-2] -> z[0..n-1] where zᵢ = cᵢ + ξ * cᵢ₊ₙ (for i < n-1), zₙ₋₁ = cₙ₋₁
+  template <size_t N>
+  Derived Reduce(const std::array<BaseField, N>& c) const {
+    constexpr size_t kReducedSize = (N + 1) / 2;
+    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+    std::array<BaseField, kReducedSize> ret;
+    for (size_t i = 0; i < kReducedSize - 1; ++i) {
+      ret[i] = c[i] + non_residue * c[i + kReducedSize];
+    }
+    ret[kReducedSize - 1] = c[kReducedSize - 1];
+    return static_cast<const Derived&>(*this).FromBaseFields(ret);
+  }
+
   // Inverse in extension field using Frobenius endomorphism.
   //
   // Using the norm: Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x) ∈ Fp

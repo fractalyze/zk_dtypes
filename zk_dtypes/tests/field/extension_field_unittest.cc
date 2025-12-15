@@ -124,16 +124,24 @@ TYPED_TEST(ExtensionFieldTypedTest, Mul) {
 
 TYPED_TEST(ExtensionFieldTypedTest, SquareRoot) {
   using ExtF = TypeParam;
-  if constexpr (std::is_same_v<ExtF, Goldilocks3> ||
-                std::is_same_v<ExtF, Goldilocks3Std>) {
-    GTEST_SKIP() << "Skipping test because Goldilocks3 has large trace value.";
+  // clang-format off
+  if constexpr (std::is_same_v<ExtF, Babybear4> ||
+                std::is_same_v<ExtF, Babybear4Std> ||
+                std::is_same_v<ExtF, Koalabear4> ||
+                std::is_same_v<ExtF, Koalabear4Std>) {
+    GTEST_SKIP() << "SquareRoot is not implemented for quartic extension "
+                    "fields.";
+  } else if constexpr (std::is_same_v<ExtF, Goldilocks3> ||  // NOLINT(readability/braces)
+                       std::is_same_v<ExtF, Goldilocks3Std>) {
+    GTEST_SKIP() << "Skipping because Goldilocks3 has large trace value.";
+  } else {  // NOLINT(readability/braces)
+    // clang-format on
+    ExtF a = ExtF::Random();
+    ExtF a2 = a.Square();
+    absl::StatusOr<ExtF> sqrt = a2.SquareRoot();
+    ASSERT_TRUE(sqrt.ok());
+    EXPECT_TRUE(a == (*sqrt) || a == -(*sqrt));
   }
-
-  ExtF a = ExtF::Random();
-  ExtF a2 = a.Square();
-  absl::StatusOr<ExtF> sqrt = a2.SquareRoot();
-  ASSERT_TRUE(sqrt.ok());
-  EXPECT_TRUE(a == (*sqrt) || a == -(*sqrt));
 }
 
 TYPED_TEST(ExtensionFieldTypedTest, Inverse) {
