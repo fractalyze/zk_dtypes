@@ -17,13 +17,8 @@ limitations under the License.
 
 #include "gtest/gtest.h"
 
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/fq.h"
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
+#include "zk_dtypes/include/all_types.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/test/sw_curve_config.h"
-#include "zk_dtypes/include/field/babybear/babybear.h"
-#include "zk_dtypes/include/field/goldilocks/goldilocks.h"
-#include "zk_dtypes/include/field/koalabear/koalabear.h"
-#include "zk_dtypes/include/field/mersenne31/mersenne31.h"
 #include "zk_dtypes/include/random.h"
 
 namespace zk_dtypes {
@@ -32,23 +27,11 @@ template <typename T>
 class PrimeFieldTypedTest : public testing::Test {};
 
 using PrimeFieldTypes = testing::Types<
-    // clang-format off
-    // 8-bit prime fields
-    test::Fr,
-    test::FrStd,
-    // 32-bit prime fields
-    Babybear,
-    BabybearStd,
-    Koalabear,
-    Mersenne31,
-    // 64-bit prime fields
-    Goldilocks,
-    // 256-bit prime fields
-    bn254::Fq,
-    bn254::FqStd,
-    bn254::Fr
-    // clang-format on
-    >;
+#define PRIME_FIELD_TYPE(ActualType, ...) ActualType,
+    ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(PRIME_FIELD_TYPE)
+#undef PRIME_FIELD_TYPE
+        test::Fr,
+    test::FrStd>;
 TYPED_TEST_SUITE(PrimeFieldTypedTest, PrimeFieldTypes);
 
 TYPED_TEST(PrimeFieldTypedTest, Zero) {
