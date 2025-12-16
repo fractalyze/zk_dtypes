@@ -40,6 +40,9 @@ class FiniteField {
   constexpr absl::StatusOr<F> SquareRoot() const {
     using BasePrimeField = typename FiniteFieldTraits<F>::BasePrimeField;
 
+    // See
+    // https://fractalyze.gitbook.io/intro/primitives/modular-arithmetic/modular-square-root
+    // for more details.
     constexpr uint64_t p =
         static_cast<uint64_t>(BasePrimeField::Config::kModulus);
     if constexpr (F::ExtensionDegree() % 2 == 1) {

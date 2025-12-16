@@ -28,6 +28,9 @@ constexpr absl::StatusOr<F> ComputeTonelliShanksSquareRoot(const F& a) {
   // The modulus p is assumed to have the form p = 2ˢ * T + 1,
   // where s is the 2-adicity and T is the "trace".
   // See: https://eprint.iacr.org/2012/685.pdf (Algorithm 5, page 12)
+  // See
+  // https://fractalyze.gitbook.io/intro/primitives/modular-arithmetic/modular-square-root/tonelli-shanks-algorithm
+  // for more details.
   using BasePrimeField = typename FiniteFieldTraits<F>::BasePrimeField;
   static_assert(BasePrimeField::Config::kHasTwoAdicRootOfUnity);
 
