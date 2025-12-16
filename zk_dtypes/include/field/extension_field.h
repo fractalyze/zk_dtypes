@@ -32,6 +32,7 @@ limitations under the License.
 #include "zk_dtypes/include/field/cubic_extension_field_operation.h"
 #include "zk_dtypes/include/field/finite_field.h"
 #include "zk_dtypes/include/field/quadratic_extension_field_operation.h"
+#include "zk_dtypes/include/field/quartic_extension_field_operation.h"
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/str_join.h"
 
@@ -44,8 +45,9 @@ class ExtensionField;
 // Selects the appropriate extension field operation based on degree.
 template <typename Config, size_t Degree>
 struct ExtensionFieldOperationSelector {
-  static_assert(AlwaysFalse<Config>,
-                "Unsupported extension degree. Only 2 and 3 are supported.");
+  static_assert(
+      AlwaysFalse<Config>,
+      "Unsupported extension degree. Only 2, 3, and 4 are supported.");
 };
 
 template <typename Config>
@@ -56,6 +58,11 @@ struct ExtensionFieldOperationSelector<Config, 2> {
 template <typename Config>
 struct ExtensionFieldOperationSelector<Config, 3> {
   using Type = CubicExtensionFieldOperation<ExtensionField<Config>>;
+};
+
+template <typename Config>
+struct ExtensionFieldOperationSelector<Config, 4> {
+  using Type = QuarticExtensionFieldOperation<ExtensionField<Config>>;
 };
 
 template <typename _Config>
