@@ -30,13 +30,7 @@ limitations under the License.
 #include "zk_dtypes/_src/ec_point_numpy.h"
 #include "zk_dtypes/_src/field_numpy.h"
 #include "zk_dtypes/_src/intn_numpy.h"
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
-#include "zk_dtypes/include/field/babybear/babybear.h"
-#include "zk_dtypes/include/field/goldilocks/goldilocks.h"
-#include "zk_dtypes/include/field/koalabear/koalabear.h"
-#include "zk_dtypes/include/field/mersenne31/mersenne31.h"
+#include "zk_dtypes/include/all_types.h"
 #include "zk_dtypes/include/intn.h"
 
 namespace zk_dtypes {
@@ -467,31 +461,6 @@ bool RegisterIntNDtypes(PyObject* numpy) {
   return (RegisterIntNDtype<Types>(numpy) && ...);
 }
 
-template <typename... Types>
-bool RegisterFieldDTypes(PyObject* numpy) {
-  return (RegisterFieldDtype<Types>(numpy) && ...);
-}
-
-template <typename... Types>
-bool RegisterEcPointDTypes(PyObject* numpy) {
-  return (RegisterEcPointDtype<Types>(numpy) && ...);
-}
-
-template <typename... Types>
-bool RegisterEcPointCasts() {
-  return (RegisterEcPointCast<Types>() && ...);
-}
-
-template <typename... Types>
-bool RegisterEcPointMultiplyUFuncs(PyObject* numpy) {
-  return (RegisterEcPointMultiplyUFunc<Types>(numpy) && ...);
-}
-
-template <typename... Types>
-bool RegisterEcPointAddOrSubUFuncs(PyObject* numpy) {
-  return (RegisterEcPointAddOrSubUFunc<Types>(numpy) && ...);
-}
-
 }  // namespace
 
 // Initializes the module.
@@ -519,41 +488,19 @@ bool Initialize() {
     return false;
   }
 
-  if (!RegisterFieldDTypes<
-          // clang-format off
-          Babybear,
-          BabybearStd,
-          Goldilocks,
-          GoldilocksStd,
-          Koalabear,
-          KoalabearStd,
-          Mersenne31,
-          Mersenne31Std,
-          bn254::Fr,
-          bn254::FrStd
-          // clang-format on
-          >(numpy.get())) {
-    return false;
+#define REGISTER_FIELD_DTYPES(ActualType, ...)        \
+  if (!RegisterFieldDtype<ActualType>(numpy.get())) { \
+    return false;                                     \
   }
+  ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(REGISTER_FIELD_DTYPES)
+#undef REGISTER_FIELD_DTYPES
 
-  if (!RegisterEcPointDTypes<
-          // clang-format off
-          bn254::G1AffinePoint,
-          bn254::G1AffinePointStd,
-          bn254::G1JacobianPoint,
-          bn254::G1JacobianPointStd,
-          bn254::G1PointXyzz,
-          bn254::G1PointXyzzStd,
-          bn254::G2AffinePoint,
-          bn254::G2AffinePointStd,
-          bn254::G2JacobianPoint,
-          bn254::G2JacobianPointStd,
-          bn254::G2PointXyzz,
-          bn254::G2PointXyzzStd
-          // clang-format on
-          >(numpy.get())) {
-    return false;
+#define REGISTER_EC_POINT_DTYPES(ActualType, ...)       \
+  if (!RegisterEcPointDtype<ActualType>(numpy.get())) { \
+    return false;                                       \
   }
+  ZK_DTYPES_PUBLIC_EC_POINT_TYPE_LIST(REGISTER_EC_POINT_DTYPES)
+#undef REGISTER_EC_POINT_DTYPES
 
   // CAUTION: RegisterEcPointCast must be executed before
   // RegisterEcPointMultiplyUFunc and RegisterEcPointAddOrSubUFunc.
@@ -562,52 +509,28 @@ bool Initialize() {
   // dependent UFuncs have been used.
   bool success = RegisterOneWayCustomCast<int2, int4, int8_t>();
   success &= RegisterOneWayCustomCast<uint2, uint4, uint8_t>();
-  success &= RegisterEcPointCasts<
-      // clang-format off
-      bn254::G1AffinePoint,
-      bn254::G1AffinePointStd,
-      bn254::G1JacobianPoint,
-      bn254::G1JacobianPointStd,
-      bn254::G1PointXyzz,
-      bn254::G1PointXyzzStd,
-      bn254::G2AffinePoint,
-      bn254::G2AffinePointStd,
-      bn254::G2JacobianPoint,
-      bn254::G2JacobianPointStd,
-      bn254::G2PointXyzz,
-      bn254::G2PointXyzzStd
-      // clang-format on
-      >();
+#define REGISTER_EC_POINT_CASTS(ActualType, ...) \
+  if (!RegisterEcPointCast<ActualType>()) {      \
+    return false;                                \
+  }
+  ZK_DTYPES_PUBLIC_EC_POINT_TYPE_LIST(REGISTER_EC_POINT_CASTS)
+#undef REGISTER_EC_POINT_CASTS
 
   // NOTE: Elliptic curve operations requires every elliptic curve point type
   // to be registered.
-  if (!RegisterEcPointMultiplyUFuncs<
-          // clang-format off
-          bn254::Fr,
-          bn254::FrStd
-          // clang-format on
-          >(numpy.get())) {
-    return false;
+#define REGISTER_EC_POINT_MULTIPLY_UFUNCS(ActualType, ...)      \
+  if (!RegisterEcPointMultiplyUFunc<ActualType>(numpy.get())) { \
+    return false;                                               \
   }
+  ZK_DTYPES_SCALAR_FIELD_TYPE_LIST(REGISTER_EC_POINT_MULTIPLY_UFUNCS)
+#undef REGISTER_EC_POINT_MULTIPLY_UFUNCS
 
-  if (!RegisterEcPointAddOrSubUFuncs<
-          // clang-format off
-          bn254::G1AffinePoint,
-          bn254::G1AffinePointStd,
-          bn254::G1JacobianPoint,
-          bn254::G1JacobianPointStd,
-          bn254::G1PointXyzz,
-          bn254::G1PointXyzzStd,
-          bn254::G2AffinePoint,
-          bn254::G2AffinePointStd,
-          bn254::G2JacobianPoint,
-          bn254::G2JacobianPointStd,
-          bn254::G2PointXyzz,
-          bn254::G2PointXyzzStd
-          // clang-format on
-          >(numpy.get())) {
-    return false;
+#define REGISTER_EC_POINT_ADD_OR_SUB_UFUNCS(ActualType, ...)    \
+  if (!RegisterEcPointAddOrSubUFunc<ActualType>(numpy.get())) { \
+    return false;                                               \
   }
+  ZK_DTYPES_PUBLIC_EC_POINT_TYPE_LIST(REGISTER_EC_POINT_ADD_OR_SUB_UFUNCS)
+#undef REGISTER_EC_POINT_ADD_OR_SUB_UFUNCS
 
   return success;
 }
@@ -640,35 +563,17 @@ extern "C" EXPORT_SYMBOL PyObject* PyInit__zk_dtypes_ext() {
   if (!InitModuleType<int2>(m.get(), "int2") ||
       !InitModuleType<int4>(m.get(), "int4") ||
       !InitModuleType<uint2>(m.get(), "uint2") ||
-      !InitModuleType<uint4>(m.get(), "uint4") ||
-      !InitModuleType<Babybear>(m.get(), "babybear") ||
-      !InitModuleType<BabybearStd>(m.get(), "babybear_std") ||
-      !InitModuleType<Goldilocks>(m.get(), "goldilocks") ||
-      !InitModuleType<GoldilocksStd>(m.get(), "goldilocks_std") ||
-      !InitModuleType<Koalabear>(m.get(), "koalabear") ||
-      !InitModuleType<KoalabearStd>(m.get(), "koalabear_std") ||
-      !InitModuleType<Mersenne31>(m.get(), "mersenne31") ||
-      !InitModuleType<Mersenne31Std>(m.get(), "mersenne31_std") ||
-      !InitModuleType<bn254::Fr>(m.get(), "bn254_sf") ||
-      !InitModuleType<bn254::FrStd>(m.get(), "bn254_sf_std") ||
-      !InitModuleType<bn254::G1AffinePoint>(m.get(), "bn254_g1_affine") ||
-      !InitModuleType<bn254::G1AffinePointStd>(m.get(),
-                                               "bn254_g1_affine_std") ||
-      !InitModuleType<bn254::G1JacobianPoint>(m.get(), "bn254_g1_jacobian") ||
-      !InitModuleType<bn254::G1JacobianPointStd>(m.get(),
-                                                 "bn254_g1_jacobian_std") ||
-      !InitModuleType<bn254::G1PointXyzz>(m.get(), "bn254_g1_xyzz") ||
-      !InitModuleType<bn254::G1PointXyzzStd>(m.get(), "bn254_g1_xyzz_std") ||
-      !InitModuleType<bn254::G2AffinePoint>(m.get(), "bn254_g2_affine") ||
-      !InitModuleType<bn254::G2AffinePointStd>(m.get(),
-                                               "bn254_g2_affine_std") ||
-      !InitModuleType<bn254::G2JacobianPoint>(m.get(), "bn254_g2_jacobian") ||
-      !InitModuleType<bn254::G2JacobianPointStd>(m.get(),
-                                                 "bn254_g2_jacobian_std") ||
-      !InitModuleType<bn254::G2PointXyzz>(m.get(), "bn254_g2_xyzz") ||
-      !InitModuleType<bn254::G2PointXyzzStd>(m.get(), "bn254_g2_xyzz_std")) {
+      !InitModuleType<uint4>(m.get(), "uint4")) {
     return nullptr;
   }
+
+#define INIT_MODULE_TYPE(ActualType, UpperCamelCaseName, UpperSnakeCaseName, \
+                         LowerSnakeCaseName)                                 \
+  if (!InitModuleType<ActualType>(m.get(), #LowerSnakeCaseName)) {           \
+    return nullptr;                                                          \
+  }
+  ZK_DTYPES_PUBLIC_TYPE_LIST(INIT_MODULE_TYPE)
+#undef INIT_MODULE_TYPE
 
 #ifdef Py_GIL_DISABLED
   PyUnstable_Module_SetGIL(m.get(), Py_MOD_GIL_NOT_USED);

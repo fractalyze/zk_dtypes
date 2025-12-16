@@ -15,8 +15,8 @@ limitations under the License.
 
 #include "gtest/gtest.h"
 
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/fq2.h"
-#include "zk_dtypes/include/field/goldilocks/goldilocks3.h"
+#include "zk_dtypes/include/all_types.h"
+#include "zk_dtypes/include/elliptic_curve/short_weierstrass/test/sw_curve_config.h"
 
 namespace zk_dtypes {
 namespace {
@@ -25,15 +25,11 @@ template <typename T>
 class ExtensionFieldTypedTest : public testing::Test {};
 
 using ExtensionFieldTypes = testing::Types<
-    // clang-format off
-    // 64-bit extension fields
-    Goldilocks3,
-    Goldilocks3Std,
-    // 256-bit extension fields
-    bn254::Fq2,
-    bn254::Fq2Std
-    // clang-format on
-    >;
+#define EXTENSION_FIELD_TYPE(ActualType, ...) ActualType,
+    ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(EXTENSION_FIELD_TYPE)
+#undef EXTENSION_FIELD_TYPE
+        test::Fq2,
+    test::Fq2Std>;
 
 TYPED_TEST_SUITE(ExtensionFieldTypedTest, ExtensionFieldTypes);
 

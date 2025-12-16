@@ -66,24 +66,28 @@ using FqStd = PrimeField<PrimeFieldStdConfig>;
 using Fr = PrimeField<PrimeFieldConfig>;
 using FrStd = PrimeField<PrimeFieldStdConfig>;
 
+template <typename BaseField>
 struct Fq2BaseConfig {
-  using BaseField = Fq;
-  using BasePrimeField = Fq;
-
   constexpr static uint32_t kDegreeOverBaseField = 2;
   constexpr static BaseField kNonResidue = -1;
 };
 
-struct Fq2StdConfig : public Fq2BaseConfig {
+struct Fq2StdConfig : public Fq2BaseConfig<FqStd> {
   constexpr static bool kUseMontgomery = false;
 
   using StdConfig = Fq2StdConfig;
+
+  using BaseField = FqStd;
+  using BasePrimeField = FqStd;
 };
 
-struct Fq2Config : public Fq2BaseConfig {
+struct Fq2Config : public Fq2BaseConfig<Fq> {
   constexpr static bool kUseMontgomery = true;
 
   using StdConfig = Fq2StdConfig;
+
+  using BaseField = Fq;
+  using BasePrimeField = Fq;
 };
 
 using Fq2 = ExtensionField<Fq2Config>;

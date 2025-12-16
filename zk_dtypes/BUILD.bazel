@@ -25,6 +25,23 @@ package(
 )
 
 cc_library(
+    name = "all_types",
+    hdrs = ["include/all_types.h"],
+    deps = [
+        ":babybear",
+        ":bn254_fq",
+        ":bn254_fq2",
+        ":bn254_fr",
+        ":bn254_g1",
+        ":bn254_g2",
+        ":goldilocks",
+        ":goldilocks3",
+        ":koalabear",
+        ":mersenne31",
+    ],
+)
+
+cc_library(
     name = "always_false",
     hdrs = ["include/always_false.h"],
 )
@@ -321,14 +338,7 @@ cc_test(
         "tests/field/square_root_algorithms_unittest.cc",
     ],
     deps = [
-        ":babybear",
-        ":bn254_fq",
-        ":bn254_fq2",
-        ":bn254_fr",
-        ":goldilocks",
-        ":goldilocks3",
-        ":koalabear",
-        ":mersenne31",
+        ":all_types",
         ":random",
         ":root_of_unity",
         ":sw_test_curve_config",
@@ -516,15 +526,8 @@ cc_library(
         "_src/ufuncs.h",
     ],
     deps = [
-        ":babybear",
-        ":big_int",
-        ":bn254_fr",
-        ":bn254_g1",
-        ":bn254_g2",
-        ":goldilocks",
+        ":all_types",
         ":intn",
-        ":koalabear",
-        ":mersenne31",
         "//third_party/py/numpy:headers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/types:span",
