@@ -50,7 +50,7 @@ class FiniteField {
         return ComputeTonelliShanksSquareRoot(*static_cast<const F*>(this));
       }
     } else if constexpr (F::ExtensionDegree() == 2) {
-      if (IsModulusToHalfDegreeThreeModFour()) {
+      if constexpr (p % 4 == 3) {
         return ComputeAlgorithm9SquareRoot(*static_cast<const F*>(this));
       } else {
         return absl::UnimplementedError(
@@ -61,19 +61,6 @@ class FiniteField {
       static_assert(AlwaysFalse<F>,
                     "Not implemented for extension degree > 2 and even");
     }
-  }
-
- private:
-  constexpr static bool IsModulusToHalfDegreeThreeModFour() {
-    using BasePrimeField = typename FiniteFieldTraits<F>::BasePrimeField;
-    constexpr uint64_t p =
-        static_cast<uint64_t>(BasePrimeField::Config::kModulus);
-    constexpr size_t exponent = F::ExtensionDegree() / 2;
-    return ConstexprPow(p, exponent) % 4 == 3;
-  }
-
-  constexpr static uint64_t ConstexprPow(uint64_t base, size_t exp) {
-    return exp == 0 ? 1 : base * ConstexprPow(base, exp - 1);
   }
 };
 
