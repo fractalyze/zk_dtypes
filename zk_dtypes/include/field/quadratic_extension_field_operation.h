@@ -18,9 +18,8 @@ limitations under the License.
 
 #include <array>
 
-#if defined(ZK_DTYPES_USE_ABSL)
 #include "absl/status/statusor.h"
-#endif
+
 #include "zk_dtypes/include/field/extension_field_operation.h"
 
 namespace zk_dtypes {
@@ -95,12 +94,7 @@ class QuadraticExtensionFieldOperation
     return static_cast<const Derived&>(*this).FromBaseFields({y0, y1});
   }
 
-#if defined(ZK_DTYPES_USE_ABSL)
-  absl::StatusOr<Derived>
-#else
-  Derived
-#endif
-  Inverse() const {
+  absl::StatusOr<Derived> Inverse() const {
     std::array<BaseField, 2> x =
         static_cast<const Derived&>(*this).ToBaseField();
     BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
@@ -112,14 +106,9 @@ class QuadraticExtensionFieldOperation
     // v0 = x[0]² - q * v1
     BaseField v0 = x[0].Square() - v1 * non_residue;
 
-#if defined(ZK_DTYPES_USE_ABSL)
     absl::StatusOr<BaseField> v0_inv = v0.Inverse();
     if (!v0_inv.ok()) return v0_inv.status();
     std::array<BaseField, 2> y{x[0] * (*v0_inv), -x[1] * (*v0_inv)};
-#else
-    BaseField v0_inv = v0.Inverse();
-    std::array<BaseField, 2> y{x[0] * v0_inv, -x[1] * v0_inv};
-#endif
     return static_cast<const Derived&>(*this).FromBaseFields(y);
   }
 };

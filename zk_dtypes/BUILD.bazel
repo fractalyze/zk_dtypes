@@ -204,7 +204,6 @@ cc_library(
 cc_library(
     name = "extension_field",
     hdrs = ["include/field/extension_field.h"],
-    defines = ["ZK_DTYPES_USE_ABSL"],
     deps = [
         ":always_false",
         ":extension_field_operations",
@@ -224,10 +223,10 @@ cc_library(
         "include/field/frobenius.h",
         "include/field/quadratic_extension_field_operation.h",
     ],
-    # NOTE(chokobole): The dependency "@com_google_absl//absl/status:statusor" is deliberately omitted.
-    # This prevents ZKIR (which uses this library for code generation) from incurring an unwanted
-    # dependency on Abseil.
-    deps = [":extension_field_operation_traits_forward"],
+    deps = [
+        ":extension_field_operation_traits_forward",
+        "@com_google_absl//absl/status:statusor",
+    ],
 )
 
 cc_library(

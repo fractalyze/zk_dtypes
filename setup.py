@@ -31,7 +31,7 @@ else:
   PLATFORM_ARGS = ["-std:c++17", "-fvisibility=hidden"]
   DEFINE_PREFIX = "-D"
 
-DEFINES = ["EIGEN_MPL2_ONLY", "ZK_DTYPES_USE_ABSL"]
+DEFINES = ["EIGEN_MPL2_ONLY"]
 COMPILE_ARGS = PLATFORM_ARGS + [f"{DEFINE_PREFIX}{d}" for d in DEFINES]
 
 
