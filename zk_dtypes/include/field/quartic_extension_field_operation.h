@@ -83,30 +83,42 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived> {
  private:
   static std::array<BaseField, 7> ComputeEvaluations(
       const std::array<BaseField, 4>& x) {
-    // Precompute powers of coefficients for evaluation
-    // x[i] * n using Double/Add operations for ZKIR compatibility
+    // 1. Basic Doubles
     BaseField x1_2 = x[1].Double();
-    BaseField x1_3 = x1_2 + x[1];
     BaseField x2_4 = x[2].Double().Double();
-    BaseField x2_9 = x2_4.Double() + x[2];
     BaseField x3_2 = x[3].Double();
-    BaseField x3_3 = x3_2 + x[3];
     BaseField x3_8 = x3_2.Double().Double();
-    BaseField x3_27 = x3_8.Double() + x3_8 + x3_3;
+
+    // Needed for f(3) optimization formula
+    BaseField x3_3 = x3_2 + x[3];
+
+    // 2. Intermediates
+    BaseField v0 = x[0] + x[2];
+    BaseField v1 = x[1] + x[3];
+    BaseField v2 = x[0] + x2_4;
+    BaseField v3 = x1_2 + x3_8;
 
     std::array<BaseField, 7> f_x;
+
+    // 3. Evaluations
     // f(0) = x₀
     f_x[0] = x[0];
-    // f(1) = x₀ + x₁ + x₂ + x₃
-    f_x[1] = x[0] + x[1] + x[2] + x[3];
-    // f(-1) = x₀ - x₁ + x₂ - x₃
-    f_x[2] = x[0] - x[1] + x[2] - x[3];
-    // f(2) = x₀ + 2x₁ + 4x₂ + 8x₃
-    f_x[3] = x[0] + x1_2 + x2_4 + x3_8;
-    // f(-2) = x₀ - 2x₁ + 4x₂ - 8x₃
-    f_x[4] = x[0] - x1_2 + x2_4 - x3_8;
+    // f(1) = v₀ + v₁
+    f_x[1] = v0 + v1;
+    // f(-1) = v₀ - v₁
+    f_x[2] = v0 - v1;
+    // f(2) = v₂ + v₃
+    f_x[3] = v2 + v3;
+    // f(-2) = v₂ - v₃
+    f_x[4] = v2 - v3;
+    // [Optimized f(3)]
     // f(3) = x₀ + 3x₁ + 9x₂ + 27x₃
-    f_x[5] = x[0] + x1_3 + x2_9 + x3_27;
+    //       = f(1) + 2 * (v₁ + 4 * (x₂ + 3x₃))
+    BaseField term = x[2] + x3_3;
+    term = term.Double().Double();
+    term = term + v1;
+    term = term.Double();
+    f_x[5] = f_x[1] + term;
     // f(∞) = x₃
     f_x[6] = x[3];
     return f_x;
