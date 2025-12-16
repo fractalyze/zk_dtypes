@@ -52,13 +52,13 @@ class FiniteField {
         static_assert(BasePrimeField::Config::kHasTwoAdicRootOfUnity);
         return ComputeTonelliShanksSquareRoot(*static_cast<const F*>(this));
       }
-    } else if constexpr (F::ExtensionDegree() == 2) {
-      if constexpr (p % 4 == 3) {
+    } else if constexpr (F::ExtensionDegree() % 2 == 0) {
+      if constexpr (IsAlgorithm9SquareRootCompatible<F>()) {
         return ComputeAlgorithm9SquareRoot(*static_cast<const F*>(this));
       } else {
         return absl::UnimplementedError(
-            "Not implemented for extension degree 2 "
-            "and modulus not ≡ 3 (mod 4)");
+            "Not implemented for extension degree even "
+            "and modulus to the half degree not ≡ 3 (mod 4)");
       }
     } else {
       static_assert(AlwaysFalse<F>,

@@ -22,6 +22,19 @@ limitations under the License.
 
 namespace zk_dtypes {
 
+constexpr uint64_t ConstexprPow(uint64_t base, size_t exp) {
+  return exp == 0 ? 1 : base * ConstexprPow(base, exp - 1);
+}
+
+template <typename F>
+constexpr bool IsAlgorithm9SquareRootCompatible() {
+  using BasePrimeField = typename FiniteFieldTraits<F>::BasePrimeField;
+  constexpr uint64_t p =
+      static_cast<uint64_t>(BasePrimeField::Config::kModulus);
+  constexpr size_t exponent = F::ExtensionDegree() / 2;
+  return ConstexprPow(p, exponent) % 4 == 3;
+}
+
 template <typename F>
 absl::StatusOr<F> ComputeAlgorithm9SquareRoot(const F& a) {
   // F is quadratic extension field where non-quadratic non-residue i² = -1.
@@ -33,9 +46,12 @@ absl::StatusOr<F> ComputeAlgorithm9SquareRoot(const F& a) {
   // https://fractalyze.gitbook.io/intro/primitives/modular-arithmetic/modular-square-root/generalized-shanks-algorithm-for-quadratic-extension-field
   // for more details.
   using BasePrimeField = typename FiniteFieldTraits<F>::BasePrimeField;
-  static_assert(static_cast<uint64_t>(BasePrimeField::Config::kModulus) % 4 ==
-                3);
-  static_assert(F::ExtensionDegree() == 2);
+  static_assert(IsAlgorithm9SquareRootCompatible<F>());
+  static_assert(F::ExtensionDegree() % 2 == 0);
+  if constexpr (F::ExtensionDegree() != 2) {
+    return absl::UnimplementedError(
+        "Not implemented for extension degree != 2");
+  }
   constexpr auto exponent = (BasePrimeField::Config::kModulus - 3) >> 2;
   F a1 = a.Pow(exponent);
   F alpha = a1.Square() * a;
