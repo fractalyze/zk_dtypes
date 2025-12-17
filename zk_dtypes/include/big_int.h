@@ -87,6 +87,15 @@ class BigInt {
       limbs_[i] = *it;
     }
   }
+  template <size_t N2>
+  constexpr BigInt(const BigInt<N2>& other) : limbs_{0} {
+    static_assert(N >= N2,
+                  "Destination BigInt size N must be greater than or equal to "
+                  "source size N2.");
+    for (size_t i = 0; i < N2; ++i) {
+      limbs_[i] = other[i];
+    }
+  }
 
   // Convert a decimal string to a BigInt.
   static absl::StatusOr<BigInt> FromDecString(std::string_view str) {
