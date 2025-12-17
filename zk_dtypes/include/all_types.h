@@ -39,7 +39,7 @@ WITH_STD(V, ::zk_dtypes::bn254::Fq, Bn254Bf, BN254_BF, bn254_bf)
 #define ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)                              \
 WITH_STD(V, ::zk_dtypes::Babybear4, Babybear4, BABYBEAR4, babybear4)         \
 WITH_STD(V, ::zk_dtypes::Koalabear4, Koalabear4, KOALABEAR4, koalabear4)     \
-WITH_STD(V, ::zk_dtypes::Goldilocks3, Goldilocks3, GOLDILLOCKS3, goldilocks3)
+WITH_STD(V, ::zk_dtypes::Goldilocks3, Goldilocks3, GOLDILOCKS3, goldilocks3)
 
 #define ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)      \
