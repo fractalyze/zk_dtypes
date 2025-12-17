@@ -33,6 +33,9 @@ constexpr absl::StatusOr<F> ComputeShanksSquareRoot(const F& a) {
   //    = b^(p+1) (since b^(p-1) = 1, See https://en.wikipedia.org/wiki/Fermat%27s_little_theorem)
   // a  = b^((p + 1) / 4)
   // clang-format on
+  // See
+  // https://fractalyze.gitbook.io/intro/primitives/modular-arithmetic/modular-square-root/shanks-algorithm
+  // for more details.
   using BasePrimeField = typename FiniteFieldTraits<F>::BasePrimeField;
   static_assert(static_cast<uint64_t>(BasePrimeField::Config::kModulus) % 4 ==
                 3);

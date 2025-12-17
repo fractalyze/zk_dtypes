@@ -29,6 +29,9 @@ absl::StatusOr<F> ComputeAlgorithm9SquareRoot(const F& a) {
   // Finds x such that x² = a.
   // Assumes the modulus p satisfies p ≡ 3 (mod 4).
   // See: https://eprint.iacr.org/2012/685.pdf (Algorithm 9, page 17)
+  // See
+  // https://fractalyze.gitbook.io/intro/primitives/modular-arithmetic/modular-square-root/generalized-shanks-algorithm-for-quadratic-extension-field
+  // for more details.
   using BasePrimeField = typename FiniteFieldTraits<F>::BasePrimeField;
   static_assert(static_cast<uint64_t>(BasePrimeField::Config::kModulus) % 4 ==
                 3);
