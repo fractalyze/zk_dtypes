@@ -115,6 +115,7 @@ TYPED_TEST(ExtensionFieldTypedTest, Square) {
     };
   } else {
     algorithms = {
+        ExtensionFieldMulAlgorithm::kCustom,
         ExtensionFieldMulAlgorithm::kKaratsuba,
         ExtensionFieldMulAlgorithm::kToomCook,
     };
