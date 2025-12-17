@@ -67,7 +67,7 @@ used in Zero Knowledge libraries inspired by
 
 ## Installation
 
-The `zk_dtypes` package is tested with Python versions 3.9-3.12, and can be
+The `zk_dtypes` package is tested with Python versions 3.11-3.13, and can be
 installed with the following command:
 
 ```shell
