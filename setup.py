@@ -18,7 +18,9 @@
 
 import os
 import platform
+import shutil
 import subprocess
+from distutils.command.build import build
 from setuptools import Extension
 from setuptools import setup
 
@@ -35,6 +37,11 @@ else:
 
 DEFINES = ["EIGEN_MPL2_ONLY"]
 COMPILE_ARGS = PLATFORM_ARGS + [f"{DEFINE_PREFIX}{d}" for d in DEFINES]
+
+USE_BAZEL_OUTPUT = "USE_BAZEL_OUTPUT" in os.environ
+
+if USE_BAZEL_OUTPUT:
+  BAZEL_OUTPUT_FILE = f"bazel-bin/zk_dtypes/{FILE}"
 
 
 def get_sources():
@@ -65,29 +72,52 @@ def get_sources():
   return sources
 
 
-output_base = subprocess.run(
-    ["bazel", "info", "output_base"],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    check=True,
-    text=True,
-).stdout.strip()
+class CustomBuildCommand(build):
+  """Custom build command to use Bazel's output."""
 
-setup(
-    name="zk_dtypes",
-    ext_modules=[
-        Extension(
-            "zk_dtypes._zk_dtypes_ext",
-            get_sources(),
-            include_dirs=[
-                ".",
-                f"{output_base}/external/bazel_tools",
-                f"{output_base}/external/com_google_absl",
-                f"{output_base}/external/com_google_googletest/googletest/include",
-                f"{output_base}/external/eigen_archive",
-                f"{output_base}/external/pypi_numpy/site-packages/numpy/_core/include",
-            ],
-            extra_compile_args=COMPILE_ARGS,
-        )
-    ],
-)
+  def run(self):
+    """Checks for Bazel output and copies it to the build directory."""
+    if not os.path.exists(BAZEL_OUTPUT_FILE):
+      raise FileNotFoundError(
+          f"Bazel C Extension output not found: {BAZEL_OUTPUT_FILE}. "
+          "Please run 'bazel build //zk_dtypes:{FILE}' first."
+      )
+
+    build.run(self)
+
+    dst_path = os.path.join(self.build_lib, "zk_dtypes", FILE)
+    shutil.copyfile(BAZEL_OUTPUT_FILE, dst_path)
+
+
+setup_kwargs = {"name": "zk_dtypes"}
+
+if USE_BAZEL_OUTPUT:
+  setup_kwargs["package_data"] = {"zk_dtypes": [FILE]}
+  setup_kwargs["cmdclass"] = {"build": CustomBuildCommand}
+  setup_kwargs["zip_safe"] = False
+else:
+  output_base = subprocess.run(
+      ["bazel", "info", "output_base"],
+      stdout=subprocess.PIPE,
+      stderr=subprocess.PIPE,
+      check=True,
+      text=True,
+  ).stdout.strip()
+
+  setup_kwargs["ext_modules"] = [
+      Extension(
+          "zk_dtypes._zk_dtypes_ext",
+          get_sources(),
+          include_dirs=[
+              ".",
+              f"{output_base}/external/bazel_tools",
+              f"{output_base}/external/com_google_absl",
+              f"{output_base}/external/com_google_googletest/googletest/include",
+              f"{output_base}/external/eigen_archive",
+              f"{output_base}/external/pypi_numpy/site-packages/numpy/_core/include",
+          ],
+          extra_compile_args=COMPILE_ARGS,
+      )
+  ]
+
+setup(**setup_kwargs)

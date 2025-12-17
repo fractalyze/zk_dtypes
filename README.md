@@ -90,11 +90,38 @@ pip install absl-py pytest
 pytest zk_dtypes/tests
 ```
 
-To build from source, clone the repository and run:
+### Installation from source
+
+To build and install the package from source, run:
 
 ```shell
 pip install .
 ```
+
+#### Installation from prebuilt binary
+
+Use `USE_BAZEL_OUTPUT=1` for a faster installation that uses pre-built Bazel
+artifacts. This is the recommended path for development.
+
+- **On Linux / macOS**
+
+  ```shell
+  # Build the shared library (.so)
+  bazel build //zk_dtypes:_zk_dtypes_ext.so
+
+  # Install using the Bazel output
+  USE_BAZEL_OUTPUT=1 pip install .
+  ```
+
+- **On Windows**
+
+  ```powershell
+  # Build the Python extension (.pyd)
+  bazel build //zk_dtypes:_zk_dtypes_ext.pyd
+
+  # Install using the Bazel output (PowerShell syntax)
+  $env:USE_BAZEL_OUTPUT=1; pip install .
+  ```
 
 ## Example Usage
 
