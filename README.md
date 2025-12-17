@@ -24,6 +24,15 @@ used in Zero Knowledge libraries inspired by
   - `mersenne31`
   - `mersenne31_std`
 
+- Extension Field:
+
+  - `babybear4`
+  - `babybear4_std`
+  - `goldilocks3`
+  - `goldilocks3_std`
+  - `koalabear4`
+  - `koalabear4_std`
+
 - Elliptic curve:
 
   - `bn254_sf`
