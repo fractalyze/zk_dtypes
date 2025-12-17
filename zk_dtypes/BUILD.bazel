@@ -237,6 +237,7 @@ cc_library(
     deps = [
         ":extension_field_operation_traits_forward",
         ":frobenius",
+        ":toom_cook_operation",
         "@com_google_absl//absl/status:statusor",
     ],
 )
@@ -354,6 +355,12 @@ cc_library(
         ":frobenius",
         "@com_google_absl//absl/status:statusor",
     ],
+)
+
+cc_library(
+    name = "toom_cook_operation",
+    hdrs = ["include/field/toom_cook_operation.h"],
+    deps = [":extension_field_operation_traits_forward"],
 )
 
 cc_test(

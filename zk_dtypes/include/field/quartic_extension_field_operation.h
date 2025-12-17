@@ -19,6 +19,7 @@ limitations under the License.
 #include <array>
 
 #include "zk_dtypes/include/field/extension_field_operation.h"
+#include "zk_dtypes/include/field/toom_cook_operation.h"
 
 namespace zk_dtypes {
 
@@ -30,7 +31,8 @@ namespace zk_dtypes {
 //
 // For Fp4 = Fp[u] / (u⁴ - ξ), where x = x₀ + x₁u + x₂u² + x₃u³.
 template <typename Derived>
-class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived> {
+class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
+                                       public ToomCookOperation<Derived> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
 
@@ -49,38 +51,15 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived> {
 
   // Multiplication in Fp4 using Toom-Cook4.
   Derived operator*(const Derived& other) const {
-    std::array<BaseField, 4> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-    std::array<BaseField, 4> y =
-        static_cast<const Derived&>(other).ToBaseField();
-
-    std::array<BaseField, 7> evaluations_x = ComputeEvaluations(x);
-    std::array<BaseField, 7> evaluations_y = ComputeEvaluations(y);
-    std::array<BaseField, 7> evaluations_z;
-    for (size_t i = 0; i < 7; ++i) {
-      evaluations_z[i] = evaluations_x[i] * evaluations_y[i];
-    }
-
-    // Interpolation and reduction
-    return this->Reduce(this->Interpolate(evaluations_z));
+    return this->ToomCookMultiply(other);
   }
 
   // Square in Fp4 using Toom-Cook4.
-  Derived Square() const {
-    std::array<BaseField, 4> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-
-    std::array<BaseField, 7> evaluations_x = ComputeEvaluations(x);
-    std::array<BaseField, 7> evaluations_y;
-    for (size_t i = 0; i < 7; ++i) {
-      evaluations_y[i] = evaluations_x[i].Square();
-    }
-
-    // Interpolation and reduction
-    return this->Reduce(this->Interpolate(evaluations_y));
-  }
+  Derived Square() const { return this->ToomCookSquare(); }
 
  private:
+  friend class ToomCookOperation<Derived>;
+
   static std::array<BaseField, 7> ComputeEvaluations(
       const std::array<BaseField, 4>& x) {
     // 1. Basic Doubles
