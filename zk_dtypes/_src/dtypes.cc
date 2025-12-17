@@ -236,6 +236,90 @@ struct TypeDescriptor<bn254::FrStd> : FieldTypeDescriptor<bn254::FrStd> {
 };
 
 template <>
+struct TypeDescriptor<Babybear4> : FieldTypeDescriptor<Babybear4> {
+  typedef Babybear4 T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "babybear4";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.babybear4";
+  static constexpr const char* kTpDoc =
+      "babybear quartic extension field values on montgomery domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'd';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<Babybear4Std> : FieldTypeDescriptor<Babybear4Std> {
+  typedef Babybear4Std T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "babybear4_std";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.babybear4_std";
+  static constexpr const char* kTpDoc =
+      "babybear quartic extension field values on standard domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'D';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<Koalabear4> : FieldTypeDescriptor<Koalabear4> {
+  typedef Koalabear4 T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "koalabear4";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.koalabear4";
+  static constexpr const char* kTpDoc =
+      "koalabear quartic extension field values on montgomery domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'e';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<Koalabear4Std> : FieldTypeDescriptor<Koalabear4Std> {
+  typedef Koalabear4Std T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "koalabear4_std";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.koalabear4_std";
+  static constexpr const char* kTpDoc =
+      "koalabear quartic extension field values on standard domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'E';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<Goldilocks3> : FieldTypeDescriptor<Goldilocks3> {
+  typedef Goldilocks3 T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "goldilocks3";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.goldilocks3";
+  static constexpr const char* kTpDoc =
+      "goldilocks cubic extension field values on montgomery domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 't';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<Goldilocks3Std> : FieldTypeDescriptor<Goldilocks3Std> {
+  typedef Goldilocks3Std T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = false;
+  static constexpr const char* kTypeName = "goldilocks3_std";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.goldilocks3_std";
+  static constexpr const char* kTpDoc =
+      "goldilocks cubic extension field values on standard domain";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'T';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
 struct TypeDescriptor<bn254::G1AffinePoint>
     : EcPointTypeDescriptor<bn254::G1AffinePoint> {
   typedef bn254::G1AffinePoint T;
@@ -495,6 +579,13 @@ bool Initialize() {
   ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(REGISTER_FIELD_DTYPES)
 #undef REGISTER_FIELD_DTYPES
 
+#define REGISTER_EXT_FIELD_DTYPES(ActualType, ...)    \
+  if (!RegisterFieldDtype<ActualType>(numpy.get())) { \
+    return false;                                     \
+  }
+  ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(REGISTER_EXT_FIELD_DTYPES)
+#undef REGISTER_EXT_FIELD_DTYPES
+
 #define REGISTER_EC_POINT_DTYPES(ActualType, ...)       \
   if (!RegisterEcPointDtype<ActualType>(numpy.get())) { \
     return false;                                       \
@@ -573,6 +664,7 @@ extern "C" EXPORT_SYMBOL PyObject* PyInit__zk_dtypes_ext() {
     return nullptr;                                                          \
   }
   ZK_DTYPES_PUBLIC_TYPE_LIST(INIT_MODULE_TYPE)
+  ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(INIT_MODULE_TYPE)
 #undef INIT_MODULE_TYPE
 
 #ifdef Py_GIL_DISABLED

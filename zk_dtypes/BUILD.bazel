@@ -633,3 +633,15 @@ py_test(
         "@pypi//numpy",
     ],
 )
+
+py_test(
+    name = "extension_field_test",
+    srcs = ["tests/extension_field_test.py"],
+    main = "tests/extension_field_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)

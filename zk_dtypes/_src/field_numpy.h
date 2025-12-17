@@ -199,31 +199,37 @@ bool CastToField(PyObject* arg, T* output) {
   } else {
     using BaseField = typename T::BaseField;
 
-    if (!PyTuple_Check(arg)) {
-      PyErr_Format(PyExc_TypeError,
-                   "expected a tuple for extension field, got %s",
-                   Py_TYPE(arg)->tp_name);
-      return false;
-    }
-
-    Py_ssize_t size = PyTuple_Size(arg);
-    if (size != T::ExtensionDegree()) {
-      PyErr_Format(PyExc_TypeError, "expected %d arguments, got %d",
-                   T::ExtensionDegree(), size);
-      return false;
-    }
-
-    std::array<BaseField, T::ExtensionDegree()> values;
-    for (size_t i = 0; i < T::ExtensionDegree(); ++i) {
-      PyObject* arg_i = PyTuple_GetItem(arg, i);
-      BaseField base_field;
-      if (!CastToField(arg_i, &base_field)) {
+    if (PyTuple_Check(arg)) {
+      Py_ssize_t size = PyTuple_Size(arg);
+      if (size != static_cast<Py_ssize_t>(T::ExtensionDegree())) {
+        PyErr_Format(PyExc_TypeError,
+                     "expected %zu elements for extension field, got %zd",
+                     T::ExtensionDegree(), size);
         return false;
       }
-      values[i] = base_field;
+
+      std::array<BaseField, T::ExtensionDegree()> values;
+      for (size_t i = 0; i < T::ExtensionDegree(); ++i) {
+        PyObject* arg_i = PyTuple_GetItem(arg, i);  // borrowed ref
+        if (!arg_i) {
+          return false;
+        }
+        BaseField base_field;
+        if (!CastToField(arg_i, &base_field)) {
+          return false;
+        }
+        values[i] = base_field;
+      }
+      *output = T(values);
+      return true;
+    } else {
+      BaseField base_field;
+      if (!CastToField(arg, &base_field)) {
+        return false;
+      }
+      *output = T(base_field);
+      return true;
     }
-    *output = T(values);
-    return true;
   }
 }
 
@@ -364,24 +370,30 @@ PyObject* PyField_nb_true_divide(PyObject* a, PyObject* b) {
 
 template <typename T>
 PyObject* PyField_nb_int(PyObject* self) {
-  T x = PyField_Value_Unchecked<T>(self);
-  if constexpr (T::Config::kModulusBits <= 64) {
-    if constexpr (T::kUseMontgomery) {
-      return PyLong_FromUnsignedLongLong(
-          static_cast<unsigned long>(x.MontReduce().value()));
-    } else {
-      return PyLong_FromUnsignedLongLong(static_cast<unsigned long>(x.value()));
-    }
+  if constexpr (T::ExtensionDegree() > 1) {
+    PyErr_SetString(PyExc_TypeError, "cannot convert extension field to int");
+    return nullptr;
   } else {
-    std::array<uint8_t, T::kByteWidth> bytes;
-    if constexpr (T::kUseMontgomery) {
-      bytes = x.MontReduce().value().ToBytesLE();
+    T x = PyField_Value_Unchecked<T>(self);
+    if constexpr (T::Config::kModulusBits <= 64) {
+      if constexpr (T::kUseMontgomery) {
+        return PyLong_FromUnsignedLongLong(
+            static_cast<unsigned long>(x.MontReduce().value()));
+      } else {
+        return PyLong_FromUnsignedLongLong(
+            static_cast<unsigned long>(x.value()));
+      }
     } else {
-      bytes = x.value().ToBytesLE();
+      std::array<uint8_t, T::kByteWidth> bytes;
+      if constexpr (T::kUseMontgomery) {
+        bytes = x.MontReduce().value().ToBytesLE();
+      } else {
+        bytes = x.value().ToBytesLE();
+      }
+      return _PyLong_FromByteArray(bytes.data(), bytes.size(),
+                                   /*little_endian=*/true,
+                                   /*is_signed=*/false);
     }
-    return _PyLong_FromByteArray(bytes.data(), bytes.size(),
-                                 /*little_endian=*/true,
-                                 /*is_signed=*/false);
   }
 }
 
@@ -525,10 +537,24 @@ PyObject* PyField_RichCompare(PyObject* a, PyObject* b, int op) {
   bool result;
   switch (op) {
     case Py_LT:
-      result = x < y;
+      if constexpr (T::ExtensionDegree() > 1) {
+        PyErr_SetString(
+            PyExc_TypeError,
+            "ordering comparison not supported for extension field");
+        return nullptr;
+      } else {
+        result = x < y;
+      }
       break;
     case Py_LE:
-      result = x <= y;
+      if constexpr (T::ExtensionDegree() > 1) {
+        PyErr_SetString(
+            PyExc_TypeError,
+            "ordering comparison not supported for extension field");
+        return nullptr;
+      } else {
+        result = x <= y;
+      }
       break;
     case Py_EQ:
       result = x == y;
@@ -537,10 +563,24 @@ PyObject* PyField_RichCompare(PyObject* a, PyObject* b, int op) {
       result = x != y;
       break;
     case Py_GT:
-      result = x > y;
+      if constexpr (T::ExtensionDegree() > 1) {
+        PyErr_SetString(
+            PyExc_TypeError,
+            "ordering comparison not supported for extension field");
+        return nullptr;
+      } else {
+        result = x > y;
+      }
       break;
     case Py_GE:
-      result = x >= y;
+      if constexpr (T::ExtensionDegree() > 1) {
+        PyErr_SetString(
+            PyExc_TypeError,
+            "ordering comparison not supported for extension field");
+        return nullptr;
+      } else {
+        result = x >= y;
+      }
       break;
     default:
       PyErr_SetString(PyExc_ValueError, "Invalid op type");
@@ -870,14 +910,21 @@ bool RegisterFieldUFuncs(PyObject* numpy) {
 
       // Comparison functions
       RegisterUFunc<UFunc<ufuncs::Eq<T>, bool, T, T>, T>(numpy, "equal") &&
-      RegisterUFunc<UFunc<ufuncs::Ne<T>, bool, T, T>, T>(numpy, "not_equal") &&
-      RegisterUFunc<UFunc<ufuncs::Lt<T>, bool, T, T>, T>(numpy, "less") &&
-      RegisterUFunc<UFunc<ufuncs::Gt<T>, bool, T, T>, T>(numpy, "greater") &&
-      RegisterUFunc<UFunc<ufuncs::Le<T>, bool, T, T>, T>(numpy, "less_equal") &&
-      RegisterUFunc<UFunc<ufuncs::Ge<T>, bool, T, T>, T>(numpy,
-                                                         "greater_equal") &&
-      RegisterUFunc<UFunc<ufuncs::Maximum<T>, T, T, T>, T>(numpy, "maximum") &&
-      RegisterUFunc<UFunc<ufuncs::Minimum<T>, T, T, T>, T>(numpy, "minimum");
+      RegisterUFunc<UFunc<ufuncs::Ne<T>, bool, T, T>, T>(numpy, "not_equal");
+
+  // Ordering comparisons are only supported for prime fields
+  if constexpr (T::ExtensionDegree() == 1) {
+    ok = ok &&
+         RegisterUFunc<UFunc<ufuncs::Lt<T>, bool, T, T>, T>(numpy, "less") &&
+         RegisterUFunc<UFunc<ufuncs::Gt<T>, bool, T, T>, T>(numpy, "greater") &&
+         RegisterUFunc<UFunc<ufuncs::Le<T>, bool, T, T>, T>(numpy,
+                                                            "less_equal") &&
+         RegisterUFunc<UFunc<ufuncs::Ge<T>, bool, T, T>, T>(numpy,
+                                                            "greater_equal") &&
+         RegisterUFunc<UFunc<ufuncs::Maximum<T>, T, T, T>, T>(numpy,
+                                                              "maximum") &&
+         RegisterUFunc<UFunc<ufuncs::Minimum<T>, T, T, T>, T>(numpy, "minimum");
+  }
 
   return ok;
 }
@@ -918,9 +965,12 @@ bool RegisterFieldDtype(PyObject* numpy) {
   arr_funcs.nonzero = NPyField_NonZero<T>;
   arr_funcs.fill = NPyField_Fill<T>;
   arr_funcs.dotfunc = NPyField_DotFunc<T>;
-  arr_funcs.compare = NPyField_CompareFunc<T>;
-  arr_funcs.argmax = NPyField_ArgMaxFunc<T>;
-  arr_funcs.argmin = NPyField_ArgMinFunc<T>;
+  // Ordering functions are only supported for prime fields
+  if constexpr (T::ExtensionDegree() == 1) {
+    arr_funcs.compare = NPyField_CompareFunc<T>;
+    arr_funcs.argmax = NPyField_ArgMaxFunc<T>;
+    arr_funcs.argmin = NPyField_ArgMinFunc<T>;
+  }
 
   // This is messy, but that's because the NumPy 2.0 API transition is messy.
   // Before 2.0, NumPy assumes we'll keep the descriptor passed in to
@@ -958,7 +1008,12 @@ bool RegisterFieldDtype(PyObject* numpy) {
     return false;
   }
 
-  return RegisterFieldCasts<T>() && RegisterFieldUFuncs<T>(numpy);
+  // Extension fields don't support integer casts
+  if constexpr (T::ExtensionDegree() == 1) {
+    return RegisterFieldCasts<T>() && RegisterFieldUFuncs<T>(numpy);
+  } else {
+    return RegisterFieldUFuncs<T>(numpy);
+  }
 }
 
 }  // namespace zk_dtypes
