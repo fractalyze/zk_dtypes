@@ -27,6 +27,13 @@ limitations under the License.
 
 namespace zk_dtypes {
 
+enum class ExtensionFieldMulAlgorithm {
+  kCustom,
+  kCustom2,
+  kKaratsuba,
+  kToomCook,
+};
+
 template <typename Derived>
 class ExtensionFieldOperation {
  public:

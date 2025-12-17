@@ -19,20 +19,15 @@ limitations under the License.
 #include <array>
 
 #include "zk_dtypes/include/field/extension_field_operation.h"
+#include "zk_dtypes/include/field/karatsuba_operation.h"
 #include "zk_dtypes/include/field/toom_cook_operation.h"
 
 namespace zk_dtypes {
 
-// Quartic extension field operations using Toom-Cook4 algorithm.
-//
-// See https://eprint.iacr.org/2006/471.pdf
-// Devegili OhEig Scott Dahab --- Multiplication and Squaring on
-// Pairing-Friendly Fields.
-//
-// For Fp4 = Fp[u] / (u⁴ - ξ), where x = x₀ + x₁u + x₂u² + x₃u³.
 template <typename Derived>
 class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
-                                       public ToomCookOperation<Derived> {
+                                       public ToomCookOperation<Derived>,
+                                       public KaratsubaOperation<Derived> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
 
@@ -49,13 +44,30 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     return matrix;
   }
 
-  // Multiplication in Fp4 using Toom-Cook4.
+  // Multiplication in Fp4 using Toom-Cook4 or Karatsuba.
   Derived operator*(const Derived& other) const {
-    return this->ToomCookMultiply(other);
+    ExtensionFieldMulAlgorithm algorithm =
+        static_cast<const Derived&>(*this).GetMulAlgorithm();
+    if (algorithm == ExtensionFieldMulAlgorithm::kToomCook) {
+      // See https://eprint.iacr.org/2006/471.pdf
+      // Devegili OhEig Scott Dahab --- Multiplication and Squaring on
+      // Pairing-Friendly Fields.
+      return this->ToomCookMultiply(other);
+    } else {
+      return this->KaratsubaMultiply(other);
+    }
   }
 
-  // Square in Fp4 using Toom-Cook4.
-  Derived Square() const { return this->ToomCookSquare(); }
+  // Square in Fp4 using Toom-Cook4 or Karatsuba.
+  Derived Square() const {
+    ExtensionFieldMulAlgorithm algorithm =
+        static_cast<const Derived&>(*this).GetSquareAlgorithm();
+    if (algorithm == ExtensionFieldMulAlgorithm::kToomCook) {
+      return this->ToomCookSquare();
+    } else {
+      return this->KaratsubaSquare();
+    }
+  }
 
  private:
   friend class ToomCookOperation<Derived>;

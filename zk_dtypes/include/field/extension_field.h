@@ -20,6 +20,7 @@ limitations under the License.
 #include <stdint.h>
 
 #include <array>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <type_traits>
@@ -79,6 +80,9 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
   constexpr static uint32_t N = Config::kDegreeOverBaseField;
   constexpr static size_t kBitWidth = N * BaseField::kBitWidth;
   constexpr static size_t kByteWidth = N * BaseField::kByteWidth;
+
+  static std::optional<ExtensionFieldMulAlgorithm> mul_algorithm_;
+  static std::optional<ExtensionFieldMulAlgorithm> square_algorithm_;
 
   constexpr ExtensionField() {
     for (size_t i = 0; i < N; ++i) {
@@ -288,24 +292,79 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
   ExtensionField FromBaseFields(const std::array<BaseField, N>& values) const {
     return ExtensionField(values);
   }
+  BaseField CreateZeroBaseField() const { return BaseField::Zero(); }
   size_t DegreeOverBasePrimeField() const {
     return N * BaseField::ExtensionDegree();
   }
   const BaseField& NonResidue() const { return Config::kNonResidue; }
+  ExtensionFieldMulAlgorithm GetMulAlgorithm() const {
+    if (mul_algorithm_.has_value()) {
+      return mul_algorithm_.value();
+    }
+    if constexpr (Config::kDegreeOverBaseField == 4) {
+      // TODO(chokobole): Choose the best algorithm for quartic extensions.
+      return ExtensionFieldMulAlgorithm::kToomCook;
+    } else {
+      return ExtensionFieldMulAlgorithm::kKaratsuba;
+    }
+  }
+  ExtensionFieldMulAlgorithm GetSquareAlgorithm() const {
+    if (square_algorithm_.has_value()) {
+      return square_algorithm_.value();
+    }
+    if constexpr (Config::kDegreeOverBaseField == 2) {
+      constexpr static bool kIsNonResidueMinusOne =
+          Config::kNonResidue == BaseField(-1);
+
+      if constexpr (kIsNonResidueMinusOne) {
+        return ExtensionFieldMulAlgorithm::kCustom;
+      }
+
+      // NOTE(chokobole): This heuristic determines if the custom squaring
+      // algorithm outperforms the Karatsuba algorithm. The custom algorithm is
+      // selected when n² > 2n + C, where 'n' is the total number of limbs
+      // (BaseFieldLimbs * ExtensionDegree) and 'C' represents the cost of
+      // multiplication by a non-residue. This model assumes a multiplication
+      // cost of O(n²) and an addition cost of O(n).
+      if (Config::BasePrimeField::kLimbNums * ExtensionDegree() >= 2) {
+        return ExtensionFieldMulAlgorithm::kCustom2;
+      } else {
+        return ExtensionFieldMulAlgorithm::kKaratsuba;
+      }
+    } else if constexpr (Config::kDegreeOverBaseField == 3) {
+      // NOTE(chokobole): This heuristic determines if the custom squaring
+      // algorithm outperforms the Karatsuba algorithm for cubic extensions.
+      // The custom algorithm is selected when n² > 4n, where 'n' is the total
+      // number of limbs (BaseFieldLimbs * ExtensionDegree). This model
+      // assumes a multiplication cost of O(n²) and an addition cost of O(n).
+      if (Config::BasePrimeField::kLimbNums * ExtensionDegree() >= 4) {
+        return ExtensionFieldMulAlgorithm::kCustom;
+      } else {
+        return ExtensionFieldMulAlgorithm::kKaratsuba;
+      }
+    } else {
+      // TODO(chokobole): Choose the best algorithm for quartic extensions.
+      return ExtensionFieldMulAlgorithm::kToomCook;
+    }
+  }
 
  private:
   std::array<BaseField, N> values_;
 };
 
 template <typename Config>
+std::optional<ExtensionFieldMulAlgorithm>
+    ExtensionField<Config>::mul_algorithm_ = std::nullopt;
+
+template <typename Config>
+std::optional<ExtensionFieldMulAlgorithm>
+    ExtensionField<Config>::square_algorithm_ = std::nullopt;
+
+template <typename Config>
 class ExtensionFieldOperationTraits<ExtensionField<Config>> {
  public:
   using BaseField = typename Config::BaseField;
   constexpr static size_t kDegree = Config::kDegreeOverBaseField;
-
-  constexpr static bool kHasHint = true;
-  constexpr static bool kNonResidueIsMinusOne =
-      Config::kNonResidue == BaseField(-1);
 };
 
 template <typename Config>
