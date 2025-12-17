@@ -22,13 +22,15 @@ import subprocess
 from setuptools import Extension
 from setuptools import setup
 
+CPP_STANDARD = "c++17"
+
 if platform.system() == "Windows":
   FILE = "_zk_dtypes_ext.pyd"
-  PLATFORM_ARGS = ["/std:c++17", "/EHsc", "/bigobj"]
+  PLATFORM_ARGS = [f"/std:{CPP_STANDARD}", "/EHsc", "/bigobj"]
   DEFINE_PREFIX = "/D"
 else:
   FILE = "_zk_dtypes_ext.so"
-  PLATFORM_ARGS = ["-std:c++17", "-fvisibility=hidden"]
+  PLATFORM_ARGS = [f"-std={CPP_STANDARD}", "-fvisibility=hidden"]
   DEFINE_PREFIX = "-D"
 
 DEFINES = ["EIGEN_MPL2_ONLY"]
