@@ -237,6 +237,8 @@ cc_library(
     deps = [
         ":extension_field_operation_traits_forward",
         ":frobenius",
+        ":karatsuba_operation",
+        ":toom_cook_operation",
         "@com_google_absl//absl/status:statusor",
     ],
 )
@@ -292,6 +294,12 @@ cc_library(
     name = "mersenne31",
     hdrs = ["include/field/mersenne31/mersenne31.h"],
     deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "karatsuba_operation",
+    hdrs = ["include/field/karatsuba_operation.h"],
+    deps = [":extension_field_operation_traits_forward"],
 )
 
 cc_library(
@@ -354,6 +362,12 @@ cc_library(
         ":frobenius",
         "@com_google_absl//absl/status:statusor",
     ],
+)
+
+cc_library(
+    name = "toom_cook_operation",
+    hdrs = ["include/field/toom_cook_operation.h"],
+    deps = [":extension_field_operation_traits_forward"],
 )
 
 cc_test(

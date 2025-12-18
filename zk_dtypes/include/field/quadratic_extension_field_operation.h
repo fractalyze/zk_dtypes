@@ -21,77 +21,74 @@ limitations under the License.
 #include "absl/status/statusor.h"
 
 #include "zk_dtypes/include/field/extension_field_operation.h"
+#include "zk_dtypes/include/field/karatsuba_operation.h"
 
 namespace zk_dtypes {
 
 template <typename Derived>
 class QuadraticExtensionFieldOperation
-    : public ExtensionFieldOperation<Derived> {
+    : public ExtensionFieldOperation<Derived>,
+      public KaratsubaOperation<Derived> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
-  constexpr static bool kHasHint =
-      ExtensionFieldOperationTraits<Derived>::kHasHint;
 
+  // Multiplication using Karatsuba method.
   Derived operator*(const Derived& other) const {
-    std::array<BaseField, 2> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-    std::array<BaseField, 2> y =
-        static_cast<const Derived&>(other).ToBaseField();
-    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
-
-    // See https://www.math.u-bordeaux.fr/~damienrobert/csi/book/book.pdf
-    // Karatsuba multiplication;
-    // Guide to Pairing-based cryptography, Algorithm 5.16.
-    // v₀ = x₀ * y₀
-    BaseField v0 = x[0] * y[0];
-    // v₁ = x₁ * y₁
-    BaseField v1 = x[1] * y[1];
-
-    // z₀ = x₀ * y₀ + q * x₁ * y₁
-    BaseField z0 = v0 + non_residue * v1;
-    // z₁ = (x₀ + x₁) * (y₀ + y₁) - v₀ - v₁
-    // z₁ = x₀ * y₁ + x₁ * y₀
-    BaseField z1 = (x[0] + x[1]) * (y[0] + y[1]) - v0 - v1;
-    return static_cast<const Derived&>(*this).FromBaseFields({z0, z1});
+    return this->KaratsubaMultiply(other);
   }
 
   Derived Square() const {
-    std::array<BaseField, 2> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+    ExtensionFieldMulAlgorithm algorithm =
+        static_cast<const Derived&>(*this).GetSquareAlgorithm();
+    if (algorithm == ExtensionFieldMulAlgorithm::kCustom) {
+      std::array<BaseField, 2> x =
+          static_cast<const Derived&>(*this).ToBaseField();
+      // v₀ = x₀ - x₁
+      BaseField v0 = x[0] - x[1];
+      // v₁ = x₀ * x₁
+      BaseField v1 = x[0] * x[1];
 
-    // v₀ = x₀ - x₁
-    BaseField v0 = x[0] - x[1];
-    // v₁ = x₀ * x₁
-    BaseField v1 = x[0] * x[1];
-    if constexpr (kHasHint) {
-      if constexpr (ExtensionFieldOperationTraits<
-                        Derived>::kNonResidueIsMinusOne) {
-        // When the non-residue is -1, we save 2 intermediate additions,
-        // and use one fewer intermediate variable
-        // (x₀² - x[1]², 2 * x₀ * x[1])
-        return static_cast<const Derived&>(*this).FromBaseFields(
-            {v0 * (x[0] + x[1]), v1.Double()});
-      }
+      return static_cast<const Derived&>(*this).FromBaseFields(
+          {v0 * (x[0] + x[1]), v1.Double()});
+    } else if (algorithm == ExtensionFieldMulAlgorithm::kCustom2) {
+      // [Comparison]
+      // Custom Algorithm:
+      // - square: 0, mul: 2, mul by non-residue: 2, add: 1, sub: 2, double: 1
+      // Default Karatsuba:
+      // - square: 2, mul: 1, mul by non-residue: 1, add: 1, sub: 0, double: 1
+      //
+      // Conclusion:
+      // If 'mul/square' is significantly more expensive than 'mul by
+      // non-residue + sub', this algorithm is faster. This holds true for
+      // almost all large prime fields assuming ξ is a small constant.
+      std::array<BaseField, 2> x =
+          static_cast<const Derived&>(*this).ToBaseField();
+      BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+
+      // v₀ = x₀ - x₁
+      BaseField v0 = x[0] - x[1];
+      // v₁ = x₀ * x₁
+      BaseField v1 = x[0] * x[1];
+      // v₂ = x₀ - x₁ * ξ
+      BaseField v2 = x[0] - non_residue * x[1];
+
+      // v₃ = v₀ * v₂ = (x₀ - x₁)(x₀ - x₁ξ)
+      //    = x₀² - x₀x₁ξ - x₀x₁ + x₁²ξ
+      //    = (x₀² + x₁²ξ) - x₀x₁(1 + ξ)
+      BaseField v3 = v0 * v2;
+
+      // y₀ = x₀² + x₁²ξ
+      //    = v₃ + x₀x₁(1 + ξ)
+      //    = v₃ + v₁ + v₁ξ
+      BaseField y0 = v3 + v1 + non_residue * v1;
+
+      // y₁ = 2x₀x₁
+      BaseField y1 = v1.Double();
+
+      return static_cast<const Derived&>(*this).FromBaseFields({y0, y1});
+    } else {
+      return this->KaratsubaSquare();
     }
-    // v₂ = x₀ - x[1] * q
-    BaseField v2 = x[0] - x[1] * non_residue;
-
-    // v₃ = (v₀ * v₂)
-    //    = (x₀ - x₁) * (x₀ - x₁ * q)
-    //    = x₀² - x₀ * x₁ * q - x₀ * x₁ + x₁² * q
-    //    = x₀² - (q + 1) * x₀ * x₁ + x₁² * q
-    //    = x₀² + x₁² * q - (q + 1) * x₀ * x₁
-    BaseField v3 = v0 * v2;
-    // clang-format off
-    // y₀ = v₃ + (q + 1) * x₀ * x₁
-    //    = x₀² + x₁² * q - (q + 1) * x₀ * x₁ + (q + 1) * x₀ * x₁
-    //    = x₀² + x₁² * q
-    // clang-format on
-    // y₁ = 2 * x₀ * x₁
-    BaseField y0 = v3 + non_residue * v1 + v1;
-    BaseField y1 = v1.Double();
-    return static_cast<const Derived&>(*this).FromBaseFields({y0, y1});
   }
 
   absl::StatusOr<Derived> Inverse() const {

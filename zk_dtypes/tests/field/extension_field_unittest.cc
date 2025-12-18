@@ -21,6 +21,18 @@ limitations under the License.
 namespace zk_dtypes {
 namespace {
 
+struct AutoReset {
+  AutoReset(std::optional<ExtensionFieldMulAlgorithm>& ptr,
+            ExtensionFieldMulAlgorithm new_value)
+      : ptr(ptr), old_value(ptr) {
+    ptr = new_value;
+  }
+  ~AutoReset() { ptr = old_value; }
+
+  std::optional<ExtensionFieldMulAlgorithm>& ptr;
+  std::optional<ExtensionFieldMulAlgorithm> old_value;
+};
+
 template <typename T>
 class ExtensionFieldTypedTest : public testing::Test {};
 
@@ -89,37 +101,81 @@ TYPED_TEST(ExtensionFieldTypedTest, Square) {
 
   ExtF a = ExtF::Random();
 
-  // a * a = a.Square()
-  EXPECT_EQ(a * a, a.Square());
+  std::vector<ExtensionFieldMulAlgorithm> algorithms;
+  if constexpr (ExtF::Config::kDegreeOverBaseField == 2) {
+    algorithms = {
+        ExtensionFieldMulAlgorithm::kCustom,
+        ExtensionFieldMulAlgorithm::kCustom2,
+        ExtensionFieldMulAlgorithm::kKaratsuba,
+    };
+  } else if constexpr (ExtF::Config::kDegreeOverBaseField == 3) {
+    algorithms = {
+        ExtensionFieldMulAlgorithm::kCustom,
+        ExtensionFieldMulAlgorithm::kKaratsuba,
+    };
+  } else {
+    algorithms = {
+        ExtensionFieldMulAlgorithm::kCustom,
+        ExtensionFieldMulAlgorithm::kKaratsuba,
+        ExtensionFieldMulAlgorithm::kToomCook,
+    };
+  }
+  for (auto algorithm : algorithms) {
+    SCOPED_TRACE(
+        absl::Substitute("algorithm: $0", static_cast<int>(algorithm)));
+    AutoReset reset(ExtF::square_algorithm_, algorithm);
+    EXPECT_EQ(a * a, a.Square());
+  }
+}
+
+template <typename ExtF>
+ExtF SchoolbookMul(const ExtF& a, const ExtF& b) {
+  using F = typename ExtF::BaseField;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+
+  // Schoolbook multiplication in Fp[u] / (uⁿ - ξ)
+  // c = Σᵢ Σⱼ aᵢbⱼu^(i+j) mod (uⁿ - ξ)
+  // When i + j >= n, u^(i+j) = u^(i+j-n) · ξ
+  F non_residue = ExtF::Config::kNonResidue;
+  ExtF ret;
+  for (size_t i = 0; i < kDegree; ++i) {
+    for (size_t j = 0; j < kDegree; ++j) {
+      size_t idx = i + j;
+      if (idx < kDegree) {
+        ret[idx] += a[i] * b[j];
+      } else {
+        // u^(i+j) = ξ · u^(i+j-n)
+        ret[idx - kDegree] += a[i] * b[j] * non_residue;
+      }
+    }
+  }
+  return ret;
 }
 
 TYPED_TEST(ExtensionFieldTypedTest, Mul) {
   using ExtF = TypeParam;
-  using BaseF = typename ExtF::BaseField;
-  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
 
   ExtF a = ExtF::Random();
   ExtF b = ExtF::Random();
   ExtF c = a * b;
 
-  // Schoolbook multiplication in Fp[u] / (uⁿ - ξ)
-  // c = Σᵢ Σⱼ aᵢbⱼu^(i+j) mod (uⁿ - ξ)
-  // When i + j >= n, u^(i+j) = u^(i+j-n) · ξ
-  BaseF non_residue = ExtF::Config::kNonResidue;
-  ExtF expected;
-  for (size_t i = 0; i < kDegree; ++i) {
-    for (size_t j = 0; j < kDegree; ++j) {
-      size_t idx = i + j;
-      if (idx < kDegree) {
-        expected[idx] += a[i] * b[j];
-      } else {
-        // u^(i+j) = ξ · u^(i+j-n)
-        expected[idx - kDegree] += a[i] * b[j] * non_residue;
-      }
-    }
+  std::vector<ExtensionFieldMulAlgorithm> algorithms;
+  if constexpr (ExtF::Config::kDegreeOverBaseField == 4) {
+    algorithms = {
+        ExtensionFieldMulAlgorithm::kKaratsuba,
+        ExtensionFieldMulAlgorithm::kToomCook,
+    };
+  } else {
+    algorithms = {
+        ExtensionFieldMulAlgorithm::kKaratsuba,
+    };
   }
-
-  EXPECT_EQ(c, expected);
+  for (auto algorithm : algorithms) {
+    SCOPED_TRACE(
+        absl::Substitute("algorithm: $0", static_cast<int>(algorithm)));
+    AutoReset reset(ExtF::mul_algorithm_, algorithm);
+    EXPECT_EQ(c, SchoolbookMul(a, b));
+  }
 }
 
 TYPED_TEST(ExtensionFieldTypedTest, SquareRoot) {

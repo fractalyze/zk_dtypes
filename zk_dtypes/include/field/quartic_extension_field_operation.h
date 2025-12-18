@@ -19,20 +19,128 @@ limitations under the License.
 #include <array>
 
 #include "zk_dtypes/include/field/extension_field_operation.h"
+#include "zk_dtypes/include/field/karatsuba_operation.h"
+#include "zk_dtypes/include/field/toom_cook_operation.h"
 
 namespace zk_dtypes {
 
-// Quartic extension field operations using Toom-Cook4 algorithm.
-//
-// See https://eprint.iacr.org/2006/471.pdf
-// Devegili OhEig Scott Dahab --- Multiplication and Squaring on
-// Pairing-Friendly Fields.
-//
-// For Fp4 = Fp[u] / (u⁴ - ξ), where x = x₀ + x₁u + x₂u² + x₃u³.
 template <typename Derived>
-class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived> {
+class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
+                                       public ToomCookOperation<Derived>,
+                                       public KaratsubaOperation<Derived> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
+
+  // Multiplication in Fp4 using Toom-Cook4 or Karatsuba.
+  Derived operator*(const Derived& other) const {
+    ExtensionFieldMulAlgorithm algorithm =
+        static_cast<const Derived&>(*this).GetMulAlgorithm();
+    if (algorithm == ExtensionFieldMulAlgorithm::kToomCook) {
+      // See https://eprint.iacr.org/2006/471.pdf
+      // Devegili OhEig Scott Dahab --- Multiplication and Squaring on
+      // Pairing-Friendly Fields.
+      return this->ToomCookMultiply(other);
+    } else {
+      return this->KaratsubaMultiply(other);
+    }
+  }
+
+  // Square in Fp4 using Toom-Cook4 or Karatsuba.
+  Derived Square() const {
+    ExtensionFieldMulAlgorithm algorithm =
+        static_cast<const Derived&>(*this).GetSquareAlgorithm();
+    if (algorithm == ExtensionFieldMulAlgorithm::kCustom) {
+      // [Comparison]
+      // Custom Algorithm:
+      // - square: 5, mul: 4, mul by non-residue: 3, add: 7, sub: 4, double: 4
+      // Default Karatsuba:
+      // - square: 4, mul: 6, mul by non-residue: 3, add: 12, sub: 0, double: 6
+      //
+      // Conclusion:
+      // The Custom algorithm saves 1 Multiplication, 1 Addition and 2 Double
+      // operations.
+      //
+      // For x = x₀ + x₁·u + x₂·u² + x₃·u³ where u⁴ = ξ:
+      //
+      // s₀ = x₀²
+      // s₁ = x₁²
+      // s₂ = x₂²
+      // s₃ = x₃²
+      // s₄ = (x₀ + x₂)²
+      // m₀ = 2 * x₀ * x₁
+      // m₁ = 2 * x₂ * x₃
+      // m₂ = 2 * x₁ * x₃
+      // m₃ = 2 * (x₀ + x₂) * (x₁ + x₃)
+      //
+      // Result:
+      // y₀ = s₀ + ξ * (s₂ + 2x₁x₃)
+      // y₁ = m₀ + ξ * m₁
+      // y₂ = s₁ + ξ * s₃ + (s₄ - s₀ - s₂)
+      // y₃ = m₃ - m₀ - m₁
+
+      std::array<BaseField, 4> x =
+          static_cast<const Derived&>(*this).ToBaseField();
+      BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+
+      // 1. Squares (xᵢ²)
+
+      // s₀ = x₀²
+      BaseField s0 = x[0].Square();
+      // s₁ = x₁²
+      BaseField s1 = x[1].Square();
+      // s₂ = x₂²
+      BaseField s2 = x[2].Square();
+      // s₃ = x₃²
+      BaseField s3 = x[3].Square();
+
+      // s₄ = (x₀ + x₂)²
+      BaseField x0_add_x2 = x[0] + x[2];
+      BaseField s4 = x0_add_x2.Square();
+
+      // 2. Products (Cross terms)
+
+      // m₀ = 2 * x₀ * x₁
+      BaseField m0 = (x[0] * x[1]).Double();
+      // m₁ = 2 * x₂ * x₃
+      BaseField m1 = (x[2] * x[3]).Double();
+      // m₂ = 2 * x₁ * x₃
+      BaseField m2 = (x[1] * x[3]).Double();
+      // m₃ = 2 * (x₀ + x₂) * (x₁ + x₃)
+      BaseField x1_add_x3 = x[1] + x[3];
+      BaseField m3 = (x0_add_x2 * x1_add_x3).Double();
+
+      // 3. Reconstruction (u⁴ = ξ)
+
+      // y₀ = x₀² + ξx₂² + 2ξx₁x₃
+      //    = s₀ + ξ(s₂ + 2x₁x₃)
+      //    Here we use m₂ directly instead of (s5 - s1 - s3)
+      BaseField y0 = s0 + non_residue * (s2 + m2);
+
+      // y₁ = 2x₀x₁ + 2ξx₂x₃
+      //    = m₀ + ξm₁
+      BaseField y1 = m0 + non_residue * m1;
+
+      // y₂ = x₁² + ξx₃² + 2x₀x₂
+      //    = s₁ + ξs₃ + (s₄ - s₀ - s₂)
+      //    Note: s₄ - s₀ - s₂ = 2x₀x₂
+      BaseField y2 = s1 + non_residue * s3 + s4 - s0 - s2;
+
+      // y₃ = 2x₀x₃ + 2x₁x₂
+      //    = 2(x₀+x₂)(x₁+x₃) - 2x₀x₁ - 2x₂x₃
+      //    = m₃ - m₀ - m₁
+      BaseField y3 = m3 - m0 - m1;
+
+      return static_cast<const Derived&>(*this).FromBaseFields(
+          {y0, y1, y2, y3});
+    } else if (algorithm == ExtensionFieldMulAlgorithm::kToomCook) {
+      return this->ToomCookSquare();
+    } else {
+      return this->KaratsubaSquare();
+    }
+  }
+
+ private:
+  friend class ToomCookOperation<Derived>;
 
   // Returns the 7x7 inverse Vandermonde matrix V⁻¹ for Toom-Cook4
   // interpolation.
@@ -47,40 +155,6 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived> {
     return matrix;
   }
 
-  // Multiplication in Fp4 using Toom-Cook4.
-  Derived operator*(const Derived& other) const {
-    std::array<BaseField, 4> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-    std::array<BaseField, 4> y =
-        static_cast<const Derived&>(other).ToBaseField();
-
-    std::array<BaseField, 7> evaluations_x = ComputeEvaluations(x);
-    std::array<BaseField, 7> evaluations_y = ComputeEvaluations(y);
-    std::array<BaseField, 7> evaluations_z;
-    for (size_t i = 0; i < 7; ++i) {
-      evaluations_z[i] = evaluations_x[i] * evaluations_y[i];
-    }
-
-    // Interpolation and reduction
-    return this->Reduce(this->Interpolate(evaluations_z));
-  }
-
-  // Square in Fp4 using Toom-Cook4.
-  Derived Square() const {
-    std::array<BaseField, 4> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-
-    std::array<BaseField, 7> evaluations_x = ComputeEvaluations(x);
-    std::array<BaseField, 7> evaluations_y;
-    for (size_t i = 0; i < 7; ++i) {
-      evaluations_y[i] = evaluations_x[i].Square();
-    }
-
-    // Interpolation and reduction
-    return this->Reduce(this->Interpolate(evaluations_y));
-  }
-
- private:
   static std::array<BaseField, 7> ComputeEvaluations(
       const std::array<BaseField, 4>& x) {
     // 1. Basic Doubles

@@ -19,104 +19,82 @@ limitations under the License.
 #include <array>
 
 #include "zk_dtypes/include/field/extension_field_operation.h"
+#include "zk_dtypes/include/field/karatsuba_operation.h"
 
 namespace zk_dtypes {
 
 template <typename Derived>
-class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived> {
+class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
+                                     public KaratsubaOperation<Derived> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
 
-  // Multiplication in Fp3 using Karatsuba method.
-  // See https://eprint.iacr.org/2006/471.pdf
-  // Devegili OhEig Scott Dahab --- Multiplication and Squaring on
-  // Pairing-Friendly Fields; Section 4 (Karatsuba)
-  //
-  // For x = x₀ + x₁·u + x₂·u² and y = y₀ + y₁·u + y₂·u² where u³ = ξ:
-  //
-  // v₀ = x₀ * y₀
-  // v₁ = x₁ * y₁
-  // v₂ = x₂ * y₂
-  // v₃ = (x₀ + x₁) * (y₀ + y₁) - v₀ - v₁
-  // v₄ = (x₀ + x₂) * (y₀ + y₂) - v₀ - v₂
-  // v₅ = (x₁ + x₂) * (y₁ + y₂) - v₁ - v₂
-  //
-  // Result:
-  // z₀ = v₀ + ξ * v₅
-  // z₁ = v₃ + ξ * v₂
-  // z₂ = v₄ + v₁
+  // Multiplication using Karatsuba method.
   Derived operator*(const Derived& other) const {
-    std::array<BaseField, 3> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-    std::array<BaseField, 3> y =
-        static_cast<const Derived&>(other).ToBaseField();
-    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
-
-    // v₀ = x₀ * y₀
-    BaseField v0 = x[0] * y[0];
-    // v₁ = x₁ * y₁
-    BaseField v1 = x[1] * y[1];
-    // v₂ = x₂ * y₂
-    BaseField v2 = x[2] * y[2];
-
-    // v₃ = (x₀ + x₁) * (y₀ + y₁) - v₀ - v₁
-    BaseField v3 = (x[0] + x[1]) * (y[0] + y[1]) - v0 - v1;
-    // v₄ = (x₀ + x₂) * (y₀ + y₂) - v₀ - v₂
-    BaseField v4 = (x[0] + x[2]) * (y[0] + y[2]) - v0 - v2;
-    // v₅ = (x₁ + x₂) * (y₁ + y₂) - v₁ - v₂
-    BaseField v5 = (x[1] + x[2]) * (y[1] + y[2]) - v1 - v2;
-
-    // z₀ = v₀ + ξ * v₅
-    BaseField z0 = v0 + non_residue * v5;
-    // z₁ = v₃ + ξ * v₂
-    BaseField z1 = v3 + non_residue * v2;
-    // z₂ = v₄ + v₁
-    BaseField z2 = v4 + v1;
-
-    return static_cast<const Derived&>(*this).FromBaseFields({z0, z1, z2});
+    return this->KaratsubaMultiply(other);
   }
 
-  // Square in Fp3 using CH-SQR2 algorithm.
-  // See https://eprint.iacr.org/2006/471.pdf
-  // Devegili OhEig Scott Dahab --- Multiplication and Squaring on
-  // Pairing-Friendly Fields; Section 4 (CH-SQR2)
-  //
-  // For x = x₀ + x₁·u + x₂·u² where u³ = ξ:
-  //
-  // s₀ = x₀²
-  // s₁ = 2 * x₀ * x₁
-  // s₂ = (x₀ - x₁ + x₂)²
-  // s₃ = 2 * x₁ * x₂
-  // s₄ = x₂²
-  //
-  // Result:
-  // y₀ = s₀ + ξ * s₃
-  // y₁ = s₁ + ξ * s₄
-  // y₂ = s₁ + s₂ + s₃ - s₀ - s₄
   Derived Square() const {
-    std::array<BaseField, 3> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+    ExtensionFieldMulAlgorithm algorithm =
+        static_cast<const Derived&>(*this).GetSquareAlgorithm();
+    if (algorithm == ExtensionFieldMulAlgorithm::kCustom) {
+      // [Comparison]
+      // Custom Algorithm (Chung-Hasan):
+      // - square: 3, mul: 2, mul by non-residue: 2, add: 5, sub: 3, double: 2
+      // Default Karatsuba:
+      // - square: 3, mul: 3, mul by non-residue: 2, add: 3, sub: 0, double: 3
+      //
+      // Conclusion:
+      // The Custom algorithm saves 1 Multiplication at the cost of ~5
+      // Add/Sub. Since Mul >> Add in cost, this optimization is generally
+      // faster.
 
-    // s₀ = x₀²
-    BaseField s0 = x[0].Square();
-    // s₁ = 2 * x₀ * x₁
-    BaseField s1 = (x[0] * x[1]).Double();
-    // s₂ = (x₀ - x₁ + x₂)²
-    BaseField s2 = (x[0] - x[1] + x[2]).Square();
-    // s₃ = 2 * x₁ * x₂
-    BaseField s3 = (x[1] * x[2]).Double();
-    // s₄ = x₂²
-    BaseField s4 = x[2].Square();
+      // Square in Fp3 using CH-SQR2 algorithm.
+      // See https://eprint.iacr.org/2006/471.pdf
+      // Devegili OhEig Scott Dahab --- Multiplication and Squaring on
+      // Pairing-Friendly Fields; Section 4 (CH-SQR2)
+      //
+      // For x = x₀ + x₁·u + x₂·u² where u³ = ξ:
+      //
+      // s₀ = x₀²
+      // s₁ = 2 * x₀ * x₁
+      // s₂ = (x₀ - x₁ + x₂)²
+      // s₃ = 2 * x₁ * x₂
+      // s₄ = x₂²
+      //
+      // Result:
+      // y₀ = s₀ + ξ * s₃
+      // y₁ = s₁ + ξ * s₄
+      // y₂ = s₁ + s₂ + s₃ - s₀ - s₄
 
-    // y₀ = s₀ + ξ * s₃
-    BaseField y0 = s0 + non_residue * s3;
-    // y₁ = s₁ + ξ * s₄
-    BaseField y1 = s1 + non_residue * s4;
-    // y₂ = s₁ + s₂ + s₃ - s₀ - s₄
-    BaseField y2 = s1 + s2 + s3 - s0 - s4;
+      std::array<BaseField, 3> x =
+          static_cast<const Derived&>(*this).ToBaseField();
+      BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
-    return static_cast<const Derived&>(*this).FromBaseFields({y0, y1, y2});
+      // s₀ = x₀²
+      BaseField s0 = x[0].Square();
+      // s₁ = 2 * x₀ * x₁
+      BaseField s1 = (x[0] * x[1]).Double();
+      // s₂ = (x₀ - x₁ + x₂)²
+      // Parentheses added for clarity: ((x0 - x1) + x2)^2
+      BaseField s2 = (x[0] - x[1] + x[2]).Square();
+      // s₃ = 2 * x₁ * x₂
+      BaseField s3 = (x[1] * x[2]).Double();
+      // s₄ = x₂²
+      BaseField s4 = x[2].Square();
+
+      // y₀ = s₀ + ξ * s₃
+      BaseField y0 = s0 + non_residue * s3;
+      // y₁ = s₁ + ξ * s₄
+      BaseField y1 = s1 + non_residue * s4;
+      // y₂ = s₁ + s₂ + s₃ - s₀ - s₄
+      //    = (x₁² + 2x₀x₂)  <-- Verified term
+      BaseField y2 = s1 + s2 + s3 - s0 - s4;
+
+      return static_cast<const Derived&>(*this).FromBaseFields({y0, y1, y2});
+    } else {
+      return this->KaratsubaSquare();
+    }
   }
 };
 
