@@ -31,19 +31,6 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
 
-  // Returns the 7x7 inverse Vandermonde matrix V⁻¹ for Toom-Cook4
-  // interpolation.
-  //
-  // For evaluation points t = {0, 1, -1, 2, -2, 3, ∞}, V⁻¹ satisfies c = V⁻¹ *
-  // v where:
-  //   v = {v₀, v₁, v₂, v₃, v₄, v₅, v₆} are evaluation results
-  //   c = {c₀, c₁, c₂, c₃, c₄, c₅, c₆} are polynomial coefficients
-  const std::array<std::array<BaseField, 7>, 7>& GetVandermondeInverseMatrix()
-      const {
-    static const auto matrix = ComputeVandermondeInverseMatrix();
-    return matrix;
-  }
-
   // Multiplication in Fp4 using Toom-Cook4 or Karatsuba.
   Derived operator*(const Derived& other) const {
     ExtensionFieldMulAlgorithm algorithm =
@@ -71,6 +58,19 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
 
  private:
   friend class ToomCookOperation<Derived>;
+
+  // Returns the 7x7 inverse Vandermonde matrix V⁻¹ for Toom-Cook4
+  // interpolation.
+  //
+  // For evaluation points t = {0, 1, -1, 2, -2, 3, ∞}, V⁻¹ satisfies c = V⁻¹ *
+  // v where:
+  //   v = {v₀, v₁, v₂, v₃, v₄, v₅, v₆} are evaluation results
+  //   c = {c₀, c₁, c₂, c₃, c₄, c₅, c₆} are polynomial coefficients
+  const std::array<std::array<BaseField, 7>, 7>& GetVandermondeInverseMatrix()
+      const {
+    static const auto matrix = ComputeVandermondeInverseMatrix();
+    return matrix;
+  }
 
   static std::array<BaseField, 7> ComputeEvaluations(
       const std::array<BaseField, 4>& x) {
