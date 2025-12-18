@@ -313,6 +313,19 @@ std::ostream& operator<<(std::ostream& os, const ExtensionField<Config>& ef) {
   return os << ef.ToString();
 }
 
+template <typename T>
+struct IsExtensionFieldImpl {
+  static constexpr bool value = false;
+};
+
+template <typename Config>
+struct IsExtensionFieldImpl<ExtensionField<Config>> {
+  static constexpr bool value = true;
+};
+
+template <typename T>
+constexpr bool IsExtensionField = IsExtensionFieldImpl<T>::value;
+
 }  // namespace zk_dtypes
 
 #endif  // ZK_DTYPES_INCLUDE_FIELD_EXTENSION_FIELD_H_
