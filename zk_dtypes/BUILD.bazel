@@ -231,12 +231,12 @@ cc_library(
     hdrs = [
         "include/field/cubic_extension_field_operation.h",
         "include/field/extension_field_operation.h",
-        "include/field/frobenius.h",
         "include/field/quadratic_extension_field_operation.h",
         "include/field/quartic_extension_field_operation.h",
     ],
     deps = [
         ":extension_field_operation_traits_forward",
+        ":frobenius",
         "@com_google_absl//absl/status:statusor",
     ],
 )
@@ -265,6 +265,12 @@ cc_library(
 cc_library(
     name = "finite_field_traits",
     hdrs = ["include/field/finite_field_traits.h"],
+)
+
+cc_library(
+    name = "frobenius",
+    hdrs = ["include/field/frobenius.h"],
+    deps = [":extension_field_operation_traits_forward"],
 )
 
 cc_library(
@@ -345,6 +351,7 @@ cc_library(
     ],
     deps = [
         ":finite_field_traits",
+        ":frobenius",
         "@com_google_absl//absl/status:statusor",
     ],
 )
