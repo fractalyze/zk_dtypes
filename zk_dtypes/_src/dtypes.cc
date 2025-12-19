@@ -197,6 +197,21 @@ struct TypeDescriptorBase<Koalabear4Std> : FieldTypeDescriptor<Koalabear4Std> {
 };
 
 template <>
+struct TypeDescriptorBase<Mersenne312> : FieldTypeDescriptor<Mersenne312> {
+  static constexpr const char* kTpDoc =
+      "mersenne312 quadratic extension field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'q';
+};
+
+template <>
+struct TypeDescriptorBase<Mersenne312Std>
+    : FieldTypeDescriptor<Mersenne312Std> {
+  static constexpr const char* kTpDoc =
+      "mersenne312 quadratic extension field values on standard domain";
+  static constexpr char kNpyDescrType = 'Q';
+};
+
+template <>
 struct TypeDescriptorBase<Goldilocks3> : FieldTypeDescriptor<Goldilocks3> {
   static constexpr const char* kTpDoc =
       "goldilocks cubic extension field values on montgomery domain";

@@ -40,6 +40,8 @@ __all__ = [
     "babybear4_std",
     "koalabear4",
     "koalabear4_std",
+    "mersenne312",
+    "mersenne312_std",
     "goldilocks3",
     "goldilocks3_std",
     # Elliptic curve types
@@ -79,6 +81,8 @@ from zk_dtypes._zk_dtypes_ext import babybear4
 from zk_dtypes._zk_dtypes_ext import babybear4_std
 from zk_dtypes._zk_dtypes_ext import koalabear4
 from zk_dtypes._zk_dtypes_ext import koalabear4_std
+from zk_dtypes._zk_dtypes_ext import mersenne312
+from zk_dtypes._zk_dtypes_ext import mersenne312_std
 from zk_dtypes._zk_dtypes_ext import goldilocks3
 from zk_dtypes._zk_dtypes_ext import goldilocks3_std
 from zk_dtypes._zk_dtypes_ext import bn254_g1_affine
@@ -114,6 +118,8 @@ babybear4: Type[np.generic]
 babybear4_std: Type[np.generic]
 koalabear4: Type[np.generic]
 koalabear4_std: Type[np.generic]
+mersenne312: Type[np.generic]
+mersenne312_std: Type[np.generic]
 goldilocks3: Type[np.generic]
 goldilocks3_std: Type[np.generic]
 bn254_g1_affine: Type[np.generic]
