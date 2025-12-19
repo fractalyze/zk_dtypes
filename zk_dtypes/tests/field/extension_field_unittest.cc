@@ -229,5 +229,25 @@ TYPED_TEST(ExtensionFieldTypedTest, MontReduce) {
   }
 }
 
+TYPED_TEST(ExtensionFieldTypedTest, AsBasePrimeFields) {
+  using ExtF = TypeParam;
+  using BasePrimeField = typename ExtF::BasePrimeField;
+
+  ExtF a = ExtF::Random();
+  absl::Span<const BasePrimeField> span = a.AsBasePrimeFields();
+
+  // Test that AsBasePrimeFields() returns the correct size.
+  EXPECT_EQ(span.size(), ExtF::ExtensionDegree());
+
+  // Test that span points to actual internal data.
+  size_t idx = 0;
+  for (const auto& base_field : a.values()) {
+    if constexpr (std::is_same_v<typename ExtF::BaseField, BasePrimeField>) {
+      EXPECT_EQ(span[idx], base_field);
+      ++idx;
+    }
+  }
+}
+
 }  // namespace
 }  // namespace zk_dtypes
