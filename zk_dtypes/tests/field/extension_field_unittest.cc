@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include <algorithm>
+
 #include "gtest/gtest.h"
 
 #include "zk_dtypes/include/all_types.h"
@@ -242,19 +244,47 @@ TYPED_TEST(ExtensionFieldTypedTest, AsBasePrimeFields) {
   using BasePrimeField = typename ExtF::BasePrimeField;
 
   ExtF a = ExtF::Random();
-  absl::Span<const BasePrimeField> span = a.AsBasePrimeFields();
+  absl::Span<BasePrimeField> span = a.AsBasePrimeFields();
 
   // Test that AsBasePrimeFields() returns the correct size.
   EXPECT_EQ(span.size(), ExtF::ExtensionDegree());
 
   // Test that span points to actual internal data.
-  size_t idx = 0;
-  for (const auto& base_field : a.values()) {
-    if constexpr (std::is_same_v<typename ExtF::BaseField, BasePrimeField>) {
-      EXPECT_EQ(span[idx], base_field);
-      ++idx;
-    }
+  EXPECT_TRUE(std::equal(a.begin(), a.end(), span.begin()));
+
+  const ExtF const_a = ExtF::Random();
+  absl::Span<const BasePrimeField> const_span = const_a.AsBasePrimeFields();
+
+  // Test that AsBasePrimeFields() returns the correct size.
+  EXPECT_EQ(const_span.size(), ExtF::ExtensionDegree());
+
+  // Test that span points to actual internal data.
+  EXPECT_TRUE(std::equal(const_a.begin(), const_a.end(), const_span.begin()));
+}
+
+// Define Fq4 as a quadratic extension over Fq2.
+// u² - (2 + 1i) = 0, where (2 + 1i) is in Fq2.
+REGISTER_EXTENSION_FIELD_WITH_TOWER(Fq4, test::Fq2, test::Fq, 2, {2, 1});
+
+TEST(ExtensionFieldTest, BasePrimeFieldIteratorWithTower) {
+  using Fq = test::Fq;
+
+  Fq4 val = Fq4::Random();
+  std::vector<Fq> elements;
+  for (const auto& prime_field_element : val) {
+    elements.push_back(prime_field_element);
   }
+
+  ASSERT_EQ(elements.size(), Fq4::ExtensionDegree());
+
+  // Check that elements are correct
+  auto values = val.values();              // std::array<Fq2, 2>
+  auto values0_vals = values[0].values();  // std::array<Fq, 2>
+  auto values1_vals = values[1].values();  // std::array<Fq, 2>
+  EXPECT_EQ(elements[0], values0_vals[0]);
+  EXPECT_EQ(elements[1], values0_vals[1]);
+  EXPECT_EQ(elements[2], values1_vals[0]);
+  EXPECT_EQ(elements[3], values1_vals[1]);
 }
 
 }  // namespace
