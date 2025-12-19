@@ -30,12 +30,8 @@ using PrimeFieldTypes = testing::Types<
         test::Fr,
     test::FrStd>;
 
-namespace {
-
 template <typename PrimeField>
 class RootOfUnityTest : public testing::Test {};
-
-}  // namespace
 
 TYPED_TEST_SUITE(RootOfUnityTest, PrimeFieldTypes);
 
