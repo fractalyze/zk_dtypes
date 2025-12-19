@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS_GOLDILOCKS3_H_
 #define ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS_GOLDILOCKS3_H_
 
-#include <stdint.h>
-
 #include "zk_dtypes/include/field/extension_field.h"
 #include "zk_dtypes/include/field/goldilocks/goldilocks.h"
 
@@ -25,35 +23,7 @@ namespace zk_dtypes {
 
 // Cubic extension field over Goldilocks: Goldilocks³ = Goldilocks[u] / (u³ - 7)
 // W = 7 is a cubic non-residue in Goldilocks field.
-template <typename BaseField>
-class Goldilocks3BaseConfig {
- public:
-  constexpr static uint32_t kDegreeOverBaseField = 3;
-  constexpr static BaseField kNonResidue = 7;
-};
-
-class Goldilocks3StdConfig : public Goldilocks3BaseConfig<GoldilocksStd> {
- public:
-  constexpr static bool kUseMontgomery = false;
-
-  using StdConfig = Goldilocks3StdConfig;
-
-  using BaseField = GoldilocksStd;
-  using BasePrimeField = GoldilocksStd;
-};
-
-class Goldilocks3Config : public Goldilocks3BaseConfig<Goldilocks> {
- public:
-  constexpr static bool kUseMontgomery = true;
-
-  using StdConfig = Goldilocks3StdConfig;
-
-  using BaseField = Goldilocks;
-  using BasePrimeField = Goldilocks;
-};
-
-using Goldilocks3 = ExtensionField<Goldilocks3Config>;
-using Goldilocks3Std = ExtensionField<Goldilocks3StdConfig>;
+REGISTER_EXTENSION_FIELD(Goldilocks3, Goldilocks, 3, 7);
 
 }  // namespace zk_dtypes
 

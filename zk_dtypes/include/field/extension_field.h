@@ -38,6 +38,37 @@ limitations under the License.
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/str_join.h"
 
+#define REGISTER_EXTENSION_FIELD(Name, BaseFieldIn, Degree, NonResidue) \
+  template <typename BaseField>                                         \
+  class Name##BaseConfig {                                              \
+   public:                                                              \
+    constexpr static uint32_t kDegreeOverBaseField = Degree;            \
+    constexpr static BaseField kNonResidue = NonResidue;                \
+  };                                                                    \
+                                                                        \
+  class Name##StdConfig : public Name##BaseConfig<BaseFieldIn##Std> {   \
+   public:                                                              \
+    constexpr static bool kUseMontgomery = false;                       \
+                                                                        \
+    using StdConfig = Name##StdConfig;                                  \
+                                                                        \
+    using BaseField = BaseFieldIn##Std;                                 \
+    using BasePrimeField = BaseFieldIn##Std;                            \
+  };                                                                    \
+                                                                        \
+  class Name##Config : public Name##BaseConfig<BaseFieldIn> {           \
+   public:                                                              \
+    constexpr static bool kUseMontgomery = true;                        \
+                                                                        \
+    using StdConfig = Name##StdConfig;                                  \
+                                                                        \
+    using BaseField = BaseFieldIn;                                      \
+    using BasePrimeField = BaseFieldIn;                                 \
+  };                                                                    \
+                                                                        \
+  using Name = ExtensionField<Name##Config>;                            \
+  using Name##Std = ExtensionField<Name##StdConfig>
+
 namespace zk_dtypes {
 
 // Forward declaration

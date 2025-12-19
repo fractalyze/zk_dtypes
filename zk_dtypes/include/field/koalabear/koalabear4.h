@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_FIELD_KOALABEAR_KOALABEAR4_H_
 #define ZK_DTYPES_INCLUDE_FIELD_KOALABEAR_KOALABEAR4_H_
 
-#include <stdint.h>
-
 #include "zk_dtypes/include/field/extension_field.h"
 #include "zk_dtypes/include/field/koalabear/koalabear.h"
 
@@ -25,35 +23,7 @@ namespace zk_dtypes {
 
 // Quartic extension field over Koalabear: Koalabear⁴ = Koalabear[u] / (u⁴ - 3)
 // W = 3 is a quartic non-residue in Koalabear field.
-template <typename BaseField>
-class Koalabear4BaseConfig {
- public:
-  constexpr static uint32_t kDegreeOverBaseField = 4;
-  constexpr static BaseField kNonResidue = 3;
-};
-
-class Koalabear4StdConfig : public Koalabear4BaseConfig<KoalabearStd> {
- public:
-  constexpr static bool kUseMontgomery = false;
-
-  using StdConfig = Koalabear4StdConfig;
-
-  using BaseField = KoalabearStd;
-  using BasePrimeField = KoalabearStd;
-};
-
-class Koalabear4Config : public Koalabear4BaseConfig<Koalabear> {
- public:
-  constexpr static bool kUseMontgomery = true;
-
-  using StdConfig = Koalabear4StdConfig;
-
-  using BaseField = Koalabear;
-  using BasePrimeField = Koalabear;
-};
-
-using Koalabear4 = ExtensionField<Koalabear4Config>;
-using Koalabear4Std = ExtensionField<Koalabear4StdConfig>;
+REGISTER_EXTENSION_FIELD(Koalabear4, Koalabear, 4, 3);
 
 }  // namespace zk_dtypes
 
