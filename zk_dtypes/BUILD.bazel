@@ -153,7 +153,7 @@ cc_library(
 )
 
 cc_test(
-    name = "base_unitests",
+    name = "base_unittests",
     srcs = [
         "tests/batch_inverse_unittest.cc",
         "tests/big_int_unittest.cc",
@@ -372,7 +372,7 @@ cc_library(
 )
 
 cc_test(
-    name = "field_unitests",
+    name = "field_unittests",
     srcs = [
         "tests/field/extension_field_unittest.cc",
         "tests/field/prime_field_unittest.cc",
@@ -536,7 +536,7 @@ cc_library(
 )
 
 cc_test(
-    name = "elliptic_curve_unitests",
+    name = "elliptic_curve_unittests",
     srcs = [
         "tests/elliptic_curve/affine_point_unittest.cc",
         "tests/elliptic_curve/jacobian_point_unittest.cc",
