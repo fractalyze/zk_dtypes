@@ -95,417 +95,234 @@ struct TypeDescriptor<uint4> : IntNTypeDescriptor<uint4> {
   static constexpr char kNpyDescrByteorder = '=';
 };
 
+template <typename T>
+struct TypeDescriptorBase;
+
 template <>
-struct TypeDescriptor<Babybear> : FieldTypeDescriptor<Babybear> {
-  typedef Babybear T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "babybear";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.babybear";
+struct TypeDescriptorBase<Babybear> : FieldTypeDescriptor<Babybear> {
   static constexpr const char* kTpDoc =
       "babybear field values on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'b';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<BabybearStd> : FieldTypeDescriptor<BabybearStd> {
-  typedef BabybearStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "babybear_std";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.babybear_std";
+struct TypeDescriptorBase<BabybearStd> : FieldTypeDescriptor<BabybearStd> {
   static constexpr const char* kTpDoc =
       "babybear field values on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'B';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Goldilocks> : FieldTypeDescriptor<Goldilocks> {
-  typedef Goldilocks T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "goldilocks";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.goldilocks";
+struct TypeDescriptorBase<Goldilocks> : FieldTypeDescriptor<Goldilocks> {
   static constexpr const char* kTpDoc =
       "goldilocks field values on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'g';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<GoldilocksStd> : FieldTypeDescriptor<GoldilocksStd> {
-  typedef GoldilocksStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "goldilocks_std";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.goldilocks_std";
+struct TypeDescriptorBase<GoldilocksStd> : FieldTypeDescriptor<GoldilocksStd> {
   static constexpr const char* kTpDoc =
       "goldilocks field values on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'G';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Koalabear> : FieldTypeDescriptor<Koalabear> {
-  typedef Koalabear T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "koalabear";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.koalabear";
+struct TypeDescriptorBase<Koalabear> : FieldTypeDescriptor<Koalabear> {
   static constexpr const char* kTpDoc =
       "koalabear field values on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'k';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<KoalabearStd> : FieldTypeDescriptor<KoalabearStd> {
-  typedef KoalabearStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "koalabear_std";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.koalabear_std";
+struct TypeDescriptorBase<KoalabearStd> : FieldTypeDescriptor<KoalabearStd> {
   static constexpr const char* kTpDoc =
       "koalabear field values on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'K';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Mersenne31> : FieldTypeDescriptor<Mersenne31> {
-  typedef Mersenne31 T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "mersenne31";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.mersenne31";
+struct TypeDescriptorBase<Mersenne31> : FieldTypeDescriptor<Mersenne31> {
   static constexpr const char* kTpDoc =
       "mersenne31 field values on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'm';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Mersenne31Std> : FieldTypeDescriptor<Mersenne31Std> {
-  typedef Mersenne31Std T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "mersenne31_std";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.mersenne31_std";
+struct TypeDescriptorBase<Mersenne31Std> : FieldTypeDescriptor<Mersenne31Std> {
   static constexpr const char* kTpDoc =
       "mersenne31 field values on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'M';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::Fr> : FieldTypeDescriptor<bn254::Fr> {
-  typedef bn254::Fr T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_sf";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.bn254_sf";
+struct TypeDescriptorBase<bn254::Fr> : FieldTypeDescriptor<bn254::Fr> {
   static constexpr const char* kTpDoc =
       "bn254 scalar field values on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'b';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::FrStd> : FieldTypeDescriptor<bn254::FrStd> {
-  typedef bn254::FrStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_sf_std";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.bn254_sf_std";
+struct TypeDescriptorBase<bn254::FrStd> : FieldTypeDescriptor<bn254::FrStd> {
   static constexpr const char* kTpDoc =
       "bn254 scalar field values on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'B';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Babybear4> : FieldTypeDescriptor<Babybear4> {
-  typedef Babybear4 T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "babybear4";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.babybear4";
+struct TypeDescriptorBase<Babybear4> : FieldTypeDescriptor<Babybear4> {
   static constexpr const char* kTpDoc =
       "babybear quartic extension field values on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'd';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Babybear4Std> : FieldTypeDescriptor<Babybear4Std> {
-  typedef Babybear4Std T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "babybear4_std";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.babybear4_std";
+struct TypeDescriptorBase<Babybear4Std> : FieldTypeDescriptor<Babybear4Std> {
   static constexpr const char* kTpDoc =
       "babybear quartic extension field values on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'D';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Koalabear4> : FieldTypeDescriptor<Koalabear4> {
-  typedef Koalabear4 T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "koalabear4";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.koalabear4";
+struct TypeDescriptorBase<Koalabear4> : FieldTypeDescriptor<Koalabear4> {
   static constexpr const char* kTpDoc =
       "koalabear quartic extension field values on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'e';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Koalabear4Std> : FieldTypeDescriptor<Koalabear4Std> {
-  typedef Koalabear4Std T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "koalabear4_std";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.koalabear4_std";
+struct TypeDescriptorBase<Koalabear4Std> : FieldTypeDescriptor<Koalabear4Std> {
   static constexpr const char* kTpDoc =
       "koalabear quartic extension field values on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'E';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Goldilocks3> : FieldTypeDescriptor<Goldilocks3> {
-  typedef Goldilocks3 T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "goldilocks3";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.goldilocks3";
+struct TypeDescriptorBase<Goldilocks3> : FieldTypeDescriptor<Goldilocks3> {
   static constexpr const char* kTpDoc =
       "goldilocks cubic extension field values on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 't';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<Goldilocks3Std> : FieldTypeDescriptor<Goldilocks3Std> {
-  typedef Goldilocks3Std T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "goldilocks3_std";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.goldilocks3_std";
+struct TypeDescriptorBase<Goldilocks3Std>
+    : FieldTypeDescriptor<Goldilocks3Std> {
   static constexpr const char* kTpDoc =
       "goldilocks cubic extension field values on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'T';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G1AffinePoint>
+struct TypeDescriptorBase<bn254::G1AffinePoint>
     : EcPointTypeDescriptor<bn254::G1AffinePoint> {
-  typedef bn254::G1AffinePoint T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g1_affine";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.bn254_g1_affine";
   static constexpr const char* kTpDoc =
       "bn254 G1 elliptic curve affine point on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'a';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G1AffinePointStd>
+struct TypeDescriptorBase<bn254::G1AffinePointStd>
     : EcPointTypeDescriptor<bn254::G1AffinePointStd> {
-  typedef bn254::G1AffinePointStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g1_affine_std";
-  static constexpr const char* kQualifiedTypeName =
-      "zk_dtypes.bn254_g1_affine_std";
   static constexpr const char* kTpDoc =
       "bn254 G1 elliptic curve affine point on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'A';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G1JacobianPoint>
+struct TypeDescriptorBase<bn254::G1JacobianPoint>
     : EcPointTypeDescriptor<bn254::G1JacobianPoint> {
-  typedef bn254::G1JacobianPoint T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g1_jacobian";
-  static constexpr const char* kQualifiedTypeName =
-      "zk_dtypes.bn254_g1_jacobian";
   static constexpr const char* kTpDoc =
       "bn254 G1 elliptic curve jacobian point on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'j';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G1JacobianPointStd>
+struct TypeDescriptorBase<bn254::G1JacobianPointStd>
     : EcPointTypeDescriptor<bn254::G1JacobianPointStd> {
-  typedef bn254::G1JacobianPointStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g1_jacobian_std";
-  static constexpr const char* kQualifiedTypeName =
-      "zk_dtypes.bn254_g1_jacobian_std";
   static constexpr const char* kTpDoc =
       "bn254 G1 elliptic curve jacobian point on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'J';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G1PointXyzz>
+struct TypeDescriptorBase<bn254::G1PointXyzz>
     : EcPointTypeDescriptor<bn254::G1PointXyzz> {
-  typedef bn254::G1PointXyzz T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g1_xyzz";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.bn254_g1_xyzz";
   static constexpr const char* kTpDoc =
       "bn254 G1 elliptic curve xyzz point on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'x';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G1PointXyzzStd>
+struct TypeDescriptorBase<bn254::G1PointXyzzStd>
     : EcPointTypeDescriptor<bn254::G1PointXyzzStd> {
-  typedef bn254::G1PointXyzzStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g1_xyzz_std";
-  static constexpr const char* kQualifiedTypeName =
-      "zk_dtypes.bn254_g1_xyzz_std";
   static constexpr const char* kTpDoc =
       "bn254 G1 elliptic curve xyzz point on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'X';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G2AffinePoint>
+struct TypeDescriptorBase<bn254::G2AffinePoint>
     : EcPointTypeDescriptor<bn254::G2AffinePoint> {
-  typedef bn254::G2AffinePoint T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g2_affine";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.bn254_g2_affine";
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve affine point on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'a';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G2AffinePointStd>
+struct TypeDescriptorBase<bn254::G2AffinePointStd>
     : EcPointTypeDescriptor<bn254::G2AffinePointStd> {
-  typedef bn254::G2AffinePointStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g2_affine_std";
-  static constexpr const char* kQualifiedTypeName =
-      "zk_dtypes.bn254_g2_affine_std";
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve affine point on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'A';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G2JacobianPoint>
+struct TypeDescriptorBase<bn254::G2JacobianPoint>
     : EcPointTypeDescriptor<bn254::G2JacobianPoint> {
-  typedef bn254::G2JacobianPoint T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g2_jacobian";
-  static constexpr const char* kQualifiedTypeName =
-      "zk_dtypes.bn254_g2_jacobian";
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve jacobian point on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'j';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G2JacobianPointStd>
+struct TypeDescriptorBase<bn254::G2JacobianPointStd>
     : EcPointTypeDescriptor<bn254::G2JacobianPointStd> {
-  typedef bn254::G2JacobianPointStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g2_jacobian_std";
-  static constexpr const char* kQualifiedTypeName =
-      "zk_dtypes.bn254_g2_jacobian_std";
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve jacobian point on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'J';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G2PointXyzz>
+struct TypeDescriptorBase<bn254::G2PointXyzz>
     : EcPointTypeDescriptor<bn254::G2PointXyzz> {
-  typedef bn254::G2PointXyzz T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g2_xyzz";
-  static constexpr const char* kQualifiedTypeName = "zk_dtypes.bn254_g2_xyzz";
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve xyzz point on montgomery domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'x';
-  static constexpr char kNpyDescrByteorder = '=';
 };
 
 template <>
-struct TypeDescriptor<bn254::G2PointXyzzStd>
+struct TypeDescriptorBase<bn254::G2PointXyzzStd>
     : EcPointTypeDescriptor<bn254::G2PointXyzzStd> {
-  typedef bn254::G2PointXyzzStd T;
-  static constexpr bool is_floating = false;
-  static constexpr bool is_integral = false;
-  static constexpr const char* kTypeName = "bn254_g2_xyzz_std";
-  static constexpr const char* kQualifiedTypeName =
-      "zk_dtypes.bn254_g2_xyzz_std";
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve xyzz point on standard domain";
-  static constexpr char kNpyDescrKind = 'V';
   static constexpr char kNpyDescrType = 'X';
-  static constexpr char kNpyDescrByteorder = '=';
 };
+
+#define REGISTER_TYPE_DESCRIPTOR(ActualType, UpperCamelCaseName,         \
+                                 UpperSnakeCaseName, LowerSnakeCaseName) \
+  template <>                                                            \
+  struct TypeDescriptor<ActualType> : TypeDescriptorBase<ActualType> {   \
+    typedef ActualType T;                                                \
+    static constexpr bool is_floating = false;                           \
+    static constexpr bool is_integral = false;                           \
+    static constexpr const char* kTypeName = #LowerSnakeCaseName;        \
+    static constexpr const char* kQualifiedTypeName =                    \
+        "zk_dtypes." #LowerSnakeCaseName;                                \
+    static constexpr char kNpyDescrKind = 'V';                           \
+    static constexpr char kNpyDescrByteorder = '=';                      \
+  };
+
+ZK_DTYPES_PUBLIC_TYPE_LIST(REGISTER_TYPE_DESCRIPTOR)
+#undef REGISTER_TYPE_DESCRIPTOR
 
 namespace {
 
