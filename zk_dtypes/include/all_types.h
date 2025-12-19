@@ -49,12 +49,13 @@ WITH_STD(V, ::zk_dtypes::bn254::Fq2, Bn254Bf2, BN254_BF2, bn254_bf2)
 // Field Types
 //===----------------------------------------------------------------------===//
 
-// TODO(chokobole): Add `ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST()`
 #define ZK_DTYPES_PUBLIC_FIELD_TYPE_LIST(V) \
-ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)
+ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)   \
+ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)
 
 #define ZK_DTYPES_ALL_FIELD_TYPE_LIST(V) \
-ZK_DTYPES_PUBLIC_FIELD_TYPE_LIST(V)
+ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V)   \
+ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(V)
 
 //===----------------------------------------------------------------------===//
 // ScalarField Types
@@ -163,14 +164,12 @@ ZK_DTYPES_PUBLIC_EC_POINT_TYPE_LIST(V)
 // All Types
 //===----------------------------------------------------------------------===//
 
-// TODO(chokobole): Change `ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST()` to `ZK_DTYPES_PUBLIC_FIELD_TYPE_LIST()`
-#define ZK_DTYPES_PUBLIC_TYPE_LIST(V)     \
-ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V) \
+#define ZK_DTYPES_PUBLIC_TYPE_LIST(V) \
+ZK_DTYPES_PUBLIC_FIELD_TYPE_LIST(V)   \
 ZK_DTYPES_PUBLIC_EC_POINT_TYPE_LIST(V)
 
-// TODO(chokobole): Change `ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST()` to `ZK_DTYPES_ALL_FIELD_TYPE_LIST()`
-#define ZK_DTYPES_ALL_TYPE_LIST(V)     \
-ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V) \
+#define ZK_DTYPES_ALL_TYPE_LIST(V) \
+ZK_DTYPES_ALL_FIELD_TYPE_LIST(V)   \
 ZK_DTYPES_ALL_EC_POINT_TYPE_LIST(V)
 // clang-format on
 
