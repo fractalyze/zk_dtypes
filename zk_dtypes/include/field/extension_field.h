@@ -27,6 +27,7 @@ limitations under the License.
 
 #include "absl/log/check.h"
 #include "absl/strings/substitute.h"
+#include "absl/types/span.h"
 
 #include "zk_dtypes/include/always_false.h"
 #include "zk_dtypes/include/big_int.h"
@@ -176,6 +177,17 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
 
   constexpr const std::array<BaseField, N>& values() const { return values_; }
   constexpr std::array<BaseField, N>& values() { return values_; }
+
+  constexpr absl::Span<const BasePrimeField> AsBasePrimeFields() const {
+    return absl::Span<const BasePrimeField>(
+        reinterpret_cast<const BasePrimeField*>(values_.data()),
+        ExtensionDegree());
+  }
+
+  constexpr absl::Span<BasePrimeField> AsBasePrimeFields() {
+    return absl::Span<BasePrimeField>(
+        reinterpret_cast<BasePrimeField*>(values_.data()), ExtensionDegree());
+  }
 
   constexpr bool IsZero() const {
     for (size_t i = 0; i < std::size(values_); ++i) {
