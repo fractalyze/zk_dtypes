@@ -33,13 +33,13 @@ using PrimeFieldTypes = testing::Types<
 namespace {
 
 template <typename PrimeField>
-class PrimeFieldBaseTest : public testing::Test {};
+class RootOfUnityTest : public testing::Test {};
 
 }  // namespace
 
-TYPED_TEST_SUITE(PrimeFieldBaseTest, PrimeFieldTypes);
+TYPED_TEST_SUITE(RootOfUnityTest, PrimeFieldTypes);
 
-TYPED_TEST(PrimeFieldBaseTest, Decompose) {
+TYPED_TEST(RootOfUnityTest, Decompose) {
   using F = TypeParam;
 
   if constexpr (F::Config::kHasLargeSubgroupRootOfUnity) {
@@ -56,7 +56,7 @@ TYPED_TEST(PrimeFieldBaseTest, Decompose) {
   }
 }
 
-TYPED_TEST(PrimeFieldBaseTest, TwoAdicRootOfUnity) {
+TYPED_TEST(RootOfUnityTest, TwoAdicRootOfUnity) {
   using F = TypeParam;
 
   if constexpr (F::Config::kHasTwoAdicRootOfUnity) {
@@ -68,7 +68,7 @@ TYPED_TEST(PrimeFieldBaseTest, TwoAdicRootOfUnity) {
   }
 }
 
-TYPED_TEST(PrimeFieldBaseTest, LargeSubgroupOfUnity) {
+TYPED_TEST(RootOfUnityTest, LargeSubgroupOfUnity) {
   using F = TypeParam;
 
   if constexpr (F::Config::kHasLargeSubgroupRootOfUnity) {
@@ -82,7 +82,7 @@ TYPED_TEST(PrimeFieldBaseTest, LargeSubgroupOfUnity) {
   }
 }
 
-TYPED_TEST(PrimeFieldBaseTest, GetRootOfUnity) {
+TYPED_TEST(RootOfUnityTest, GetRootOfUnity) {
   using F = TypeParam;
 
   if constexpr (F::Config::kHasLargeSubgroupRootOfUnity) {
