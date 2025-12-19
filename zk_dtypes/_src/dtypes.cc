@@ -576,15 +576,8 @@ bool Initialize() {
   if (!RegisterFieldDtype<ActualType>(numpy.get())) { \
     return false;                                     \
   }
-  ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(REGISTER_FIELD_DTYPES)
+  ZK_DTYPES_PUBLIC_FIELD_TYPE_LIST(REGISTER_FIELD_DTYPES)
 #undef REGISTER_FIELD_DTYPES
-
-#define REGISTER_EXT_FIELD_DTYPES(ActualType, ...)    \
-  if (!RegisterFieldDtype<ActualType>(numpy.get())) { \
-    return false;                                     \
-  }
-  ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(REGISTER_EXT_FIELD_DTYPES)
-#undef REGISTER_EXT_FIELD_DTYPES
 
 #define REGISTER_EC_POINT_DTYPES(ActualType, ...)       \
   if (!RegisterEcPointDtype<ActualType>(numpy.get())) { \
@@ -664,7 +657,6 @@ extern "C" EXPORT_SYMBOL PyObject* PyInit__zk_dtypes_ext() {
     return nullptr;                                                          \
   }
   ZK_DTYPES_PUBLIC_TYPE_LIST(INIT_MODULE_TYPE)
-  ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(INIT_MODULE_TYPE)
 #undef INIT_MODULE_TYPE
 
 #ifdef Py_GIL_DISABLED
