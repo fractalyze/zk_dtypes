@@ -142,6 +142,9 @@ be referred to by their string name:
 dtype(babybear)
 ```
 
+See [examples/zk_dtypes_examples.ipynb](/examples/zk_dtypes_examples.ipynb) for
+more examples.
+
 ## License
 
 The `zk_dtypes` source code is a modified derivative of the `ml_dtypes` project
