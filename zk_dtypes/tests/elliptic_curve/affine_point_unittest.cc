@@ -122,5 +122,18 @@ TEST(AffinePointTest, MontReduce) {
   EXPECT_EQ(reduced.y(), Fq(2).MontReduce());
 }
 
+TEST(AffinePointTypedTest, CreateFromX) {
+  for (size_t i = 0; i < 7; ++i) {
+    AffinePoint ap = *(Fr(i) * AffinePoint::Generator()).ToAffine();
+    absl::StatusOr<AffinePoint> q = AffinePoint::CreateFromX(ap.x());
+    if (i == 0) {
+      ASSERT_FALSE(q.ok());
+    } else {
+      ASSERT_TRUE(q.ok()) << i;
+      EXPECT_TRUE(ap == *q || ap == -(*q));
+    }
+  }
+}
+
 }  // namespace
 }  // namespace zk_dtypes::test
