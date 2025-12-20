@@ -48,6 +48,7 @@ TYPED_TEST_SUITE(ExtensionFieldTypedTest, ExtensionFieldTypes);
 TYPED_TEST(ExtensionFieldTypedTest, Zero) {
   using ExtF = TypeParam;
 
+  EXPECT_TRUE(ExtF(0).IsZero());
   EXPECT_TRUE(ExtF::Zero().IsZero());
   EXPECT_FALSE(ExtF::One().IsZero());
 }
@@ -55,6 +56,7 @@ TYPED_TEST(ExtensionFieldTypedTest, Zero) {
 TYPED_TEST(ExtensionFieldTypedTest, One) {
   using ExtF = TypeParam;
 
+  EXPECT_TRUE(ExtF(1).IsOne());
   EXPECT_TRUE(ExtF::One().IsOne());
   EXPECT_FALSE(ExtF::Zero().IsOne());
 }
