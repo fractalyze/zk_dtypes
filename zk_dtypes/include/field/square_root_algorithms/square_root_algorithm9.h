@@ -56,7 +56,7 @@ absl::StatusOr<F> ComputeAlgorithm9SquareRoot(const F& a) {
   constexpr auto exponent = (BasePrimeField::Config::kModulus - 3) >> 2;
   F a1 = a.Pow(exponent);
   F alpha = a1.Square() * a;
-  F a0 = Frobenius(alpha) * alpha;
+  F a0 = alpha.template Frobenius<>() * alpha;
   auto neg_one = -F::One();
   if (a0 == neg_one) {
     return absl::NotFoundError("No square root exists");

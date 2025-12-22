@@ -237,7 +237,7 @@ cc_library(
     ],
     deps = [
         ":extension_field_operation_traits_forward",
-        ":frobenius",
+        ":frobenius_operation",
         ":karatsuba_operation",
         ":toom_cook_operation",
         "@com_google_absl//absl/status:statusor",
@@ -274,6 +274,12 @@ cc_library(
     name = "frobenius",
     hdrs = ["include/field/frobenius.h"],
     deps = [":extension_field_operation_traits_forward"],
+)
+
+cc_library(
+    name = "frobenius_operation",
+    hdrs = ["include/field/frobenius_operation.h"],
+    deps = [":frobenius"],
 )
 
 cc_library(

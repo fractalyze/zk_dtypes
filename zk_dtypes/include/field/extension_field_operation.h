@@ -23,7 +23,7 @@ limitations under the License.
 #include "absl/status/statusor.h"
 
 #include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
-#include "zk_dtypes/include/field/frobenius.h"
+#include "zk_dtypes/include/field/frobenius_operation.h"
 
 namespace zk_dtypes {
 
@@ -35,7 +35,7 @@ enum class ExtensionFieldMulAlgorithm {
 };
 
 template <typename Derived>
-class ExtensionFieldOperation {
+class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
   constexpr static size_t kDegree =
@@ -104,7 +104,7 @@ class ExtensionFieldOperation {
     // See
     // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.-frobenius-endomorphism
     Derived frob_product =
-        ComputeFrobeniusProduct(self, std::make_index_sequence<kDegree - 1>{});
+        ComputeFrobeniusProduct(std::make_index_sequence<kDegree - 1>{});
 
     // Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x) ∈ BaseField
     // Result is [norm, 0, ..., 0] in extension field representation.
@@ -122,11 +122,9 @@ class ExtensionFieldOperation {
 
  private:
   // Compute φ¹(x) · φ²(x) · ... · φⁿ⁻¹(x) using fold expression.
-  // Each Frobenius<E> directly uses precomputed coeffs[E - 1].
   template <size_t... Es>
-  static Derived ComputeFrobeniusProduct(const Derived& x,
-                                         std::index_sequence<Es...>) {
-    return (Frobenius<Es + 1>(x) * ...);
+  Derived ComputeFrobeniusProduct(std::index_sequence<Es...>) const {
+    return (this->template Frobenius<Es + 1>() * ...);
   }
 
  public:
