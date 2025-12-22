@@ -24,6 +24,7 @@ namespace zk_dtypes::test {
 namespace {
 
 TEST(AffinePointTest, Zero) {
+  EXPECT_TRUE(AffinePoint(0).IsZero());
   EXPECT_TRUE(AffinePoint::Zero().IsZero());
   EXPECT_FALSE(AffinePoint(1, 2).IsZero());
 }
@@ -34,6 +35,8 @@ TEST(AffinePointTest, One) {
                                    AffinePoint::Curve::Config::kY));
   EXPECT_EQ(AffinePoint::Generator(), AffinePoint::One());
   EXPECT_TRUE(generator.IsOne());
+  EXPECT_TRUE(AffinePoint(1).IsOne());
+  EXPECT_TRUE(AffinePoint::One().IsOne());
 }
 
 TEST(AffinePointTest, EqualityOperations) {
@@ -117,6 +120,19 @@ TEST(AffinePointTest, MontReduce) {
 
   EXPECT_EQ(reduced.x(), Fq(3).MontReduce());
   EXPECT_EQ(reduced.y(), Fq(2).MontReduce());
+}
+
+TEST(AffinePointTypedTest, CreateFromX) {
+  for (size_t i = 0; i < 7; ++i) {
+    AffinePoint ap = *(Fr(i) * AffinePoint::Generator()).ToAffine();
+    absl::StatusOr<AffinePoint> q = AffinePoint::CreateFromX(ap.x());
+    if (i == 0) {
+      ASSERT_FALSE(q.ok());
+    } else {
+      ASSERT_TRUE(q.ok()) << i;
+      EXPECT_TRUE(ap == *q || ap == -(*q));
+    }
+  }
 }
 
 }  // namespace

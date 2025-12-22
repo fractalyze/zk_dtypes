@@ -24,6 +24,7 @@ namespace zk_dtypes::test {
 namespace {
 
 TEST(JacobianPointTest, Zero) {
+  EXPECT_TRUE(JacobianPoint(0).IsZero());
   EXPECT_TRUE(JacobianPoint::Zero().IsZero());
   EXPECT_FALSE(JacobianPoint(1, 2, 1).IsZero());
 }
@@ -34,6 +35,8 @@ TEST(JacobianPointTest, One) {
                                      JacobianPoint::Curve::Config::kY, 1));
   EXPECT_EQ(JacobianPoint::Generator(), JacobianPoint::One());
   EXPECT_TRUE(generator.IsOne());
+  EXPECT_TRUE(JacobianPoint(1).IsOne());
+  EXPECT_TRUE(JacobianPoint::One().IsOne());
 }
 
 TEST(JacobianPointTest, EqualityOperations) {

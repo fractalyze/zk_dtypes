@@ -24,6 +24,8 @@ namespace zk_dtypes::test {
 namespace {
 
 TEST(PointXyzzTest, Zero) {
+  EXPECT_TRUE(PointXyzz(0).IsZero());
+  EXPECT_TRUE(PointXyzz::Zero().IsZero());
   EXPECT_TRUE(PointXyzz(1, 2, 0, 0).IsZero());
   EXPECT_FALSE(PointXyzz(1, 2, 1, 0).IsZero());
   EXPECT_TRUE(PointXyzz(1, 2, 0, 1).IsZero());
@@ -35,6 +37,8 @@ TEST(PointXyzzTest, One) {
                                  PointXyzz::Curve::Config::kY, 1, 1));
   EXPECT_EQ(PointXyzz::Generator(), PointXyzz::One());
   EXPECT_TRUE(generator.IsOne());
+  EXPECT_TRUE(PointXyzz(1).IsOne());
+  EXPECT_TRUE(PointXyzz::One().IsOne());
 }
 
 TEST(PointXyzzTest, EqualityOperations) {

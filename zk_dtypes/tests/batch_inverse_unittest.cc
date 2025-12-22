@@ -19,20 +19,26 @@ limitations under the License.
 
 #include "gtest/gtest.h"
 
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
+#include "zk_dtypes/include/elliptic_curve/short_weierstrass/test/sw_curve_config.h"
 
-namespace zk_dtypes::bn254 {
+namespace zk_dtypes {
 namespace {
+
+using Fr = test::Fr;
 
 class BatchInverseTest : public testing::Test {
  public:
   void SetUp() override {
-    inputs_.push_back(*Fr::FromHexString(
-        "0xb94db59332f8a619901d39188315c421beafb516eb8a3ab56ceed7df960ede2"));
-    inputs_.push_back(*Fr::FromHexString(
-        "0xecec51689891ef3f7ff39040036fd0e282687d392abe8f011589f1c755500a2"));
-    answers_.push_back(*inputs_[0].Inverse());
-    answers_.push_back(*inputs_[1].Inverse());
+    for (size_t i = 0; i < 10; ++i) {
+      // NOTE: BatchInverse supports zero values.
+      auto value = Fr::Random();
+      inputs_.push_back(value);
+      if (value.IsZero()) {
+        answers_.push_back(Fr::Zero());
+      } else {
+        answers_.push_back(*value.Inverse());
+      }
+    }
   }
 
  protected:
@@ -56,13 +62,6 @@ TEST_F(BatchInverseTest, InPlace) {
   EXPECT_EQ(inputs_, answers_);
 }
 
-TEST_F(BatchInverseTest, WithZero) {
-  inputs_.push_back(Fr::Zero());
-  ASSERT_TRUE(BatchInverse(inputs_, &inputs_).ok());
-  answers_.push_back(Fr::Zero());
-  EXPECT_EQ(inputs_, answers_);
-}
-
 TEST_F(BatchInverseTest, WithCoeff) {
   ASSERT_TRUE(BatchInverse(inputs_, &inputs_, Fr(2)).ok());
   for (size_t i = 0; i < inputs_.size(); ++i) {
@@ -71,4 +70,4 @@ TEST_F(BatchInverseTest, WithCoeff) {
 }
 
 }  // namespace
-}  // namespace zk_dtypes::bn254
+}  // namespace zk_dtypes

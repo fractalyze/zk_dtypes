@@ -17,43 +17,25 @@ limitations under the License.
 
 #include "gtest/gtest.h"
 
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/fq.h"
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
+#include "zk_dtypes/include/all_types.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/test/sw_curve_config.h"
-#include "zk_dtypes/include/field/babybear/babybear.h"
-#include "zk_dtypes/include/field/goldilocks/goldilocks.h"
-#include "zk_dtypes/include/field/koalabear/koalabear.h"
-#include "zk_dtypes/include/field/mersenne31/mersenne31.h"
 
 namespace zk_dtypes {
 namespace {
 
 using PrimeFieldTypes = testing::Types<
-    // clang-format off
-    // 8-bit prime fields
-    test::Fr,
-    // 32-bit prime fields
-    Babybear,
-    Koalabear,
-    Mersenne31,
-    // 64-bit prime fields
-    Goldilocks,
-    // 256-bit prime fields
-    bn254::Fq,
-    bn254::Fr
-    // clang-format on
-    >;
-
-namespace {
+#define PRIME_FIELD_TYPE(ActualType, ...) ActualType,
+    ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(PRIME_FIELD_TYPE)
+#undef PRIME_FIELD_TYPE
+        test::Fr,
+    test::FrStd>;
 
 template <typename PrimeField>
-class PrimeFieldBaseTest : public testing::Test {};
+class RootOfUnityTest : public testing::Test {};
 
-}  // namespace
+TYPED_TEST_SUITE(RootOfUnityTest, PrimeFieldTypes);
 
-TYPED_TEST_SUITE(PrimeFieldBaseTest, PrimeFieldTypes);
-
-TYPED_TEST(PrimeFieldBaseTest, Decompose) {
+TYPED_TEST(RootOfUnityTest, Decompose) {
   using F = TypeParam;
 
   if constexpr (F::Config::kHasLargeSubgroupRootOfUnity) {
@@ -70,7 +52,7 @@ TYPED_TEST(PrimeFieldBaseTest, Decompose) {
   }
 }
 
-TYPED_TEST(PrimeFieldBaseTest, TwoAdicRootOfUnity) {
+TYPED_TEST(RootOfUnityTest, TwoAdicRootOfUnity) {
   using F = TypeParam;
 
   if constexpr (F::Config::kHasTwoAdicRootOfUnity) {
@@ -82,7 +64,7 @@ TYPED_TEST(PrimeFieldBaseTest, TwoAdicRootOfUnity) {
   }
 }
 
-TYPED_TEST(PrimeFieldBaseTest, LargeSubgroupOfUnity) {
+TYPED_TEST(RootOfUnityTest, LargeSubgroupOfUnity) {
   using F = TypeParam;
 
   if constexpr (F::Config::kHasLargeSubgroupRootOfUnity) {
@@ -96,7 +78,7 @@ TYPED_TEST(PrimeFieldBaseTest, LargeSubgroupOfUnity) {
   }
 }
 
-TYPED_TEST(PrimeFieldBaseTest, GetRootOfUnity) {
+TYPED_TEST(RootOfUnityTest, GetRootOfUnity) {
   using F = TypeParam;
 
   if constexpr (F::Config::kHasLargeSubgroupRootOfUnity) {

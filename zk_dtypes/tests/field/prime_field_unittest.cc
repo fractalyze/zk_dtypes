@@ -36,6 +36,7 @@ TYPED_TEST_SUITE(PrimeFieldTypedTest, PrimeFieldTypes);
 
 TYPED_TEST(PrimeFieldTypedTest, Zero) {
   using F = TypeParam;
+  EXPECT_TRUE(F(0).IsZero());
   EXPECT_TRUE(F::Zero().IsZero());
   EXPECT_FALSE(F::One().IsZero());
 }
@@ -43,6 +44,7 @@ TYPED_TEST(PrimeFieldTypedTest, Zero) {
 TYPED_TEST(PrimeFieldTypedTest, One) {
   using F = TypeParam;
 
+  EXPECT_TRUE(F(1).IsOne());
   EXPECT_TRUE(F::One().IsOne());
   EXPECT_FALSE(F::Zero().IsOne());
 }
