@@ -30,6 +30,7 @@ repos:
     hooks:
       - id: clang-format
         args: ["--style=file"]
+        exclude: '\.ipynb$'
 
   # Starlark
   - repo: https://github.com/keith/pre-commit-buildifier
