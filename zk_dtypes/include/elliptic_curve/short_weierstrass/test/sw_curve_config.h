@@ -53,8 +53,8 @@ struct PrimeFieldConfig : public PrimeFieldBaseConfig {
 
   using StdConfig = PrimeFieldStdConfig;
 
-  constexpr static uint8_t kRSquared = UINT64_C(2);
-  constexpr static uint64_t kNPrime = UINT64_C(183);
+  constexpr static uint8_t kRSquared = 2;
+  constexpr static uint64_t kNPrime = 183;
 
   constexpr static uint8_t kOne = 4;
 
