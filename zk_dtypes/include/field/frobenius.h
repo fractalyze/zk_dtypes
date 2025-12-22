@@ -23,40 +23,46 @@ limitations under the License.
 
 namespace zk_dtypes {
 
+// clang-format off
 // Frobenius endomorphism: φᴱ(x) = x^(pᴱ)
 //
 // For extension field Fₚ[u] / (uⁿ - ξ):
-//   φᴱ(aᵢ · uⁱ) = φᴱ(aᵢ) · ξ^(i * E * q) · uⁱ  where q = (p - 1) / n
+//   φᴱ(aᵢ · uⁱ) = φᴱ(aᵢ) · ξ^(i * (pᴱ - 1) / n) · uⁱ
 //
 // See:
 // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.2.-optimized-computation-when
+// clang-format on
 
-// Base case: prime field Frobenius is identity (xᵖ = x in Fₚ).
-template <size_t E = 1, typename T,
+// Apply Frobenius to base field element.
+// For prime field (ExtensionDegree() == 1), Frobenius is identity.
+template <size_t E, typename T,
           std::enable_if_t<T::ExtensionDegree() == 1>* = nullptr>
-[[nodiscard]] T Frobenius(const T& x) {
+[[nodiscard]] T ApplyFrobeniusToBase(const T& x) {
   return x;
 }
 
-// Extension field case.
-// Frobenius coefficients for all E are precomputed in ExtensionField.
-// coeffs[E - 1][i - 1] = ξ^(i * (pᴱ - 1) / n) for i = 1, ..., n - 1.
-template <size_t E = 1, typename T,
+// For extension field, recursively apply Frobenius.
+template <size_t E, typename T,
           std::enable_if_t<(T::ExtensionDegree() > 1)>* = nullptr>
-[[nodiscard]] T Frobenius(const T& x) {
+[[nodiscard]] T ApplyFrobeniusToBase(const T& x) {
+  return x.template Frobenius<E>();
+}
+
+// Core Frobenius logic with coefficients passed as parameter.
+// coeffs[E - 1][i - 1] = ξ^(i * (pᴱ - 1) / n) for i = 1, ..., n - 1.
+template <size_t E, typename T, typename CoeffsArray>
+[[nodiscard]] T ApplyFrobenius(const T& x, const CoeffsArray& coeffs) {
   using BaseField = typename ExtensionFieldOperationTraits<T>::BaseField;
   constexpr size_t kDegree = ExtensionFieldOperationTraits<T>::kDegree;
 
-  const auto& coeffs = T::GetFrobeniusCoeffs();
-
   std::array<BaseField, kDegree> src = x.ToBaseField();
-  std::array<BaseField, kDegree> dst{};
+  std::array<BaseField, kDegree> dst;
 
   // a₀ · u⁰ → φᴱ(a₀) · u⁰ (coefficient is 1)
-  dst[0] = Frobenius<E>(src[0]);
+  dst[0] = ApplyFrobeniusToBase<E>(src[0]);
   for (size_t i = 1; i < kDegree; ++i) {
     // aᵢ · uⁱ → φᴱ(aᵢ) · ξ^(i * (pᴱ - 1) / n) · uⁱ
-    dst[i] = Frobenius<E>(src[i]) * coeffs[E - 1][i - 1];
+    dst[i] = ApplyFrobeniusToBase<E>(src[i]) * coeffs[E - 1][i - 1];
   }
 
   return x.FromBaseFields(dst);
