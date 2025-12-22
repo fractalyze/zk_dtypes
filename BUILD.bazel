@@ -1,0 +1,35 @@
+# Copyright 2025 The zk_dtypes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+load("@rules_python//python:defs.bzl", "py_library")
+
+# This target provides a convenient entry point for projects using zk_dtypes
+# as an external dependency. It includes the root-level __init__.py to bridge
+# the import path, allowing users to 'import zk_dtypes' directly
+# without dealing with nested package structures.
+#
+# Resulting runfiles structure in the consuming project:
+# bazel-bin/.../my_test.runfiles/zk_dtypes/
+# ├── __init__.py      <-- Bridge file (should contain: from .zk_dtypes import *)
+# └── zk_dtypes/       <-- Actual implementation package
+#     ├── __init__.py
+#     ├── ...
+#     └── _zk_dtypes_ext.so
+py_library(
+    name = "zk_dtypes_py_dev",
+    srcs = ["__init__.py"],
+    visibility = ["//visibility:public"],
+    deps = ["//zk_dtypes:zk_dtypes_py"],
+)
