@@ -29,14 +29,6 @@ struct FqBaseConfig {
       UINT64_C(3486998266802970665),
   };
 
-  constexpr static BigInt<4> kRSquared = {
-      UINT64_C(17522657719365597833),
-      UINT64_C(13107472804851548667),
-      UINT64_C(5164255478447964150),
-      UINT64_C(493319470278259999),
-  };
-  constexpr static uint64_t kNPrime = UINT64_C(9786893198990664585);
-
   constexpr static uint32_t kTwoAdicity = 1;
 
   constexpr static BigInt<4> kTrace = {
@@ -69,6 +61,14 @@ struct FqConfig : public FqBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
   using StdConfig = FqStdConfig;
+
+  constexpr static BigInt<4> kRSquared = {
+      UINT64_C(17522657719365597833),
+      UINT64_C(13107472804851548667),
+      UINT64_C(5164255478447964150),
+      UINT64_C(493319470278259999),
+  };
+  constexpr static uint64_t kNPrime = UINT64_C(9786893198990664585);
 
   constexpr static BigInt<4> kOne = {
       UINT64_C(15230403791020821917),

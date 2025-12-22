@@ -26,9 +26,6 @@ struct BabybearBaseConfig {
   constexpr static size_t kModulusBits = 31;
   constexpr static uint32_t kModulus = 2013265921;
 
-  constexpr static uint32_t kRSquared = 1172168163;
-  constexpr static uint32_t kNPrime = 2281701377;
-
   constexpr static uint32_t kTwoAdicity = 27;
 
   constexpr static uint32_t kTrace = 15;
@@ -51,6 +48,9 @@ struct BabybearConfig : public BabybearBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
   using StdConfig = BabybearStdConfig;
+
+  constexpr static uint32_t kRSquared = 1172168163;
+  constexpr static uint32_t kNPrime = 2281701377;
 
   constexpr static uint32_t kOne = 268435454;
 

@@ -26,9 +26,6 @@ struct KoalabearBaseConfig {
   constexpr static size_t kModulusBits = 31;
   constexpr static uint32_t kModulus = 2130706433;
 
-  constexpr static uint32_t kRSquared = 402124772;
-  constexpr static uint32_t kNPrime = 2164260865;
-
   constexpr static uint32_t kTwoAdicity = 24;
 
   constexpr static uint32_t kTrace = 127;
@@ -51,6 +48,9 @@ struct KoalabearConfig : public KoalabearBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
   using StdConfig = KoalabearStdConfig;
+
+  constexpr static uint32_t kRSquared = 402124772;
+  constexpr static uint32_t kNPrime = 2164260865;
 
   constexpr static uint32_t kOne = 33554430;
 

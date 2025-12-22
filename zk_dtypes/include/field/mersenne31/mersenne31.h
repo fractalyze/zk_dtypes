@@ -26,9 +26,6 @@ struct Mersenne31BaseConfig {
   constexpr static size_t kModulusBits = 31;
   constexpr static uint32_t kModulus = 2147483647;
 
-  constexpr static uint32_t kRSquared = 4;
-  constexpr static uint32_t kNPrime = 2147483647;
-
   constexpr static uint32_t kTwoAdicity = 1;
 
   constexpr static uint32_t kTrace = 1073741823;
@@ -51,6 +48,9 @@ struct Mersenne31Config : public Mersenne31BaseConfig {
   constexpr static bool kUseMontgomery = true;
 
   using StdConfig = Mersenne31StdConfig;
+
+  constexpr static uint32_t kRSquared = 4;
+  constexpr static uint32_t kNPrime = 2147483647;
 
   constexpr static uint32_t kOne = 2;
 
