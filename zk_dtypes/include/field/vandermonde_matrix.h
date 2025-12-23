@@ -17,36 +17,38 @@ limitations under the License.
 #define ZK_DTYPES_INCLUDE_FIELD_VANDERMONDE_MATRIX_H_
 
 #include <array>
-
-#include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
+#include <cstddef>
+#include <type_traits>
 
 namespace zk_dtypes {
 
 // Mixin providing Vandermonde inverse matrix for Toom-Cook multiplication.
 //
-// Returns the 7x7 inverse Vandermonde matrix V⁻¹ for Toom-Cook4 interpolation.
+// Template parameter N is the extension degree (e.g., N=4 for Toom-Cook4).
+// Returns the (2N - 1) x (2N - 1) inverse Vandermonde matrix V⁻¹.
 //
-// For evaluation points t = {0, 1, -1, 2, -2, 3, ∞}, V⁻¹ satisfies c = V⁻¹ * v
-// where:
+// For N=4, evaluation points t = {0, 1, -1, 2, -2, 3, ∞}, V⁻¹ satisfies
+// c = V⁻¹ * v where:
 //   v = {v₀, v₁, v₂, v₃, v₄, v₅, v₆} are evaluation results
 //   c = {c₀, c₁, c₂, c₃, c₄, c₅, c₆} are polynomial coefficients
 //
 // TODO(junbeomlee): Share this matrix with zkir by adding CreateConstant() and
 // CreateRationalConstant() methods to the Derived class interface.
-template <typename Derived>
+template <typename F, size_t N>
 class VandermondeMatrix {
  public:
-  using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
+  static constexpr size_t kNumEvaluation = 2 * N - 1;
 
-  const std::array<std::array<BaseField, 7>, 7>& GetVandermondeInverseMatrix()
-      const {
+  template <size_t N2 = N, std::enable_if_t<N2 == 4>* = nullptr>
+  const std::array<std::array<F, kNumEvaluation>, kNumEvaluation>&
+  GetVandermondeInverseMatrix() const {
     static const auto matrix = []() {
-#define C(x) BaseField(x)
-#define C2(x, y) (*(BaseField(x) / BaseField(y)))
+#define C(x) F(x)
+#define C2(x, y) (*(F(x) / F(y)))
       // clang-format off
       // V⁻¹ matrix for Toom-Cook4 interpolation
       // Row i gives coefficients for cᵢ in terms of v₀...v₆
-      return std::array<std::array<BaseField, 7>, 7>{{  // NOLINT(readability/braces)
+      return std::array<std::array<F, kNumEvaluation>, kNumEvaluation>{{  // NOLINT(readability/braces)
         // c₀ = 1*v₀ + 0*v₁ + 0*v₂ + 0*v₃ + 0*v₄ + 0*v₅ + 0*v₆
         {C(1), C(0), C(0), C(0), C(0), C(0), C(0)},
         // c₁ = -(1/3)v₀ + 1*v₁ - (1/2)v₂ - (1/4)v₃ + (1/20)v₄ + (1/30)v₅ - 12*v₆

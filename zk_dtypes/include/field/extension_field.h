@@ -113,7 +113,8 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
                        public ExtensionFieldOperationSelector<
                            _Config, _Config::kDegreeOverBaseField>::Type,
                        public FrobeniusCoeffs<_Config>,
-                       public VandermondeMatrix<ExtensionField<_Config>> {
+                       public VandermondeMatrix<typename _Config::BaseField,
+                                                _Config::kDegreeOverBaseField> {
  public:
   using Config = _Config;
   using BaseField = typename Config::BaseField;
