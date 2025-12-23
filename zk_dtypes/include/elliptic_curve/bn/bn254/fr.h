@@ -29,14 +29,6 @@ struct FrBaseConfig {
       UINT64_C(3486998266802970665),
   };
 
-  constexpr static BigInt<4> kRSquared = {
-      UINT64_C(1997599621687373223),
-      UINT64_C(6052339484930628067),
-      UINT64_C(10108755138030829701),
-      UINT64_C(150537098327114917),
-  };
-  constexpr static uint64_t kNPrime = UINT64_C(14042775128853446655);
-
   constexpr static uint32_t kTwoAdicity = 28;
   constexpr static uint32_t kSmallSubgroupBase = 3;
   constexpr static uint32_t kSmallSubgroupAdicity = 2;
@@ -77,6 +69,14 @@ struct FrConfig : public FrBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
   using StdConfig = FrStdConfig;
+
+  constexpr static BigInt<4> kRSquared = {
+      UINT64_C(1997599621687373223),
+      UINT64_C(6052339484930628067),
+      UINT64_C(10108755138030829701),
+      UINT64_C(150537098327114917),
+  };
+  constexpr static uint64_t kNPrime = UINT64_C(14042775128853446655);
 
   constexpr static BigInt<4> kOne = {
       UINT64_C(12436184717236109307),

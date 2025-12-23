@@ -30,9 +30,6 @@ struct PrimeFieldBaseConfig {
   constexpr static size_t kModulusBits = 4;
   constexpr static uint8_t kModulus = 7;
 
-  constexpr static uint8_t kRSquared = UINT64_C(2);
-  constexpr static uint64_t kNPrime = UINT64_C(183);
-
   constexpr static uint32_t kTwoAdicity = 1;
 
   constexpr static uint8_t kTrace = 3;
@@ -55,6 +52,9 @@ struct PrimeFieldConfig : public PrimeFieldBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
   using StdConfig = PrimeFieldStdConfig;
+
+  constexpr static uint8_t kRSquared = 2;
+  constexpr static uint64_t kNPrime = 183;
 
   constexpr static uint8_t kOne = 4;
 

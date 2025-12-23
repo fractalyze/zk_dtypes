@@ -26,9 +26,6 @@ struct GoldilocksBaseConfig {
   constexpr static size_t kModulusBits = 64;
   constexpr static uint64_t kModulus = UINT64_C(18446744069414584321);
 
-  constexpr static uint64_t kRSquared = UINT64_C(18446744065119617025);
-  constexpr static uint64_t kNPrime = 4294967297;
-
   constexpr static uint32_t kTwoAdicity = 32;
   constexpr static uint32_t kSmallSubgroupBase = 3;
   constexpr static uint32_t kSmallSubgroupAdicity = 1;
@@ -56,6 +53,9 @@ struct GoldilocksConfig : public GoldilocksBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
   using StdConfig = GoldilocksStdConfig;
+
+  constexpr static uint64_t kRSquared = UINT64_C(18446744065119617025);
+  constexpr static uint64_t kNPrime = 4294967297;
 
   constexpr static uint64_t kOne = 4294967295;
 
