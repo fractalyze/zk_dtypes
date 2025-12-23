@@ -17,6 +17,9 @@ limitations under the License.
 
 #include "zk_dtypes/include/all_types.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/test/sw_curve_config.h"
+// TODO(chokobole33): Remove this header after we include this field to
+// ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST.
+#include "zk_dtypes/include/field/mersenne31/mersenne314.h"
 
 namespace zk_dtypes {
 namespace {
@@ -40,8 +43,8 @@ using ExtensionFieldTypes = testing::Types<
 #define EXTENSION_FIELD_TYPE(ActualType, ...) ActualType,
     ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(EXTENSION_FIELD_TYPE)
 #undef EXTENSION_FIELD_TYPE
-        test::Fq2,
-    test::Fq2Std>;
+        Mersenne314,
+    Mersenne314Std, test::Fq2, test::Fq2Std>;
 
 TYPED_TEST_SUITE(ExtensionFieldTypedTest, ExtensionFieldTypes);
 
@@ -105,11 +108,14 @@ TYPED_TEST(ExtensionFieldTypedTest, Square) {
 
   std::vector<ExtensionFieldMulAlgorithm> algorithms;
   if constexpr (ExtF::Config::kDegreeOverBaseField == 2) {
+    using BaseField = typename ExtF::BaseField;
     algorithms = {
-        ExtensionFieldMulAlgorithm::kCustom,
         ExtensionFieldMulAlgorithm::kCustom2,
         ExtensionFieldMulAlgorithm::kKaratsuba,
     };
+    if (ExtF::Config::kNonResidue == BaseField(-1)) {
+      algorithms.push_back(ExtensionFieldMulAlgorithm::kCustom);
+    }
   } else if constexpr (ExtF::Config::kDegreeOverBaseField == 3) {
     algorithms = {
         ExtensionFieldMulAlgorithm::kCustom,
@@ -186,7 +192,9 @@ TYPED_TEST(ExtensionFieldTypedTest, SquareRoot) {
   if constexpr (std::is_same_v<ExtF, Babybear4> ||
                 std::is_same_v<ExtF, Babybear4Std> ||
                 std::is_same_v<ExtF, Koalabear4> ||
-                std::is_same_v<ExtF, Koalabear4Std>) {
+                std::is_same_v<ExtF, Koalabear4Std> ||
+                std::is_same_v<ExtF, Mersenne314> ||
+                std::is_same_v<ExtF, Mersenne314Std>) {
     GTEST_SKIP() << "SquareRoot is not implemented for quartic extension "
                     "fields.";
   } else if constexpr (std::is_same_v<ExtF, Goldilocks3> ||  // NOLINT(readability/braces)

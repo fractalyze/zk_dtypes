@@ -40,6 +40,7 @@ cc_library(
         ":koalabear",
         ":koalabear4",
         ":mersenne31",
+        ":mersenne312",
     ],
 )
 
@@ -221,6 +222,7 @@ cc_library(
         ":finite_field",
         ":pow",
         ":str_join",
+        "@com_google_absl//absl/base",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
@@ -301,6 +303,24 @@ cc_library(
     name = "mersenne31",
     hdrs = ["include/field/mersenne31/mersenne31.h"],
     deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "mersenne312",
+    hdrs = ["include/field/mersenne31/mersenne312.h"],
+    deps = [
+        ":extension_field",
+        ":mersenne31",
+    ],
+)
+
+cc_library(
+    name = "mersenne314",
+    hdrs = ["include/field/mersenne31/mersenne314.h"],
+    deps = [
+        ":extension_field",
+        ":mersenne312",
+    ],
 )
 
 cc_library(
@@ -387,6 +407,8 @@ cc_test(
     ],
     deps = [
         ":all_types",
+        # TODO(chokobole33): Remove this.
+        ":mersenne314",
         ":random",
         ":root_of_unity",
         ":sw_test_curve_config",

@@ -25,6 +25,7 @@ limitations under the License.
 #include <string>
 #include <type_traits>
 
+#include "absl/base/call_once.h"
 #include "absl/log/check.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
@@ -37,6 +38,43 @@ limitations under the License.
 #include "zk_dtypes/include/field/quartic_extension_field_operation.h"
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/str_join.h"
+
+#define REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BasePrimeFieldIn, \
+                                         Degree, ...)                         \
+  template <typename BaseField>                                               \
+  class Name##BaseConfig {                                                    \
+   public:                                                                    \
+    constexpr static uint32_t kDegreeOverBaseField = Degree;                  \
+    constexpr static BaseField kNonResidue = __VA_ARGS__;                     \
+  };                                                                          \
+                                                                              \
+  class Name##StdConfig : public Name##BaseConfig<BaseFieldIn##Std> {         \
+   public:                                                                    \
+    constexpr static bool kUseMontgomery = false;                             \
+    using StdConfig = Name##StdConfig;                                        \
+    using BaseField = BaseFieldIn##Std;                                       \
+    using BasePrimeField = BasePrimeFieldIn##Std;                             \
+  };                                                                          \
+                                                                              \
+  class Name##Config : public Name##BaseConfig<BaseFieldIn> {                 \
+   public:                                                                    \
+    constexpr static bool kUseMontgomery = true;                              \
+    using StdConfig = Name##StdConfig;                                        \
+    using BaseField = BaseFieldIn;                                            \
+    using BasePrimeField = BasePrimeFieldIn;                                  \
+  };                                                                          \
+                                                                              \
+  using Name = ExtensionField<Name##Config>;                                  \
+  using Name##Std = ExtensionField<Name##StdConfig>
+
+#define REGISTER_EXTENSION_FIELD(Name, BaseFieldIn, Degree, NonResidue)    \
+  REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BaseFieldIn, Degree, \
+                                   NonResidue)
+
+#define REGISTER_EXTENSION_FIELD_WITH_TOWER(Name, BaseFieldIn,             \
+                                            BasePrimeFieldIn, Degree, ...) \
+  REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BasePrimeFieldIn,    \
+                                   Degree, __VA_ARGS__)
 
 namespace zk_dtypes {
 
@@ -92,7 +130,7 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
   }
 
   template <typename T, std::enable_if_t<std::is_signed_v<T>>* = nullptr>
-  constexpr ExtensionField(T value) {
+  ExtensionField(T value) {
     if (value >= 0) {
       *this = ExtensionField({value});
     } else {
@@ -325,10 +363,13 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
       return square_algorithm_.value();
     }
     if constexpr (Config::kDegreeOverBaseField == 2) {
-      constexpr static bool kIsNonResidueMinusOne =
-          Config::kNonResidue == BaseField(-1);
+      static absl::once_flag once;
+      static bool is_non_residue_minus_one = false;
+      absl::call_once(once, [&]() {
+        is_non_residue_minus_one = Config::kNonResidue == BaseField(-1);
+      });
 
-      if constexpr (kIsNonResidueMinusOne) {
+      if (is_non_residue_minus_one) {
         return ExtensionFieldMulAlgorithm::kCustom;
       }
 

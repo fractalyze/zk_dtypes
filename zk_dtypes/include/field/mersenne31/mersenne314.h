@@ -13,18 +13,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS_GOLDILOCKS3_H_
-#define ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS_GOLDILOCKS3_H_
+#ifndef ZK_DTYPES_INCLUDE_FIELD_MERSENNE31_MERSENNE314_H_
+#define ZK_DTYPES_INCLUDE_FIELD_MERSENNE31_MERSENNE314_H_
 
 #include "zk_dtypes/include/field/extension_field.h"
-#include "zk_dtypes/include/field/goldilocks/goldilocks.h"
+#include "zk_dtypes/include/field/mersenne31/mersenne312.h"
 
 namespace zk_dtypes {
 
-// Cubic extension field over Goldilocks: Goldilocks³ = Goldilocks[u] / (u³ - 7)
-// W = 7 is a cubic non-residue in Goldilocks field.
-REGISTER_EXTENSION_FIELD(Goldilocks3, Goldilocks, 3, 7);
+// Quartic extension field over Mersenne31:
+// (Mersenne31²)² = Mersenne31²[u] / (u² - (2 + 1i))
+// W = (2 + 1i) is a quartic non-residue in Mersenne31² field.
+REGISTER_EXTENSION_FIELD_WITH_TOWER(Mersenne314, Mersenne312, Mersenne31, 2,
+                                    {2, 1});
 
 }  // namespace zk_dtypes
 
-#endif  // ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS_GOLDILOCKS3_H_
+#endif  // ZK_DTYPES_INCLUDE_FIELD_MERSENNE31_MERSENNE314_H_

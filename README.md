@@ -30,6 +30,8 @@ used in Zero Knowledge libraries inspired by
   - `babybear4_std`
   - `goldilocks3`
   - `goldilocks3_std`
+  - `mersenne312`
+  - `mersenne312_std`
   - `koalabear4`
   - `koalabear4_std`
 
