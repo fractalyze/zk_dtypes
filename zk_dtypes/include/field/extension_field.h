@@ -20,6 +20,7 @@ limitations under the License.
 #include <stdint.h>
 
 #include <array>
+#include <iterator>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -225,6 +226,163 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
   constexpr absl::Span<BasePrimeField> AsBasePrimeFields() {
     return absl::Span<BasePrimeField>(
         reinterpret_cast<BasePrimeField*>(values_.data()), ExtensionDegree());
+  }
+
+  // Iterator for BasePrimeField elements that handles tower structures
+  template <bool IsConst>
+  class BasePrimeFieldIteratorImpl {
+   private:
+    constexpr static bool kBaseFieldIsExtensionField =
+        BaseField::ExtensionDegree() > 1;
+
+    // Helper to get nested iterator type only if BaseField is ExtensionField
+    template <bool IsConstIter, typename Field, typename = void>
+    struct NestedIteratorTypeHelper {
+      using type = std::nullptr_t;
+    };
+
+    template <typename C>
+    struct NestedIteratorTypeHelper<false, ExtensionField<C>, void> {
+      using type = typename ExtensionField<C>::BasePrimeFieldIterator;
+    };
+
+    template <typename C>
+    struct NestedIteratorTypeHelper<true, ExtensionField<C>, void> {
+      using type = typename ExtensionField<C>::ConstBasePrimeFieldIterator;
+    };
+
+   public:
+    using FieldType =
+        std::conditional_t<IsConst, const ExtensionField, ExtensionField>;
+    using BaseFieldType =
+        std::conditional_t<IsConst, const BaseField, BaseField>;
+    using BasePrimeFieldType =
+        std::conditional_t<IsConst, const BasePrimeField, BasePrimeField>;
+    using NestedIteratorType =
+        typename NestedIteratorTypeHelper<IsConst, BaseField>::type;
+
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = BasePrimeFieldType;
+    using difference_type = std::ptrdiff_t;
+    using pointer = BasePrimeFieldType*;
+    using reference = BasePrimeFieldType&;
+
+    BasePrimeFieldIteratorImpl() : BasePrimeFieldIteratorImpl(nullptr) {}
+    BasePrimeFieldIteratorImpl(FieldType* field, size_t base_field_idx = 0)
+        : field_(field), base_field_idx_(base_field_idx) {
+      if (field_ && base_field_idx_ < N) {
+        AdvanceToNextBasePrimeField();
+      }
+    }
+
+    BasePrimeFieldIteratorImpl(const BasePrimeFieldIteratorImpl&) = default;
+    BasePrimeFieldIteratorImpl& operator=(const BasePrimeFieldIteratorImpl&) =
+        default;
+
+    reference operator*() const {
+      DCHECK(field_);
+      DCHECK_LT(base_field_idx_, N);
+      if constexpr (kBaseFieldIsExtensionField) {
+        DCHECK(nested_iterator_.has_value());
+        return **nested_iterator_;
+      } else {
+        return static_cast<reference>(field_->values_[base_field_idx_]);
+      }
+    }
+
+    pointer operator->() const { return &(**this); }
+
+    BasePrimeFieldIteratorImpl& operator++() {
+      if (!field_ || base_field_idx_ >= N) {
+        return *this;
+      }
+
+      if constexpr (kBaseFieldIsExtensionField) {
+        // For a valid, non-end iterator, nested_iterator_ should always have a
+        // value.
+        DCHECK(nested_iterator_.has_value());
+        ++(*nested_iterator_);
+        if (*nested_iterator_ == nested_end_) {
+          // Finished iterating through the current BaseField, move to the next.
+          ++base_field_idx_;
+          AdvanceToNextBasePrimeField();
+        }
+      } else {
+        // For prime fields, just move to the next element.
+        ++base_field_idx_;
+      }
+      return *this;
+    }
+
+    BasePrimeFieldIteratorImpl operator++(int) {
+      BasePrimeFieldIteratorImpl tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+    bool operator==(const BasePrimeFieldIteratorImpl& other) const {
+      if (field_ != other.field_ || base_field_idx_ != other.base_field_idx_) {
+        return false;
+      }
+      if (base_field_idx_ >= N) {
+        return true;  // Both are end iterators.
+      }
+      if constexpr (kBaseFieldIsExtensionField) {
+        return nested_iterator_ == other.nested_iterator_;
+      }
+      return true;  // Not a nested iterator.
+    }
+
+    bool operator!=(const BasePrimeFieldIteratorImpl& other) const {
+      return !(*this == other);
+    }
+
+   private:
+    void AdvanceToNextBasePrimeField() {
+      if (!field_ || base_field_idx_ >= N) {
+        return;
+      }
+
+      if constexpr (kBaseFieldIsExtensionField) {
+        // BaseField is also an ExtensionField, use its iterator
+        BaseFieldType& base_field = field_->values_[base_field_idx_];
+        nested_iterator_ = base_field.begin();
+        nested_end_ = base_field.end();
+      }
+      // If BaseField is PrimeField, we're already pointing to it
+    }
+
+    FieldType* field_;
+    size_t base_field_idx_;
+    [[no_unique_address]] std::conditional_t<kBaseFieldIsExtensionField,
+                                             std::optional<NestedIteratorType>,
+                                             std::nullptr_t> nested_iterator_;
+    [[no_unique_address]] std::conditional_t<kBaseFieldIsExtensionField,
+                                             NestedIteratorType, std::nullptr_t>
+        nested_end_;
+  };
+
+  using BasePrimeFieldIterator = BasePrimeFieldIteratorImpl<false>;
+  using ConstBasePrimeFieldIterator = BasePrimeFieldIteratorImpl<true>;
+
+  BasePrimeFieldIterator begin() { return BasePrimeFieldIterator(this, 0); }
+
+  BasePrimeFieldIterator end() { return BasePrimeFieldIterator(this, N); }
+
+  ConstBasePrimeFieldIterator begin() const {
+    return ConstBasePrimeFieldIterator(this, 0);
+  }
+
+  ConstBasePrimeFieldIterator end() const {
+    return ConstBasePrimeFieldIterator(this, N);
+  }
+
+  ConstBasePrimeFieldIterator cbegin() const {
+    return ConstBasePrimeFieldIterator(this, 0);
+  }
+
+  ConstBasePrimeFieldIterator cend() const {
+    return ConstBasePrimeFieldIterator(this, N);
   }
 
   constexpr bool IsZero() const {
