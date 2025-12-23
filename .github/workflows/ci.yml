@@ -38,10 +38,49 @@ jobs:
       - name: Checkout Setup Python
         uses: actions/setup-python@v4.7.0
         with:
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: Install cpplint
         run: pip install cpplint
 
       - name: Run pre-commit github action
         uses: pre-commit/action@646c83fcd040023954eafda54b4db0192ce70507 # pin@v3
+
+  notebook-check:
+    runs-on: [self-hosted, zk_dtypes]
+    steps:
+      - name: Checkout zk_dtypes
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4.7.0
+        with:
+          python-version: "3.11"
+
+      - name: Build zk_dtypes
+        run: |
+          bazel build //zk_dtypes:_zk_dtypes_ext.so
+
+      - name: Install zk_dtypes
+        env:
+          USE_BAZEL_OUTPUT: 1
+        run: |
+          pip install .
+
+      - name: Install notebook dependencies
+        run: |
+          pip install jupyter nbconvert ipykernel
+
+      - name: Execute notebook
+        run: |
+          jupyter nbconvert --to notebook --execute \
+            --ExecutePreprocessor.timeout=600 \
+            --ExecutePreprocessor.kernel_name=python3 \
+            --output zk_dtypes_examples.nbconvert.ipynb \
+            examples/zk_dtypes_examples.ipynb
+
+      - name: Compare notebook outputs
+        run: |
+          python scripts/check_notebook_outputs.py \
+            examples/zk_dtypes_examples.ipynb \
+            examples/zk_dtypes_examples.nbconvert.ipynb
