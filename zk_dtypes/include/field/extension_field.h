@@ -38,7 +38,6 @@ limitations under the License.
 #include "zk_dtypes/include/field/frobenius_coeffs.h"
 #include "zk_dtypes/include/field/quadratic_extension_field_operation.h"
 #include "zk_dtypes/include/field/quartic_extension_field_operation.h"
-#include "zk_dtypes/include/field/vandermonde_matrix.h"
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/str_join.h"
 
@@ -112,9 +111,7 @@ template <typename _Config>
 class ExtensionField : public FiniteField<ExtensionField<_Config>>,
                        public ExtensionFieldOperationSelector<
                            _Config, _Config::kDegreeOverBaseField>::Type,
-                       public FrobeniusCoeffs<_Config>,
-                       public VandermondeMatrix<typename _Config::BaseField,
-                                                _Config::kDegreeOverBaseField> {
+                       public FrobeniusCoeffs<_Config> {
  public:
   using Config = _Config;
   using BaseField = typename Config::BaseField;

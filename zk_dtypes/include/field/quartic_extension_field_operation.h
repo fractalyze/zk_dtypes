@@ -21,13 +21,17 @@ limitations under the License.
 #include "zk_dtypes/include/field/extension_field_operation.h"
 #include "zk_dtypes/include/field/karatsuba_operation.h"
 #include "zk_dtypes/include/field/toom_cook_operation.h"
+#include "zk_dtypes/include/field/vandermonde_matrix.h"
 
 namespace zk_dtypes {
 
 template <typename Derived>
-class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
-                                       public ToomCookOperation<Derived>,
-                                       public KaratsubaOperation<Derived> {
+class QuarticExtensionFieldOperation
+    : public ExtensionFieldOperation<Derived>,
+      public ToomCookOperation<Derived>,
+      public KaratsubaOperation<Derived>,
+      public VandermondeMatrix<
+          typename ExtensionFieldOperationTraits<Derived>::BaseField, 4> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
 
