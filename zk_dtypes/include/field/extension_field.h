@@ -35,6 +35,7 @@ limitations under the License.
 #include "zk_dtypes/include/big_int.h"
 #include "zk_dtypes/include/field/cubic_extension_field_operation.h"
 #include "zk_dtypes/include/field/finite_field.h"
+#include "zk_dtypes/include/field/frobenius_coeffs.h"
 #include "zk_dtypes/include/field/quadratic_extension_field_operation.h"
 #include "zk_dtypes/include/field/quartic_extension_field_operation.h"
 #include "zk_dtypes/include/pow.h"
@@ -109,7 +110,8 @@ struct ExtensionFieldOperationSelector<Config, 4> {
 template <typename _Config>
 class ExtensionField : public FiniteField<ExtensionField<_Config>>,
                        public ExtensionFieldOperationSelector<
-                           _Config, _Config::kDegreeOverBaseField>::Type {
+                           _Config, _Config::kDegreeOverBaseField>::Type,
+                       public FrobeniusCoeffs<_Config> {
  public:
   using Config = _Config;
   using BaseField = typename Config::BaseField;
@@ -173,45 +175,6 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
       ret[i] = BaseField::Random();
     }
     return ret;
-  }
-
-  // Returns precomputed Frobenius coefficients for all φᴱ (E = 1, ..., N - 1):
-  // coeffs[E - 1][i - 1] = ξ^(i * (pᴱ - 1) / n) for i = 1, ..., N - 1.
-  //
-  // For Fp3: a = (a₁, a₂, a₃, a₄) where
-  //   a₁ = ξ^((p - 1) / 3), a₂ = ξ^(2(p - 1) / 3)
-  //   a₃ = ξ^((p² - 1) / 3), a₄ = ξ^(2(p² - 1) / 3)
-  // - φ¹(x) = (x₀, x₁ * a₁, x₂ * a₂)
-  // - φ²(x) = (x₀, x₁ * a₃, x₂ * a₄)
-  //
-  // See:
-  // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.2.-optimized-computation-when
-  static const std::array<std::array<BaseField, N - 1>, N - 1>&
-  GetFrobeniusCoeffs() {
-    static const auto coeffs = []() {
-      // Use larger BigInt to avoid overflow when computing pᵉ.
-      constexpr size_t kLimbNums = BasePrimeField::kLimbNums * N;
-      BigInt<kLimbNums> p(BasePrimeField::Config::kModulus);
-      BaseField nr = Config::kNonResidue;
-
-      std::array<std::array<BaseField, N - 1>, N - 1> result{};
-      // p_e = pᵉ, computed iteratively
-      BigInt<kLimbNums> p_e = p;
-      BigInt<kLimbNums> n_big(N);
-      for (size_t e = 1; e < N; ++e) {
-        // qₑ = (pᵉ - 1) / n
-        auto q_e = ((p_e - 1) / n_big).value();
-        BaseField nr_q_e = zk_dtypes::Pow(nr, q_e);
-
-        result[e - 1][0] = nr_q_e;
-        for (size_t i = 1; i < N - 1; ++i) {
-          result[e - 1][i] = result[e - 1][i - 1] * nr_q_e;
-        }
-        p_e = p_e * p;
-      }
-      return result;
-    }();
-    return coeffs;
   }
 
   constexpr const std::array<BaseField, N>& values() const { return values_; }
