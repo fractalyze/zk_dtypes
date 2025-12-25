@@ -31,6 +31,7 @@ limitations under the License.
 #include "zk_dtypes/include/byinverter.h"
 #include "zk_dtypes/include/field/finite_field.h"
 #include "zk_dtypes/include/field/modular_operations.h"
+#include "zk_dtypes/include/field/mont_multiplication.h"
 #include "zk_dtypes/include/field/prime_field.h"
 #include "zk_dtypes/include/pow.h"
 
@@ -168,11 +169,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   constexpr PrimeField operator*(const PrimeField& other) const {
     PrimeField ret;
     if constexpr (kUseMontgomery) {
-      if constexpr (CanUseNoCarryMulOptimization()) {
-        FastMontMul(*this, other, ret);
-      } else {
-        SlowMontMul(*this, other, ret);
-      }
+      zk_dtypes::MontMul<Config>(value_, other.value_, ret.value_);
     } else {
       VerySlowMul(*this, other, ret);
     }
@@ -186,7 +183,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   constexpr PrimeField Square() const {
     PrimeField ret;
     if constexpr (kUseMontgomery) {
-      FastMontSquare(*this, ret);
+      zk_dtypes::MontSquare<Config>(value_, ret.value_);
     } else {
       VerySlowMul(*this, *this, ret);
     }
@@ -283,19 +280,10 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   template <typename Config2 = Config,
             std::enable_if_t<Config2::kUseMontgomery>* = nullptr>
   StdType MontReduce() const {
-    BigInt<N> ret = value_;
-    for (size_t i = 0; i < N; ++i) {
-      uint64_t k = ret[i] * Config::kNPrime;
-      internal::MulResult<uint64_t> result =
-          internal::MulAddWithCarry(ret[i], k, Config::kModulus[0], 0);
-      for (size_t j = 1; j < N; ++j) {
-        result = internal::MulAddWithCarry(ret[(j + i) % N], k,
-                                           Config::kModulus[j], result.hi);
-        ret[(j + i) % N] = result.lo;
-      }
-      ret[i] = result.hi;
-    }
-    return StdType::FromUnchecked(ret);
+    StdType ret;
+    zk_dtypes::MontReduce(value_, ret.value_, Config::kModulus,
+                          Config::kNPrime);
+    return ret;
   }
 
   std::string ToString() const {
@@ -314,81 +302,11 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   }
 
  private:
+  template <typename Config2, typename>
+  friend class PrimeField;
+
   template <typename T>
   FRIEND_TEST(PrimeFieldTypedTest, Operations);
-
-  // Does the modulus have a spare unused bit?
-  //
-  // This condition applies if
-  // (a) `modulus[biggest_limb_idx] >> 63 == 0`
-  constexpr static bool HasSpareBit() {
-    uint64_t biggest_limb = Config::kModulus[N - 1];
-    return biggest_limb >> 63 == 0;
-  }
-
-  // Can we use the no-carry optimization for multiplication
-  // outlined [here](https://hackmd.io/@gnark/modular_multiplication)?
-  //
-  // This optimization applies if
-  // (a) `modulus[biggest_limb_idx] < max(uint64_t) >> 1`, and
-  // (b) the bits of the modulus are not all 1.
-  constexpr static bool CanUseNoCarryMulOptimization() {
-    uint64_t biggest_limb = Config::kModulus[N - 1];
-    bool top_bit_is_zero = biggest_limb >> 63 == 0;
-    bool all_remaining_bits_are_one =
-        biggest_limb == std::numeric_limits<uint64_t>::max() >> 1;
-    for (size_t i = 0; i < N - 1; ++i) {
-      all_remaining_bits_are_one &=
-          Config::kModulus[i] == std::numeric_limits<uint64_t>::max();
-    }
-    return top_bit_is_zero && !all_remaining_bits_are_one;
-  }
-
-  constexpr static void Clamp(BigInt<N>& value,
-                              [[maybe_unused]] bool carry = false) {
-    bool needs_to_clamp = value >= Config::kModulus;
-    if constexpr (!HasSpareBit()) {
-      needs_to_clamp |= carry;
-    }
-    if (needs_to_clamp) {
-      value -= Config::kModulus;
-    }
-  }
-
-  constexpr static void FastMontMul(const PrimeField& a, const PrimeField& b,
-                                    PrimeField& c) {
-    BigInt<N> ret;
-    for (size_t i = 0; i < N; ++i) {
-      internal::MulResult<uint64_t> result;
-      result = internal::MulAddWithCarry(ret[0], a[0], b[i]);
-      ret[0] = result.lo;
-
-      uint64_t k = ret[0] * Config::kNPrime;
-      internal::MulResult<uint64_t> result2;
-      result2 = internal::MulAddWithCarry(ret[0], k, Config::kModulus[0]);
-
-      for (size_t j = 1; j < N; ++j) {
-        result = internal::MulAddWithCarry(ret[j], a[j], b[i], result.hi);
-        ret[j] = result.lo;
-        result2 = internal::MulAddWithCarry(ret[j], k, Config::kModulus[j],
-                                            result2.hi);
-        ret[j - 1] = result2.lo;
-      }
-      ret[N - 1] = result.hi + result2.hi;
-    }
-    Clamp(ret, 0);
-    c.value_ = ret;
-  }
-
-  constexpr static void SlowMontMul(const PrimeField& a, const PrimeField& b,
-                                    PrimeField& c) {
-    internal::MulResult<BigInt<N>> mul_result =
-        BigInt<N>::Mul(a.value_, b.value_);
-    BigInt<2 * N> mul;
-    memcpy(&mul[0], &mul_result.lo[0], sizeof(uint64_t) * N);
-    memcpy(&mul[N], &mul_result.hi[0], sizeof(uint64_t) * N);
-    MontMulReduce(mul, c.value_);
-  }
 
   constexpr static void VerySlowMul(const PrimeField& a, const PrimeField& b,
                                     PrimeField& c) {
@@ -400,57 +318,6 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     memcpy(&modulus[0], &Config::kModulus[0], sizeof(uint64_t) * N);
     BigInt<2 * N> mul_mod = *(mul % modulus);
     memcpy(&c.value_[0], &mul_mod[0], sizeof(uint64_t) * N);
-  }
-
-  constexpr static void FastMontSquare(const PrimeField& a, PrimeField& b) {
-    BigInt<2 * N> ret;
-    internal::MulResult<uint64_t> mul_result;
-    for (size_t i = 0; i < N - 1; ++i) {
-      for (size_t j = i + 1; j < N; ++j) {
-        mul_result =
-            internal::MulAddWithCarry(ret[i + j], a[i], a[j], mul_result.hi);
-        ret[i + j] = mul_result.lo;
-      }
-      ret[i + N] = mul_result.hi;
-      mul_result.hi = 0;
-    }
-
-    ret[2 * N - 1] = ret[2 * N - 2] >> 63;
-    for (size_t i = 2; i < 2 * N - 1; ++i) {
-      ret[2 * N - i] = (ret[2 * N - i] << 1) | (ret[2 * N - (i + 1)] >> 63);
-    }
-    ret[1] <<= 1;
-
-    internal::AddResult<uint64_t> add_result;
-    for (size_t i = 0; i < N; ++i) {
-      mul_result =
-          internal::MulAddWithCarry(ret[2 * i], a[i], a[i], mul_result.hi);
-      ret[2 * i] = mul_result.lo;
-      add_result = internal::AddWithCarry(ret[2 * i + 1], mul_result.hi);
-      ret[2 * i + 1] = add_result.value;
-      mul_result.hi = add_result.carry;
-    }
-    MontMulReduce(ret, b.value_);
-  }
-
-  constexpr static void MontMulReduce(BigInt<2 * N>& a, BigInt<N>& b) {
-    internal::AddResult<uint64_t> add_result;
-    for (size_t i = 0; i < N; ++i) {
-      uint64_t tmp = a[i] * Config::kNPrime;
-      internal::MulResult<uint64_t> mul_result;
-      mul_result = internal::MulAddWithCarry(a[i], tmp, Config::kModulus[0],
-                                             mul_result.hi);
-      for (size_t j = 1; j < N; ++j) {
-        mul_result = internal::MulAddWithCarry(
-            a[i + j], tmp, Config::kModulus[j], mul_result.hi);
-        a[i + j] = mul_result.lo;
-      }
-      add_result =
-          internal::AddWithCarry(a[N + i], mul_result.hi, add_result.carry);
-      a[N + i] = add_result.value;
-    }
-    memcpy(&b[0], &a[N], sizeof(uint64_t) * N);
-    Clamp(b, add_result.carry);
   }
 
   BigInt<N> value_;
