@@ -558,8 +558,6 @@ std::ostream& operator<<(std::ostream& os, const BigInt<N>& big_int) {
 template <size_t N>
 class BitTraits<BigInt<N>> {
  public:
-  constexpr static bool kIsDynamic = false;
-
   constexpr static size_t GetNumBits(const BigInt<N>& _) { return N * 64; }
 
   constexpr static bool TestBit(const BigInt<N>& bigint, size_t index) {
