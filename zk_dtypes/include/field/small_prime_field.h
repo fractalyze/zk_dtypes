@@ -32,6 +32,7 @@ limitations under the License.
 #include "zk_dtypes/include/big_int.h"
 #include "zk_dtypes/include/byinverter.h"
 #include "zk_dtypes/include/field/finite_field.h"
+#include "zk_dtypes/include/field/modular_operations.h"
 #include "zk_dtypes/include/field/prime_field.h"
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/random.h"
@@ -143,18 +144,9 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   }
 
   constexpr PrimeField operator+(PrimeField other) const {
-    UnderlyingType ret_value;
-    bool carry = false;
-    if constexpr (HasSpareBit()) {
-      ret_value = value_ + other.value_;
-    } else {
-      internal::AddResult<UnderlyingType> result =
-          internal::AddWithCarry(value_, other.value_, 0);
-      carry = result.carry;
-      ret_value = result.value;
-    }
-    Clamp(ret_value, carry);
-    return PrimeField::FromUnchecked(ret_value);
+    PrimeField ret;
+    ModAdd<Config, UnderlyingType>(value_, other.value_, ret.value_);
+    return ret;
   }
 
   constexpr PrimeField& operator+=(PrimeField other) {
@@ -162,31 +154,15 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   }
 
   constexpr PrimeField Double() const {
-    if constexpr (HasSpareBit()) {
-      UnderlyingType ret_value = value_ << 1;
-      Clamp(ret_value, 0);
-      return PrimeField::FromUnchecked(ret_value);
-    } else {
-      return *this + *this;
-    }
+    PrimeField ret;
+    ModDouble<Config, UnderlyingType>(value_, ret.value_);
+    return ret;
   }
 
   constexpr PrimeField operator-(PrimeField other) const {
-    UnderlyingType ret_value;
-    if (other.value_ > value_) {
-      if constexpr (HasSpareBit()) {
-        ret_value = value_ + Config::kModulus - other.value_;
-      } else {
-        using PromotedUnderlyingType =
-            internal::make_promoted_t<UnderlyingType>;
-
-        ret_value =
-            PromotedUnderlyingType{value_} + Config::kModulus - other.value_;
-      }
-    } else {
-      ret_value = value_ - other.value_;
-    }
-    return PrimeField::FromUnchecked(ret_value);
+    PrimeField ret;
+    ModSub<Config, UnderlyingType>(value_, other.value_, ret.value_);
+    return ret;
   }
 
   constexpr PrimeField& operator-=(PrimeField other) {

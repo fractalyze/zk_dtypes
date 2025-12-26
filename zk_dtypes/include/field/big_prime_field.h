@@ -30,6 +30,7 @@ limitations under the License.
 #include "zk_dtypes/include/big_int.h"
 #include "zk_dtypes/include/byinverter.h"
 #include "zk_dtypes/include/field/finite_field.h"
+#include "zk_dtypes/include/field/modular_operations.h"
 #include "zk_dtypes/include/field/prime_field.h"
 #include "zk_dtypes/include/pow.h"
 
@@ -132,15 +133,9 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   }
 
   constexpr PrimeField operator+(const PrimeField& other) const {
-    BigInt<N> ret_value;
-    bool carry = false;
-    if constexpr (HasSpareBit()) {
-      ret_value = value_ + other.value_;
-    } else {
-      carry = BigInt<N>::Add(value_, other.value_, ret_value);
-    }
-    Clamp(ret_value, carry);
-    return PrimeField::FromUnchecked(ret_value);
+    PrimeField ret;
+    ModAdd<Config, BigInt<N>>(value_, other.value_, ret.value_);
+    return ret;
   }
 
   constexpr PrimeField& operator+=(const PrimeField& other) {
@@ -148,27 +143,15 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   }
 
   constexpr PrimeField Double() const {
-    BigInt<N> ret_value;
-    bool carry = false;
-    if constexpr (HasSpareBit()) {
-      ret_value = value_ << 1;
-    } else {
-      carry = BigInt<N>::ShiftLeft(value_, ret_value, 1);
-    }
-    Clamp(ret_value, carry);
-    return PrimeField::FromUnchecked(ret_value);
+    PrimeField ret;
+    ModDouble<Config, BigInt<N>>(value_, ret.value_);
+    return ret;
   }
 
   constexpr PrimeField operator-(const PrimeField& other) const {
-    BigInt<N> ret_value;
-    if (other.value_ > value_) {
-      static_assert(HasSpareBit());
-      ret_value = value_ + Config::kModulus;
-      ret_value -= other.value_;
-    } else {
-      ret_value = value_ - other.value_;
-    }
-    return PrimeField::FromUnchecked(ret_value);
+    PrimeField ret;
+    ModSub<Config, BigInt<N>>(value_, other.value_, ret.value_);
+    return ret;
   }
 
   constexpr PrimeField& operator-=(const PrimeField& other) {
