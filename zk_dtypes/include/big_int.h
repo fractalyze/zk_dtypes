@@ -19,6 +19,7 @@ limitations under the License.
 #include <stddef.h>
 #include <stdint.h>
 
+#include <algorithm>
 #include <array>
 #include <bitset>
 #include <initializer_list>
@@ -453,6 +454,15 @@ class BigInt {
     return ret;
   }
 
+  template <size_t N2>
+  BigInt<N2> Truncate() const {
+    static_assert(
+        N > N2, "Destination BigInt size N2 must be less than source size N.");
+    BigInt<N2> ret;
+    std::copy_n(limbs_, N2, ret.limbs_);
+    return ret;
+  }
+
   constexpr static uint64_t Add(const BigInt& a, const BigInt& b, BigInt& c) {
     internal::AddResult<uint64_t> add_result = {};
     for (size_t i = 0; i < N; ++i) {
@@ -536,6 +546,9 @@ class BigInt {
   }
 
  private:
+  template <size_t N2>
+  friend class BigInt;
+
   uint64_t limbs_[N];
 };
 
