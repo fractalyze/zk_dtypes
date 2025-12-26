@@ -138,6 +138,14 @@ TEST(BigIntTest, BitsBEConversion) {
   EXPECT_EQ(big_int.ToBitsBE<255>(), input);
 }
 
+TEST(BigIntTest, Truncate) {
+  BigInt<4> input = BigInt<4>::Random();
+  BigInt<2> truncated = input.Truncate<2>();
+  for (size_t i = 0; i < 2; ++i) {
+    EXPECT_EQ(truncated[i], input[i]);
+  }
+}
+
 namespace {
 
 template <typename Container>

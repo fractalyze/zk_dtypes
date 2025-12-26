@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 #include <string>
 #include <type_traits>
@@ -32,6 +31,8 @@ limitations under the License.
 #include "zk_dtypes/include/big_int.h"
 #include "zk_dtypes/include/byinverter.h"
 #include "zk_dtypes/include/field/finite_field.h"
+#include "zk_dtypes/include/field/modular_operations.h"
+#include "zk_dtypes/include/field/mont_multiplication.h"
 #include "zk_dtypes/include/field/prime_field.h"
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/random.h"
@@ -143,18 +144,9 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   }
 
   constexpr PrimeField operator+(PrimeField other) const {
-    UnderlyingType ret_value;
-    bool carry = false;
-    if constexpr (HasSpareBit()) {
-      ret_value = value_ + other.value_;
-    } else {
-      internal::AddResult<UnderlyingType> result =
-          internal::AddWithCarry(value_, other.value_, 0);
-      carry = result.carry;
-      ret_value = result.value;
-    }
-    Clamp(ret_value, carry);
-    return PrimeField::FromUnchecked(ret_value);
+    PrimeField ret;
+    ModAdd<Config, UnderlyingType>(value_, other.value_, ret.value_);
+    return ret;
   }
 
   constexpr PrimeField& operator+=(PrimeField other) {
@@ -162,31 +154,15 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   }
 
   constexpr PrimeField Double() const {
-    if constexpr (HasSpareBit()) {
-      UnderlyingType ret_value = value_ << 1;
-      Clamp(ret_value, 0);
-      return PrimeField::FromUnchecked(ret_value);
-    } else {
-      return *this + *this;
-    }
+    PrimeField ret;
+    ModDouble<Config, UnderlyingType>(value_, ret.value_);
+    return ret;
   }
 
   constexpr PrimeField operator-(PrimeField other) const {
-    UnderlyingType ret_value;
-    if (other.value_ > value_) {
-      if constexpr (HasSpareBit()) {
-        ret_value = value_ + Config::kModulus - other.value_;
-      } else {
-        using PromotedUnderlyingType =
-            internal::make_promoted_t<UnderlyingType>;
-
-        ret_value =
-            PromotedUnderlyingType{value_} + Config::kModulus - other.value_;
-      }
-    } else {
-      ret_value = value_ - other.value_;
-    }
-    return PrimeField::FromUnchecked(ret_value);
+    PrimeField ret;
+    ModSub<Config, UnderlyingType>(value_, other.value_, ret.value_);
+    return ret;
   }
 
   constexpr PrimeField& operator-=(PrimeField other) {
@@ -201,7 +177,8 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   constexpr PrimeField operator*(PrimeField other) const {
     PrimeField ret;
     if constexpr (kUseMontgomery) {
-      MontMul(*this, other, ret);
+      zk_dtypes::MontMul(value_, other.value_, ret.value_, Config::kModulus,
+                         Config::kNPrime);
     } else {
       VerySlowMul(*this, other, ret);
     }
@@ -295,17 +272,10 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   template <typename Config2 = Config,
             std::enable_if_t<Config2::kUseMontgomery>* = nullptr>
   StdType MontReduce() const {
-    using SignedUnderlyingType = std::make_signed_t<UnderlyingType>;
-    using PromotedSignedUnderlyingType =
-        internal::make_promoted_t<SignedUnderlyingType>;
-    UnderlyingType m = value_ * Config::kNPrime;
-    auto mn = (PromotedSignedUnderlyingType{m} * Config::kModulus) >>
-              (sizeof(UnderlyingType) * 8);
-    if (mn == 0) {
-      return StdType(0);
-    } else {
-      return StdType(Config::kModulus - static_cast<UnderlyingType>(mn));
-    }
+    StdType ret;
+    zk_dtypes::MontReduce(value_, ret.value_, Config::kModulus,
+                          Config::kNPrime);
+    return ret;
   }
 
   std::string ToString() const {
@@ -333,45 +303,11 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   }
 
  private:
+  template <typename Config2, typename>
+  friend class PrimeField;
+
   template <typename T>
   FRIEND_TEST(PrimeFieldTypedTest, Operations);
-
-  // Does the modulus have a spare unused bit?
-  //
-  // This condition applies if
-  // (a) `modulus[biggest_limb_idx] >> 63 == 0`
-  constexpr static bool HasSpareBit() {
-    UnderlyingType biggest_limb = Config::kModulus;
-    return biggest_limb >> (kBitWidth - 1) == 0;
-  }
-
-  constexpr static void Clamp(UnderlyingType& value, bool carry = false) {
-    bool needs_to_clamp = value >= Config::kModulus;
-    if constexpr (!HasSpareBit()) {
-      needs_to_clamp |= carry;
-    }
-    if (needs_to_clamp) {
-      value -= Config::kModulus;
-    }
-  }
-
-  constexpr static void MontMul(PrimeField a, PrimeField b, PrimeField& c) {
-    using PromotedUnderlyingType = internal::make_promoted_t<UnderlyingType>;
-
-    auto t = PromotedUnderlyingType{a.value_} * b.value_;
-    UnderlyingType t_high = t >> (sizeof(UnderlyingType) * 8);
-
-    UnderlyingType m = static_cast<UnderlyingType>(t) * Config::kNPrime;
-    UnderlyingType mn_high = (PromotedUnderlyingType{m} *
-                              PromotedUnderlyingType{Config::kModulus}) >>
-                             (sizeof(UnderlyingType) * 8);
-
-    if (t_high >= mn_high) {
-      c = PrimeField::FromUnchecked(t_high - mn_high);
-    } else {
-      c = PrimeField::FromUnchecked(t_high + Config::kModulus - mn_high);
-    }
-  }
 
   constexpr static void VerySlowMul(PrimeField a, PrimeField b, PrimeField& c) {
     using PromotedUnderlyingType = internal::make_promoted_t<UnderlyingType>;

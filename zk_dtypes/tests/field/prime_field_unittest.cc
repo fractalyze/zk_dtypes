@@ -61,15 +61,16 @@ TYPED_TEST(PrimeFieldTypedTest, Min) {
 
 TYPED_TEST(PrimeFieldTypedTest, Operations) {
   using F = TypeParam;
+  using Config = typename F::Config;
   using UnderlyingType = typename F::UnderlyingType;
 
   UnderlyingType a_value, b_value;
-  if constexpr (F::Config::kStorageBits <= 64) {
-    a_value = Uniform(UnderlyingType{0}, F::Config::kModulus);
-    b_value = Uniform(UnderlyingType{0}, F::Config::kModulus);
+  if constexpr (Config::kStorageBits <= 64) {
+    a_value = Uniform(UnderlyingType{0}, Config::kModulus);
+    b_value = Uniform(UnderlyingType{0}, Config::kModulus);
   } else {
-    a_value = UnderlyingType::Random(F::Config::kModulus);
-    b_value = UnderlyingType::Random(F::Config::kModulus);
+    a_value = UnderlyingType::Random(Config::kModulus);
+    b_value = UnderlyingType::Random(Config::kModulus);
   }
 
   F a = F(a_value);
@@ -78,8 +79,8 @@ TYPED_TEST(PrimeFieldTypedTest, Operations) {
   EXPECT_EQ(a > b, a_value > b_value);
   EXPECT_EQ(a < b, a_value < b_value);
   EXPECT_EQ(a == b, a_value == b_value);
-  if constexpr (F::HasSpareBit()) {
-    if constexpr (F::Config::kStorageBits <= 64) {
+  if constexpr (HasModulusSpareBit<Config>()) {
+    if constexpr (Config::kStorageBits <= 64) {
       EXPECT_EQ(a + b, F((a_value + b_value) % F::Config::kModulus));
       EXPECT_EQ(a.Double(), F((a_value + a_value) % F::Config::kModulus));
       if (a >= b) {
