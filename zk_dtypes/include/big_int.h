@@ -93,9 +93,7 @@ class BigInt {
     static_assert(N >= N2,
                   "Destination BigInt size N must be greater than or equal to "
                   "source size N2.");
-    for (size_t i = 0; i < N2; ++i) {
-      limbs_[i] = other[i];
-    }
+    std::copy_n(other.limbs_, N2, limbs_);
   }
 
   // Convert a decimal string to a BigInt.
