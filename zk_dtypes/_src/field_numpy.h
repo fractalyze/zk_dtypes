@@ -110,10 +110,10 @@ Safe_PyObjectPtr PyField_FromValue(T x) {
 
 template <typename T>
 class PrimeFieldIntCaster
-    : public std::conditional_t<(T::Config::kModulusBits <= 64), IntCaster,
+    : public std::conditional_t<(T::Config::kStorageBits <= 64), IntCaster,
                                 BigIntCaster<PrimeFieldIntCaster<T>>> {
  public:
-  constexpr static size_t N = (T::Config::kModulusBits + 63) / 64;
+  constexpr static size_t N = (T::Config::kStorageBits + 63) / 64;
 
   T value() const { return value_; }
 
@@ -129,7 +129,7 @@ class PrimeFieldIntCaster
   }
 
   bool IsOverflow(int64_t v) const override {
-    if constexpr (T::Config::kModulusBits <= 64) {
+    if constexpr (T::Config::kStorageBits <= 64) {
       if (v < 0) {
         return static_cast<uint64_t>(-v) >= T::Config::kModulus;
       } else {
@@ -140,7 +140,7 @@ class PrimeFieldIntCaster
   }
 
   bool IsOverflow(uint64_t v) const override {
-    if constexpr (T::Config::kModulusBits <= 64) {
+    if constexpr (T::Config::kStorageBits <= 64) {
       return v >= T::Config::kModulus;
     }
     return false;
@@ -153,7 +153,7 @@ class PrimeFieldIntCaster
 
   // BigIntCaster methods.
   bool Cast(const BigInt<N>& value, int sign) {
-    if constexpr (T::Config::kModulusBits > 64) {
+    if constexpr (T::Config::kStorageBits > 64) {
       if (sign == -1) {
         value_ = -T(value);
       } else {
@@ -166,7 +166,7 @@ class PrimeFieldIntCaster
   }
 
   bool IsOverflow(const BigInt<N>& value) const {
-    if constexpr (T::Config::kModulusBits > 64) {
+    if constexpr (T::Config::kStorageBits > 64) {
       return value >= T::Config::kModulus;
     } else {
       ABSL_UNREACHABLE();
@@ -183,7 +183,7 @@ class PrimeFieldIntCaster
 template <typename T>
 bool CastToPrimeField(PyObject* arg, T* output) {
   PrimeFieldIntCaster<T> caster;
-  if constexpr (T::Config::kModulusBits <= 64) {
+  if constexpr (T::Config::kStorageBits <= 64) {
     if (!caster.CastInt(arg)) return false;
   } else {
     if (!caster.CastBigInt(arg)) return false;
@@ -375,7 +375,7 @@ PyObject* PyField_nb_int(PyObject* self) {
     return nullptr;
   } else {
     T x = PyField_Value_Unchecked<T>(self);
-    if constexpr (T::Config::kModulusBits <= 64) {
+    if constexpr (T::Config::kStorageBits <= 64) {
       if constexpr (T::kUseMontgomery) {
         return PyLong_FromUnsignedLongLong(
             static_cast<unsigned long>(x.MontReduce().value()));
@@ -503,7 +503,7 @@ template <typename T>
 uint64_t PyField_Hash_Impl(T x) {
   if constexpr (T::ExtensionDegree() == 1) {
     uint64_t hash = static_cast<uint64_t>(x.value());
-    if constexpr (T::Config::kModulusBits > 64) {
+    if constexpr (T::Config::kStorageBits > 64) {
       for (size_t i = 1; i < T::kLimbNums; ++i) {
         hash ^= x[i];
       }
@@ -770,7 +770,7 @@ int NPyField_ArgMinFunc(void* data, npy_intp n, npy_intp* min_ind, void* arr) {
 template <typename T>
 uint64_t NPyField_CastToInt(T value) {
   if constexpr (IsPrimeField<T>) {
-    if constexpr (T::Config::kModulusBits <= 64) {
+    if constexpr (T::Config::kStorageBits <= 64) {
       if constexpr (T::Config::kUseMontgomery) {
         return value.MontReduce().value();
       } else {
@@ -873,7 +873,7 @@ bool RegisterFieldCasts() {
 
   // Safe casts from T to other types
   for (int i = 0; i < std::size(kBits); ++i) {
-    if (T::Config::kModulusBits <= kBits[i]) {
+    if (T::Config::kStorageBits <= kBits[i]) {
       if (PyArray_RegisterCanCast(TypeDescriptor<T>::npy_descr,
                                   kUnsignedTypes[i], NPY_NOSCALAR) < 0) {
         return false;
@@ -883,7 +883,7 @@ bool RegisterFieldCasts() {
 
   // Safe casts to T from other types
   for (int i = 0; i < std::size(kBits); ++i) {
-    if (kBits[i] <= T::Config::kModulusBits) {
+    if (kBits[i] <= T::Config::kStorageBits) {
       if (PyArray_RegisterCanCast(PyArray_DescrFromType(kUnsignedTypes[i]),
                                   TypeDescriptor<T>::Dtype(),
                                   NPY_NOSCALAR) < 0) {

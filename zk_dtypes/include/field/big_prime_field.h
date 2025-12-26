@@ -38,15 +38,18 @@ namespace zk_dtypes {
 // If Config::kUseMontgomery is true, the operations are performed on montgomery
 // domain. Otherwise, the operations are performed on standard domain.
 template <typename _Config>
-class PrimeField<_Config, std::enable_if_t<(_Config::kModulusBits > 64)>>
+class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     : public FiniteField<PrimeField<_Config>> {
  public:
   constexpr static bool kUseMontgomery = _Config::kUseMontgomery;
-  constexpr static size_t kModulusBits = _Config::kModulusBits;
-  constexpr static size_t kLimbNums = (kModulusBits + 63) / 64;
+  constexpr static size_t kStorageBits = _Config::kStorageBits;
+  constexpr static size_t kLimbNums = (kStorageBits + 63) / 64;
   constexpr static size_t N = kLimbNums;
   constexpr static size_t kBitWidth = BigInt<N>::kBitWidth;
   constexpr static size_t kByteWidth = BigInt<N>::kByteWidth;
+
+  static_assert(kStorageBits == kBitWidth,
+                "kStorageBits must be equal to kBitWidth");
 
   using Config = _Config;
   using StdType = PrimeField<typename Config::StdConfig>;

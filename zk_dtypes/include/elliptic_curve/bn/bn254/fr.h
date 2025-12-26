@@ -21,6 +21,7 @@ limitations under the License.
 namespace zk_dtypes::bn254 {
 
 struct FrBaseConfig {
+  constexpr static size_t kStorageBits = 256;
   constexpr static size_t kModulusBits = 254;
   constexpr static BigInt<4> kModulus = {
       UINT64_C(4891460686036598785),

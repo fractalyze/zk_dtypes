@@ -41,23 +41,26 @@ namespace zk_dtypes {
 // If Config::kUseMontgomery is true, the operations are performed on montgomery
 // domain. Otherwise, the operations are performed on standard domain.
 template <typename _Config>
-class PrimeField<_Config, std::enable_if_t<(_Config::kModulusBits <= 64)>>
+class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
     : public FiniteField<PrimeField<_Config>> {
  public:
   using UnderlyingType = std::conditional_t<
-      _Config::kModulusBits <= 32,
+      _Config::kStorageBits <= 32,
       std::conditional_t<
-          _Config::kModulusBits <= 16,
-          std::conditional_t<_Config::kModulusBits <= 8, uint8_t, uint16_t>,
+          _Config::kStorageBits <= 16,
+          std::conditional_t<_Config::kStorageBits <= 8, uint8_t, uint16_t>,
           uint32_t>,
       uint64_t>;
 
   constexpr static bool kUseMontgomery = _Config::kUseMontgomery;
-  constexpr static size_t kModulusBits = _Config::kModulusBits;
+  constexpr static size_t kStorageBits = _Config::kStorageBits;
   constexpr static size_t kLimbNums = 1;
   constexpr static size_t N = kLimbNums;
   constexpr static size_t kBitWidth = 8 * sizeof(UnderlyingType);
   constexpr static size_t kByteWidth = sizeof(UnderlyingType);
+
+  static_assert(kStorageBits == kBitWidth,
+                "kStorageBits must be equal to kBitWidth");
 
   using Config = _Config;
   using StdType = PrimeField<typename Config::StdConfig>;

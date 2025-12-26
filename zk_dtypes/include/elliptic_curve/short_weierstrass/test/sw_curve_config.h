@@ -27,6 +27,7 @@ namespace zk_dtypes::test {
 
 struct PrimeFieldBaseConfig {
  public:
+  constexpr static size_t kStorageBits = 8;
   constexpr static size_t kModulusBits = 4;
   constexpr static uint8_t kModulus = 7;
 
