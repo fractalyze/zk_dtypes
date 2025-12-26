@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 #include <string>
 #include <type_traits>
