@@ -23,6 +23,7 @@ limitations under the License.
 namespace zk_dtypes {
 
 struct Mersenne31BaseConfig {
+  constexpr static size_t kStorageBits = 32;
   constexpr static size_t kModulusBits = 31;
   constexpr static uint32_t kModulus = 2147483647;
 

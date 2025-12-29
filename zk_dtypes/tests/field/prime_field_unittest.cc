@@ -64,7 +64,7 @@ TYPED_TEST(PrimeFieldTypedTest, Operations) {
   using UnderlyingType = typename F::UnderlyingType;
 
   UnderlyingType a_value, b_value;
-  if constexpr (F::Config::kModulusBits <= 64) {
+  if constexpr (F::Config::kStorageBits <= 64) {
     a_value = Uniform(UnderlyingType{0}, F::Config::kModulus);
     b_value = Uniform(UnderlyingType{0}, F::Config::kModulus);
   } else {
@@ -79,7 +79,7 @@ TYPED_TEST(PrimeFieldTypedTest, Operations) {
   EXPECT_EQ(a < b, a_value < b_value);
   EXPECT_EQ(a == b, a_value == b_value);
   if constexpr (F::HasSpareBit()) {
-    if constexpr (F::Config::kModulusBits <= 64) {
+    if constexpr (F::Config::kStorageBits <= 64) {
       EXPECT_EQ(a + b, F((a_value + b_value) % F::Config::kModulus));
       EXPECT_EQ(a.Double(), F((a_value + a_value) % F::Config::kModulus));
       if (a >= b) {
