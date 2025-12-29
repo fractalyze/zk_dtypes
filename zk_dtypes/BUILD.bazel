@@ -220,12 +220,22 @@ cc_library(
         ":always_false",
         ":extension_field_operations",
         ":finite_field",
+        ":frobenius_coeffs",
         ":pow",
         ":str_join",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "frobenius_coeffs",
+    hdrs = ["include/field/frobenius_coeffs.h"],
+    deps = [
+        ":big_int",
+        ":pow",
     ],
 )
 
@@ -242,8 +252,14 @@ cc_library(
         ":frobenius_operation",
         ":karatsuba_operation",
         ":toom_cook_operation",
+        ":vandermonde_matrix",
         "@com_google_absl//absl/status:statusor",
     ],
+)
+
+cc_library(
+    name = "vandermonde_matrix",
+    hdrs = ["include/field/vandermonde_matrix.h"],
 )
 
 cc_library(
