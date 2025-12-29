@@ -21,13 +21,17 @@ limitations under the License.
 #include "zk_dtypes/include/field/extension_field_operation.h"
 #include "zk_dtypes/include/field/karatsuba_operation.h"
 #include "zk_dtypes/include/field/toom_cook_operation.h"
+#include "zk_dtypes/include/field/vandermonde_matrix.h"
 
 namespace zk_dtypes {
 
 template <typename Derived>
-class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
-                                       public ToomCookOperation<Derived>,
-                                       public KaratsubaOperation<Derived> {
+class QuarticExtensionFieldOperation
+    : public ExtensionFieldOperation<Derived>,
+      public ToomCookOperation<Derived>,
+      public KaratsubaOperation<Derived>,
+      public VandermondeMatrix<
+          typename ExtensionFieldOperationTraits<Derived>::BaseField, 4> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
 
@@ -142,19 +146,6 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
  private:
   friend class ToomCookOperation<Derived>;
 
-  // Returns the 7x7 inverse Vandermonde matrix V⁻¹ for Toom-Cook4
-  // interpolation.
-  //
-  // For evaluation points t = {0, 1, -1, 2, -2, 3, ∞}, V⁻¹ satisfies c = V⁻¹ *
-  // v where:
-  //   v = {v₀, v₁, v₂, v₃, v₄, v₅, v₆} are evaluation results
-  //   c = {c₀, c₁, c₂, c₃, c₄, c₅, c₆} are polynomial coefficients
-  const std::array<std::array<BaseField, 7>, 7>& GetVandermondeInverseMatrix()
-      const {
-    static const auto matrix = ComputeVandermondeInverseMatrix();
-    return matrix;
-  }
-
   static std::array<BaseField, 7> ComputeEvaluations(
       const std::array<BaseField, 4>& x) {
     // 1. Basic Doubles
@@ -196,37 +187,6 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     // f(∞) = x₃
     f_x[6] = x[3];
     return f_x;
-  }
-
-  // Computes the 7x7 inverse Vandermonde matrix for Toom-Cook4 interpolation.
-  static std::array<std::array<BaseField, 7>, 7>
-  ComputeVandermondeInverseMatrix() {
-#define C(x) BaseField(x)
-#define C2(x, y) (*(BaseField(x) / BaseField(y)))
-
-    // clang-format off
-    // V⁻¹ matrix for Toom-Cook4 interpolation
-    // Row i gives coefficients for cᵢ in terms of v₀...v₆
-    return {{  // NOLINT(readability/braces)
-      // c₀ = 1*v₀ + 0*v₁ + 0*v₂ + 0*v₃ + 0*v₄ + 0*v₅ + 0*v₆
-      {C(1), C(0), C(0), C(0), C(0), C(0), C(0)},
-      // c₁ = -(1/3)v₀ + 1*v₁ - (1/2)v₂ - (1/4)v₃ + (1/20)v₄ + (1/30)v₅ - 12*v₆
-      {C2(-1, 3), C(1), C2(-1, 2), C2(-1, 4), C2(1, 20), C2(1, 30), C(-12)},
-      // c₂ = -(5/4)v₀ + (2/3)v₁ + (2/3)v₂ - (1/24)v₃ - (1/24)v₄ + 0*v₅ + 4*v₆
-      {C2(-5, 4), C2(2, 3), C2(2, 3), C2(-1, 24), C2(-1, 24), C(0), C(4)},
-      // c₃ = (5/12)v₀ - (7/12)v₁ - (1/24)v₂ + (7/24)v₃ - (1/24)v₄ - (1/24)v₅ + 15*v₆
-      {C2(5, 12), C2(-7, 12), C2(-1, 24), C2(7, 24), C2(-1, 24), C2(-1, 24), C(15)},
-      // c₄ = (1/4)v₀ - (1/6)v₁ - (1/6)v₂ + (1/24)v₃ + (1/24)v₄ + 0*v₅ - 5*v₆
-      {C2(1, 4), C2(-1, 6), C2(-1, 6), C2(1, 24), C2(1, 24), C(0), C(-5)},
-      // c₅ = -(1/12)v₀ + (1/12)v₁ + (1/24)v₂ - (1/24)v₃ - (1/120)v₄ + (1/120)v₅ - 3*v₆
-      {C2(-1, 12), C2(1, 12), C2(1, 24), C2(-1, 24), C2(-1, 120), C2(1, 120), C(-3)},
-      // c₆ = 0*v₀ + 0*v₁ + 0*v₂ + 0*v₃ + 0*v₄ + 0*v₅ + 1*v₆
-      {C(0), C(0), C(0), C(0), C(0), C(0), C(1)},
-    }};
-    // clang-format on
-
-#undef C
-#undef C2
   }
 };
 
