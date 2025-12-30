@@ -142,7 +142,7 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
   }
 
   template <typename T, std::enable_if_t<std::is_unsigned_v<T>>* = nullptr>
-  constexpr ExtensionField(T value) : ExtensionField({BigInt<N>(value)}) {}
+  constexpr ExtensionField(T value) : ExtensionField({BaseField(value)}) {}
 
   constexpr ExtensionField(const BaseField& value) { values_[0] = value; }
 
