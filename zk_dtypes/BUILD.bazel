@@ -205,6 +205,8 @@ cc_library(
         ":big_int",
         ":byinverter",
         ":finite_field",
+        ":modular_operations",
+        ":mont_multiplication",
         ":pow",
         ":prime_field",
         "@com_google_absl//absl/log:check",
@@ -340,6 +342,25 @@ cc_library(
 )
 
 cc_library(
+    name = "modular_operations",
+    hdrs = ["include/field/modular_operations.h"],
+    deps = [
+        ":arithmetics",
+        ":big_int",
+    ],
+)
+
+cc_library(
+    name = "mont_multiplication",
+    hdrs = ["include/field/mont_multiplication.h"],
+    deps = [
+        ":arithmetics",
+        ":big_int",
+        ":modular_operations",
+    ],
+)
+
+cc_library(
     name = "karatsuba_operation",
     hdrs = ["include/field/karatsuba_operation.h"],
     deps = [":extension_field_operation_traits_forward"],
@@ -383,6 +404,8 @@ cc_library(
         ":big_int",
         ":byinverter",
         ":finite_field",
+        ":modular_operations",
+        ":mont_multiplication",
         ":pow",
         ":prime_field",
         ":random",

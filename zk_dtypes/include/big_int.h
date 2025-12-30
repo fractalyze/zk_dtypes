@@ -19,6 +19,7 @@ limitations under the License.
 #include <stddef.h>
 #include <stdint.h>
 
+#include <algorithm>
 #include <array>
 #include <bitset>
 #include <initializer_list>
@@ -92,9 +93,7 @@ class BigInt {
     static_assert(N >= N2,
                   "Destination BigInt size N must be greater than or equal to "
                   "source size N2.");
-    for (size_t i = 0; i < N2; ++i) {
-      limbs_[i] = other[i];
-    }
+    std::copy_n(other.limbs_, N2, limbs_);
   }
 
   // Convert a decimal string to a BigInt.
@@ -453,6 +452,15 @@ class BigInt {
     return ret;
   }
 
+  template <size_t N2>
+  BigInt<N2> Truncate() const {
+    static_assert(
+        N > N2, "Destination BigInt size N2 must be less than source size N.");
+    BigInt<N2> ret;
+    std::copy_n(limbs_, N2, ret.limbs_);
+    return ret;
+  }
+
   constexpr static uint64_t Add(const BigInt& a, const BigInt& b, BigInt& c) {
     internal::AddResult<uint64_t> add_result = {};
     for (size_t i = 0; i < N; ++i) {
@@ -536,6 +544,9 @@ class BigInt {
   }
 
  private:
+  template <size_t N2>
+  friend class BigInt;
+
   uint64_t limbs_[N];
 };
 
@@ -547,8 +558,6 @@ std::ostream& operator<<(std::ostream& os, const BigInt<N>& big_int) {
 template <size_t N>
 class BitTraits<BigInt<N>> {
  public:
-  constexpr static bool kIsDynamic = false;
-
   constexpr static size_t GetNumBits(const BigInt<N>& _) { return N * 64; }
 
   constexpr static bool TestBit(const BigInt<N>& bigint, size_t index) {
