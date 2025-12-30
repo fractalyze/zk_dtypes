@@ -16,10 +16,10 @@
 
 """Overload of numpy.iinfo to handle dtypes defined in zk_dtypes."""
 
-from ._zk_dtypes_ext import int2
-from ._zk_dtypes_ext import int4
-from ._zk_dtypes_ext import uint2
-from ._zk_dtypes_ext import uint4
+from zk_dtypes._zk_dtypes_ext import int2
+from zk_dtypes._zk_dtypes_ext import int4
+from zk_dtypes._zk_dtypes_ext import uint2
+from zk_dtypes._zk_dtypes_ext import uint4
 
 import numpy as np
 
