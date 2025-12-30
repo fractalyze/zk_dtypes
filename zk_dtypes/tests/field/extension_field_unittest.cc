@@ -66,6 +66,20 @@ TYPED_TEST(ExtensionFieldTypedTest, One) {
   EXPECT_FALSE(ExtF::Zero().IsOne());
 }
 
+TYPED_TEST(ExtensionFieldTypedTest, ConstructFromUnsignedInteger) {
+  using ExtF = TypeParam;
+  using BaseField = typename ExtF::BaseField;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+
+  ExtF a(uint32_t{3});
+
+  // The first coefficient should be the value, others should be zero.
+  EXPECT_EQ(a[0], BaseField(3));
+  for (size_t i = 1; i < kDegree; ++i) {
+    EXPECT_TRUE(a[i].IsZero());
+  }
+}
+
 TYPED_TEST(ExtensionFieldTypedTest, Add) {
   using ExtF = TypeParam;
   constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
