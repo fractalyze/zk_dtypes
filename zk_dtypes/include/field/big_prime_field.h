@@ -33,6 +33,7 @@ limitations under the License.
 #include "zk_dtypes/include/field/modular_operations.h"
 #include "zk_dtypes/include/field/mont_multiplication.h"
 #include "zk_dtypes/include/field/prime_field.h"
+#include "zk_dtypes/include/intn.h"
 #include "zk_dtypes/include/pow.h"
 
 namespace zk_dtypes {
@@ -92,6 +93,14 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
 
   constexpr static PrimeField Random() {
     return PrimeField::FromUnchecked(BigInt<N>::Random(Config::kModulus));
+  }
+
+  template <int N, typename UnderlyingTy>
+  constexpr static PrimeField FromUnchecked(intN<N, UnderlyingTy> value) {
+    if constexpr (std::is_signed_v<UnderlyingTy>) {
+      DCHECK_GE(value, 0);
+    }
+    return PrimeField::FromUnchecked(BigInt<N>(value));
   }
 
   constexpr static PrimeField FromUnchecked(const BigInt<N>& value) {

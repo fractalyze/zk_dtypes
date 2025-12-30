@@ -34,6 +34,17 @@ using PrimeFieldTypes = testing::Types<
     test::FrStd>;
 TYPED_TEST_SUITE(PrimeFieldTypedTest, PrimeFieldTypes);
 
+// See https://github.com/fractalyze/zkx/pull/165#discussion_r2650000397
+TYPED_TEST(PrimeFieldTypedTest, FromUncheckedWithIntN) {
+  using F = TypeParam;
+  if constexpr (F::Config::kModulusBits <= 3) {
+    GTEST_SKIP() << "Skipping test because modulus is less than 4";
+  } else {
+    EXPECT_EQ(F::FromUnchecked(uint4(3)), F::FromUnchecked(3));
+    EXPECT_EQ(F::FromUnchecked(int4(3)), F::FromUnchecked(3));
+  }
+}
+
 TYPED_TEST(PrimeFieldTypedTest, Zero) {
   using F = TypeParam;
   EXPECT_TRUE(F(0).IsZero());
