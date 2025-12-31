@@ -16,6 +16,13 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_FIELD_FROBENIUS_OPERATION_H_
 #define ZK_DTYPES_INCLUDE_FIELD_FROBENIUS_OPERATION_H_
 
+#include <array>
+#include <cstddef>
+#include <utility>
+
+#include "absl/status/statusor.h"
+
+#include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
 #include "zk_dtypes/include/field/frobenius.h"
 
 namespace zk_dtypes {
@@ -24,7 +31,9 @@ namespace zk_dtypes {
 // Frobenius Operation Mixin for Extension Fields.
 //
 // This mixin provides the Frobenius endomorphism φᴱ(x) = x^(pᴱ) as a member
-// function, using instance method to obtain Frobenius coefficients.
+// function, using instance method to obtain Frobenius coefficients, where p
+// is order of base field.
+//
 //
 // Derived class must implement:
 //   - GetFrobeniusCoeffs(): returns (n - 1) × (n - 1) array of coefficients
@@ -38,10 +47,65 @@ namespace zk_dtypes {
 template <typename Derived>
 class FrobeniusOperation {
  public:
+  using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
+  constexpr static size_t kDegree =
+      ExtensionFieldOperationTraits<Derived>::kDegree;
+
   template <size_t E = 1>
   Derived Frobenius() const {
     const Derived& self = static_cast<const Derived&>(*this);
     return ApplyFrobenius<E>(self, self.GetFrobeniusCoeffs());
+  }
+
+  // Inverse in extension field using Frobenius endomorphism.
+  //
+  // Using the norm: Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x) ∈ BaseField
+  // where φ(x) = xᵖ is the Frobenius endomorphism.
+  //
+  // From Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x), we derive:
+  //   x⁻¹ = φ(x) · ... · φⁿ⁻¹(x) / Norm(x)
+  //
+  // Since Norm(x) ∈ base field, we only need base field inverse (cheaper than
+  // extension field inverse).
+  //
+  // Note: Child classes may override this with more efficient algorithms.
+  absl::StatusOr<Derived> FrobeniusInverse() const {
+    const std::array<BaseField, kDegree>& x =
+        static_cast<const Derived&>(*this).ToBaseFields();
+    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+
+    // Compute φ¹(x) · φ²(x) · ... · φⁿ⁻¹(x) using precomputed coefficients.
+    // Each Frobenius<E> uses coeffs[E - 1] from GetFrobeniusCoeffs().
+    // See
+    // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.-frobenius-endomorphism
+    Derived frob_product =
+        ComputeFrobeniusProduct(std::make_index_sequence<kDegree - 1>{});
+    const std::array<BaseField, kDegree>& field_product_comp =
+        frob_product.ToBaseFields();
+
+    // Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x) ∈ BaseField
+    // Result is [norm, 0, ..., 0] in extension field representation.
+    // See
+    // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-3.-norm
+    BaseField norm = x[1] * field_product_comp[kDegree - 1];
+    for (size_t i = 2; i < kDegree; ++i) {
+      norm += x[i] * field_product_comp[kDegree - i];
+    }
+    norm *= non_residue;
+    norm += x[0] * field_product_comp[0];
+
+    // BaseField inverse (cheaper than extension field inverse)
+    absl::StatusOr<BaseField> norm_inv = norm.Inverse();
+    if (!norm_inv.ok()) return norm_inv.status();
+    // x⁻¹ = φ(x) · ... · φⁿ⁻¹(x) · norm⁻¹
+    return frob_product * (*norm_inv);
+  }
+
+ private:
+  // Compute φ¹(x) · φ²(x) · ... · φⁿ⁻¹(x) using fold expression.
+  template <size_t... Es>
+  Derived ComputeFrobeniusProduct(std::index_sequence<Es...>) const {
+    return (this->template Frobenius<Es + 1>() * ...);
   }
 };
 

@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <array>
 #include <cstddef>
-#include <utility>
 
 #include "absl/status/statusor.h"
 
@@ -85,57 +84,6 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
     return static_cast<const Derived&>(*this).FromBaseFields(y);
   }
 
-  // Inverse in extension field using Frobenius endomorphism.
-  //
-  // Using the norm: Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x) ∈ Fp
-  // where φ(x) = xᵖ is the Frobenius endomorphism.
-  //
-  // From Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x), we derive:
-  //   x⁻¹ = φ(x) · ... · φⁿ⁻¹(x) / Norm(x)
-  //
-  // Since Norm(x) ∈ Fp, we only need Fp inverse (cheaper than Fpⁿ inverse).
-  //
-  // Note: Child classes may override this with more efficient algorithms.
-  absl::StatusOr<Derived> Inverse() const {
-    const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
-    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
-
-    // Compute φ¹(x) · φ²(x) · ... · φⁿ⁻¹(x) using precomputed coefficients.
-    // Each Frobenius<E> uses coeffs[E - 1] from GetFrobeniusCoeffs().
-    // See
-    // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.-frobenius-endomorphism
-    Derived frob_product =
-        ComputeFrobeniusProduct(std::make_index_sequence<kDegree - 1>{});
-    const std::array<BaseField, kDegree>& field_product_comp =
-        frob_product.ToBaseFields();
-
-    // Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x) ∈ BaseField
-    // Result is [norm, 0, ..., 0] in extension field representation.
-    // See
-    // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-3.-norm
-    BaseField norm = x[1] * field_product_comp[kDegree - 1];
-    for (size_t i = 2; i < kDegree; ++i) {
-      norm += x[i] * field_product_comp[kDegree - i];
-    }
-    norm *= non_residue;
-    norm += x[0] * field_product_comp[0];
-
-    // BaseField inverse (cheaper than extension field inverse)
-    absl::StatusOr<BaseField> norm_inv = norm.Inverse();
-    if (!norm_inv.ok()) return norm_inv.status();
-    // x⁻¹ = φ(x) · ... · φⁿ⁻¹(x) · norm⁻¹
-    return frob_product * (*norm_inv);
-  }
-
- private:
-  // Compute φ¹(x) · φ²(x) · ... · φⁿ⁻¹(x) using fold expression.
-  template <size_t... Es>
-  Derived ComputeFrobeniusProduct(std::index_sequence<Es...>) const {
-    return (this->template Frobenius<Es + 1>() * ...);
-  }
-
- public:
   absl::StatusOr<Derived> operator/(const Derived& other) const {
     absl::StatusOr<Derived> inv = other.Inverse();
     if (!inv.ok()) return inv.status();
