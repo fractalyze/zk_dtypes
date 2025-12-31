@@ -163,6 +163,15 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
     return N * BaseField::ExtensionDegree();
   }
 
+  constexpr static auto Order() {
+    constexpr size_t kLimbNums = BasePrimeField::kLimbNums * ExtensionDegree();
+    BigInt<kLimbNums> order = BasePrimeField::Order();
+    for (size_t i = 1; i < ExtensionDegree(); ++i) {
+      order *= BasePrimeField::Order();
+    }
+    return order;
+  }
+
   constexpr static ExtensionField Zero() { return ExtensionField(); }
 
   constexpr static ExtensionField One() {

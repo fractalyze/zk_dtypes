@@ -48,9 +48,11 @@ class FrobeniusCoeffs {
   static const std::array<std::array<BaseField, N - 1>, N - 1>&
   GetFrobeniusCoeffs() {
     static const auto coeffs = []() {
-      // Use larger BigInt to avoid overflow when computing pᵉ.
-      constexpr size_t kLimbNums = BasePrimeField::kLimbNums * N;
-      BigInt<kLimbNums> p(BasePrimeField::Config::kModulus);
+      // Use larger BigInt to avoid overflow when computing pᵉ, where p is order
+      // of base field.
+      constexpr size_t kLimbNums =
+          BasePrimeField::kLimbNums * N * BaseField::ExtensionDegree();
+      BigInt<kLimbNums> p = BaseField::Order();
       BaseField nr = Config::kNonResidue;
 
       std::array<std::array<BaseField, N - 1>, N - 1> result{};

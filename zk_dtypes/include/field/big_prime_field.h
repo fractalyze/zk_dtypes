@@ -81,6 +81,8 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
 
   constexpr static uint32_t ExtensionDegree() { return 1; }
 
+  constexpr static BigInt<N> Order() { return Config::kModulus; }
+
   constexpr static PrimeField Zero() { return PrimeField(); }
 
   constexpr static PrimeField One() {
