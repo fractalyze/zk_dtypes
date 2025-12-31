@@ -80,6 +80,37 @@ TYPED_TEST(ExtensionFieldTypedTest, ConstructFromUnsignedInteger) {
   }
 }
 
+TYPED_TEST(ExtensionFieldTypedTest, ConstructFromBaseField) {
+  using ExtF = TypeParam;
+  using BaseField = typename ExtF::BaseField;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+
+  ExtF a(BaseField(3));
+  EXPECT_EQ(a[0], BaseField(3));
+  for (size_t i = 1; i < kDegree; ++i) {
+    EXPECT_TRUE(a[i].IsZero());
+  }
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, ConstructFromBasePrimeField) {
+  using ExtF = TypeParam;
+  using BaseField = typename ExtF::BaseField;
+  using BasePrimeField = typename ExtF::BasePrimeField;
+
+  if constexpr (std::is_same_v<BaseField, BasePrimeField>) {
+    GTEST_SKIP()
+        << "Skipping test because BaseField and BasePrimeField are the same.";
+  } else {
+    ExtF a(BasePrimeField(3));
+    EXPECT_EQ(a[0], BaseField(3));
+    absl::Span<const BasePrimeField> base_prime_fields = a.AsBasePrimeFields();
+    EXPECT_EQ(base_prime_fields[0], BasePrimeField(3));
+    for (size_t i = 1; i < ExtF::ExtensionDegree(); ++i) {
+      EXPECT_TRUE(base_prime_fields[i].IsZero());
+    }
+  }
+}
+
 TYPED_TEST(ExtensionFieldTypedTest, Add) {
   using ExtF = TypeParam;
   constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;

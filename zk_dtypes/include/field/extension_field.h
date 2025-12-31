@@ -146,6 +146,14 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
 
   constexpr ExtensionField(const BaseField& value) { values_[0] = value; }
 
+  template <typename Config2 = Config,
+            std::enable_if_t<
+                !std::is_same_v<typename Config2::kBaseField,
+                                typename Config2::kBasePrimeField>>* = nullptr>
+  constexpr ExtensionField(const BasePrimeField& value) {
+    AsBasePrimeFields()[0] = value;
+  }
+
   constexpr ExtensionField(std::initializer_list<BaseField> values) {
     DCHECK_LE(values.size(), N);
     auto it = values.begin();
