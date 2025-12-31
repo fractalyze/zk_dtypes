@@ -96,6 +96,58 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
       return this->KaratsubaSquare();
     }
   }
+
+  absl::StatusOr<Derived> Inverse() const {
+    // [Comparison]
+    // This Algorithm (Matrix Method / Cramer's Rule):
+    // - square: 3, mul: 9, inv: 1 (base field ops)
+    // Standard Itoh-Tsujii:
+    // - square: 3, mul: 12, inv: 1 (approx. 1 Full Fp3-Mul + Dot Product)
+    //
+    // Conclusion:
+    // This algorithm saves ~3 Multiplications. The Matrix Method computes
+    // the first column of the inverse directly, avoiding the overhead of
+    // a full extension field multiplication required by Itoh-Tsujii.
+    std::array<BaseField, 3> x =
+        static_cast<const Derived&>(*this).ToBaseField();
+    BaseField xi = static_cast<const Derived&>(*this)
+                       .NonResidue();  // ξ: Irreducible polynomial constant
+                                       // [Comparison]
+
+    // Representing an element (x₀ + x₁w + x₂w²) as a 3×3 Matrix:
+    //   [ x₀  ξx₂  ξx₁ ]
+    //   [ x₁  x₀   ξx₂ ]
+    //   [ x₂  x₁   x₀  ]
+    // The inverse is (1 / det) * Adjugate(M).
+
+    // 1. Calculate the first column of the Adjugate Matrix (Cofactors)
+    // t₀, t₁, t₂ are the cofactors of the first column of the representation
+    // matrix.
+    // t₀ = x₀² - ξx₁x₂
+    BaseField t0 = x[0].Square() - xi * (x[1] * x[2]);
+    // t₁ = ξx₂² - x₀x₁
+    BaseField t1 = xi * x[2].Square() - x[0] * x[1];
+    // t₂ = x₁² - x₀x₂
+    BaseField t2 = x[1].Square() - x[0] * x[2];
+
+    // 2. Calculate the Determinant (t₃)
+    // Using Laplace expansion along the first column: det = x₀*t₀ + ξx₂*t₁ +
+    // ξx₁*t₂
+    BaseField t3 = x[0] * t0 + xi * (x[2] * t1 + x[1] * t2);
+
+    // 3. Check for existence (det ≠ 0) and invert the determinant
+    absl::StatusOr<BaseField> t3_inv = t3.Inverse();
+    if (!t3_inv.ok()) {
+      return t3_inv.status();  // Error if the element is zero (not invertible)
+    }
+
+    // 4. Final Inverse result: (t₀, t₁, t₂) / det
+    // Since the field is commutative, we only need the first column of the
+    // adjugate.
+    std::array<BaseField, 3> y{t0 * *t3_inv, t1 * *t3_inv, t2 * *t3_inv};
+
+    return static_cast<const Derived&>(*this).FromBaseFields(y);
+  }
 };
 
 }  // namespace zk_dtypes

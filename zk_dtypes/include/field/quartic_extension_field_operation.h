@@ -143,6 +143,74 @@ class QuarticExtensionFieldOperation
     }
   }
 
+  absl::StatusOr<Derived> Inverse() const {
+    // [Comparison]
+    // Tower Extension over Fp2:
+    // - square: 6, mul: 12, inv: 1 (base field ops)
+    // Standard Itoh-Tsujii:
+    // - square: ~8, mul: ~18, inv: 1 (approx. 2 Full Fp4-Muls)
+    //
+    // Conclusion:
+    // This algorithm saves >6 Multiplications. By utilizing the quadratic
+    // tower structure (Fp2 -> Fp4), it reduces the problem to simpler
+    // complex-conjugate arithmetic, which is significantly cheaper than
+    // flat exponentiation.
+
+    // Fp4 inverse via quadratic tower (u⁴ = ξ) with v = u²:
+    // Write x = A + B·u where A = x₀ + x₂·v and B = x₁ + x₃·v in Fp₂[v]/(v² −
+    // ξ). Then x⁻¹ = (A − B·u) · (A² − v·B²)⁻¹. If D = A² − v·B² = D₀ + D₁·v,
+    // we invert D in Fp₂ by D⁻¹ = (D₀ − D₁·v)/(D₀² − ξ·D₁²), and expand back to
+    // {1,u,u²,u³}.
+
+    std::array<BaseField, 4> x =
+        static_cast<const Derived&>(*this).ToBaseField();
+    BaseField xi = static_cast<const Derived&>(*this).NonResidue();  // ξ
+
+    // 1) Compute A² and B² in Fp₂[v]/(v² − ξ), for A = x₀ + x₂·v and B = x₁ +
+    // x₃·v (v² = ξ): A² = (x₀² + ξ·x₂²) + (2·x₀·x₂)·v B² = (x₁² + ξ·x₃²) +
+    // (2·x₁·x₃)·v
+    BaseField x0_sq = x[0].Square();
+    BaseField x1_sq = x[1].Square();
+    BaseField x2_sq = x[2].Square();
+    BaseField x3_sq = x[3].Square();
+
+    BaseField A0 = x0_sq + xi * x2_sq;      // real part of A²
+    BaseField A1 = (x[0] * x[2]).Double();  // v part of A²
+    BaseField B0 = x1_sq + xi * x3_sq;      // real part of B²
+    BaseField B1 = (x[1] * x[3]).Double();  // v part of B²
+
+    // 2) Compute D = A² − v·B². Since v·(B₀ + B₁·v) = (ξ·B₁) + (B₀)·v,
+    // D = (A₀ − ξ·B₁) + (A₁ − B₀)·v.
+    BaseField D0 = A0 - xi * B1;
+    BaseField D1 = A1 - B0;
+
+    // 3) Compute the norm N = D₀² − ξ·D₁² ∈ Fp and its inverse N⁻¹ in the base
+    // field.
+    BaseField N = D0.Square() - xi * D1.Square();
+    absl::StatusOr<BaseField> N_inv = N.Inverse();
+    if (!N_inv.ok()) {
+      return N_inv.status();
+    }
+
+    // 4) Invert D in Fp₂: D⁻¹ = (D₀ − D₁·v) · N⁻¹ = C₀ + C₁·v, where C₀ =
+    // D₀·N⁻¹ and C₁ = −D₁·N⁻¹.
+    BaseField C0 = D0 * *N_inv;
+    BaseField C1 = -D1 * *N_inv;
+
+    // 5) Final expansion: x⁻¹ = (A − B·u) · (C₀ + C₁·v), with v = u².
+    // In the basis {1, u, u², u³}:
+    // y₀ = x₀·C₀ + ξ·x₂·C₁
+    // y₁ = −(x₁·C₀ + ξ·x₃·C₁)
+    // y₂ = x₂·C₀ + x₀·C₁
+    // y₃ = −(x₃·C₀ + x₁·C₁)
+    BaseField y0 = x[0] * C0 + xi * (x[2] * C1);
+    BaseField y1 = -(x[1] * C0 + xi * (x[3] * C1));
+    BaseField y2 = x[2] * C0 + x[0] * C1;
+    BaseField y3 = -(x[3] * C0 + x[1] * C1);
+
+    return static_cast<const Derived&>(*this).FromBaseFields({y0, y1, y2, y3});
+  }
+
  private:
   friend class ToomCookOperation<Derived>;
 
