@@ -23,7 +23,6 @@ limitations under the License.
 #include "absl/status/statusor.h"
 
 #include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
-#include "zk_dtypes/include/field/frobenius.h"
 
 namespace zk_dtypes {
 
@@ -51,10 +50,35 @@ class FrobeniusOperation {
   constexpr static size_t kDegree =
       ExtensionFieldOperationTraits<Derived>::kDegree;
 
+  // clang-format off
+  // Frobenius endomorphism: φᴱ(x) = x^(pᴱ)
+  //
+  // For extension field F[u] / (uⁿ - ξ):
+  //   φᴱ(aᵢ · uⁱ) = aᵢ · ξ^(i * (pᴱ - 1) / n) · uⁱ
+  //
+  // where p is order of F.
+  //
+  // See:
+  // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.2.-optimized-computation-when
+  // clang-format on
+  // Core Frobenius logic with coefficients passed as parameter.
+  // coeffs[E - 1][i - 1] = ξ^(i * (pᴱ - 1) / n) for i = 1, ..., n - 1.
   template <size_t E = 1>
   Derived Frobenius() const {
-    const Derived& self = static_cast<const Derived&>(*this);
-    return ApplyFrobenius<E>(self, self.GetFrobeniusCoeffs());
+    const std::array<BaseField, kDegree>& x =
+        static_cast<const Derived&>(*this).ToBaseFields();
+    std::array<BaseField, kDegree> y;
+    const std::array<std::array<BaseField, kDegree - 1>, kDegree - 1>& coeffs =
+        static_cast<const Derived&>(*this).GetFrobeniusCoeffs();
+
+    // a₀ · u⁰ → a₀ · u⁰ (coefficient is 1)
+    y[0] = x[0];
+    for (size_t i = 1; i < kDegree; ++i) {
+      // aᵢ · uⁱ → aᵢ · ξ^(i * (pᴱ - 1) / n) · uⁱ
+      y[i] = x[i] * coeffs[E - 1][i - 1];
+    }
+
+    return static_cast<const Derived&>(*this).FromBaseFields(y);
   }
 
   // Inverse in extension field using Frobenius endomorphism.
