@@ -97,7 +97,9 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
   //
   // Note: Child classes may override this with more efficient algorithms.
   absl::StatusOr<Derived> Inverse() const {
-    const Derived& self = static_cast<const Derived&>(*this);
+    std::array<BaseField, kDegree> x =
+        static_cast<const Derived&>(*this).ToBaseField();
+    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
     // Compute φ¹(x) · φ²(x) · ... · φⁿ⁻¹(x) using precomputed coefficients.
     // Each Frobenius<E> uses coeffs[E - 1] from GetFrobeniusCoeffs().
@@ -105,13 +107,19 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
     // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.-frobenius-endomorphism
     Derived frob_product =
         ComputeFrobeniusProduct(std::make_index_sequence<kDegree - 1>{});
+    std::array<BaseField, kDegree> field_product_comp =
+        frob_product.ToBaseField();
 
     // Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x) ∈ BaseField
     // Result is [norm, 0, ..., 0] in extension field representation.
     // See
     // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-3.-norm
-    Derived norm_ext = self * frob_product;
-    BaseField norm = norm_ext.ToBaseField()[0];
+    BaseField norm = x[1] * field_product_comp[kDegree - 1];
+    for (size_t i = 2; i < kDegree; ++i) {
+      norm += x[i] * field_product_comp[kDegree - i];
+    }
+    norm *= non_residue;
+    norm += x[0] * field_product_comp[0];
 
     // BaseField inverse (cheaper than extension field inverse)
     absl::StatusOr<BaseField> norm_inv = norm.Inverse();
