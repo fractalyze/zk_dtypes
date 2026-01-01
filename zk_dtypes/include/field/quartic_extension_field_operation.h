@@ -82,7 +82,7 @@ class QuarticExtensionFieldOperation
       // y₂ = s₁ + ξ * s₃ + (s₄ - s₀ - s₂)
       // y₃ = m₃ - m₀ - m₁
 
-      std::array<BaseField, 4> x =
+      const std::array<BaseField, 4>& x =
           static_cast<const Derived&>(*this).ToBaseFields();
       BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
@@ -162,7 +162,7 @@ class QuarticExtensionFieldOperation
     // we invert D in Fp₂ by D⁻¹ = (D₀ − D₁·v)/(D₀² − ξ·D₁²), and expand back to
     // {1,u,u²,u³}.
 
-    std::array<BaseField, 4> x =
+    const std::array<BaseField, 4>& x =
         static_cast<const Derived&>(*this).ToBaseFields();
     BaseField xi = static_cast<const Derived&>(*this).NonResidue();  // ξ
 
