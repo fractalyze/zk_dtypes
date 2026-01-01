@@ -83,7 +83,7 @@ class QuarticExtensionFieldOperation
       // y₃ = m₃ - m₀ - m₁
 
       std::array<BaseField, 4> x =
-          static_cast<const Derived&>(*this).ToBaseField();
+          static_cast<const Derived&>(*this).ToBaseFields();
       BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
       // 1. Squares (xᵢ²)
@@ -163,7 +163,7 @@ class QuarticExtensionFieldOperation
     // {1,u,u²,u³}.
 
     std::array<BaseField, 4> x =
-        static_cast<const Derived&>(*this).ToBaseField();
+        static_cast<const Derived&>(*this).ToBaseFields();
     BaseField xi = static_cast<const Derived&>(*this).NonResidue();  // ξ
 
     // 1) Compute A² and B² in Fp₂[v]/(v² − ξ), for A = x₀ + x₂·v and B = x₁ +

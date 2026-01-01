@@ -53,9 +53,9 @@ class KaratsubaOperation {
   // Multiplies this element with another using the Karatsuba method.
   Derived KaratsubaMultiply(const Derived& other) const {
     std::array<BaseField, kDegree> x =
-        static_cast<const Derived&>(*this).ToBaseField();
+        static_cast<const Derived&>(*this).ToBaseFields();
     std::array<BaseField, kDegree> y =
-        static_cast<const Derived&>(other).ToBaseField();
+        static_cast<const Derived&>(other).ToBaseFields();
 
     return Reduce(AssembleMulPolynomial(ComputeMulTerms(x, y)));
   }
@@ -63,7 +63,7 @@ class KaratsubaOperation {
   // Squares this element using the Karatsuba method.
   Derived KaratsubaSquare() const {
     std::array<BaseField, kDegree> x =
-        static_cast<const Derived&>(*this).ToBaseField();
+        static_cast<const Derived&>(*this).ToBaseFields();
 
     return Reduce(AssembleSqrPolynomial(ComputeSqrTerms(x)));
   }

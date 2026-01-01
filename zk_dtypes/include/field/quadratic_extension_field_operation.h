@@ -42,7 +42,7 @@ class QuadraticExtensionFieldOperation
         static_cast<const Derived&>(*this).GetSquareAlgorithm();
     if (algorithm == ExtensionFieldMulAlgorithm::kCustom) {
       std::array<BaseField, 2> x =
-          static_cast<const Derived&>(*this).ToBaseField();
+          static_cast<const Derived&>(*this).ToBaseFields();
       // v₀ = x₀ - x₁
       BaseField v0 = x[0] - x[1];
       // v₁ = x₀ * x₁
@@ -62,7 +62,7 @@ class QuadraticExtensionFieldOperation
       // non-residue + sub', this algorithm is faster. This holds true for
       // almost all large prime fields assuming ξ is a small constant.
       std::array<BaseField, 2> x =
-          static_cast<const Derived&>(*this).ToBaseField();
+          static_cast<const Derived&>(*this).ToBaseFields();
       BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
       // v₀ = x₀ - x₁
@@ -93,7 +93,7 @@ class QuadraticExtensionFieldOperation
 
   absl::StatusOr<Derived> Inverse() const {
     std::array<BaseField, 2> x =
-        static_cast<const Derived&>(*this).ToBaseField();
+        static_cast<const Derived&>(*this).ToBaseFields();
     BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
     // See https://www.math.u-bordeaux.fr/~damienrobert/csi/book/book.pdf

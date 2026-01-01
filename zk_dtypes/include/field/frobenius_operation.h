@@ -29,7 +29,7 @@ namespace zk_dtypes {
 // Derived class must implement:
 //   - GetFrobeniusCoeffs(): returns (n - 1) × (n - 1) array of coefficients
 //     where coeffs[E - 1][i - 1] = ξ^(i * (pᴱ - 1) / n)
-//   - ToBaseField(): converts to array of base field elements
+//   - ToBaseFields(): converts to array of base field elements
 //   - FromBaseFields(): constructs from array of base field elements
 //
 // References:

@@ -55,7 +55,7 @@ template <size_t E, typename T, typename CoeffsArray>
   using BaseField = typename ExtensionFieldOperationTraits<T>::BaseField;
   constexpr size_t kDegree = ExtensionFieldOperationTraits<T>::kDegree;
 
-  std::array<BaseField, kDegree> src = x.ToBaseField();
+  std::array<BaseField, kDegree> src = x.ToBaseFields();
   std::array<BaseField, kDegree> dst;
 
   // a₀ · u⁰ → φᴱ(a₀) · u⁰ (coefficient is 1)

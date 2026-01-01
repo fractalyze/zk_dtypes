@@ -68,7 +68,7 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
       // y₂ = s₁ + s₂ + s₃ - s₀ - s₄
 
       std::array<BaseField, 3> x =
-          static_cast<const Derived&>(*this).ToBaseField();
+          static_cast<const Derived&>(*this).ToBaseFields();
       BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
       // s₀ = x₀²
@@ -109,7 +109,7 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     // the first column of the inverse directly, avoiding the overhead of
     // a full extension field multiplication required by Itoh-Tsujii.
     std::array<BaseField, 3> x =
-        static_cast<const Derived&>(*this).ToBaseField();
+        static_cast<const Derived&>(*this).ToBaseFields();
     BaseField xi = static_cast<const Derived&>(*this)
                        .NonResidue();  // ξ: Irreducible polynomial constant
                                        // [Comparison]
