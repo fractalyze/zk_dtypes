@@ -94,8 +94,8 @@ class JacobianPoint<
     // The points (X, Y, Z) and (X', Y', Z')
     // are equal when (X * Z'²) = (X' * Z²)
     // and (Y * Z'³) = (Y' * Z³).
-    const BaseField z1z1 = z_ * z_;
-    const BaseField z2z2 = other.z_ * other.z_;
+    const BaseField z1z1 = z_.Square();
+    const BaseField z2z2 = other.z_.Square();
 
     if (x_ * z2z2 != other.x_ * z1z1) {
       return false;
