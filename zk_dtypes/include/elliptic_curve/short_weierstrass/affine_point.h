@@ -54,6 +54,8 @@ class AffinePoint<
     x_ = point.x_;
     y_ = point.y_;
   }
+  constexpr AffinePoint(const std::array<BaseField, 2>& coords)
+      : x_(coords[0]), y_(coords[1]) {}
   constexpr AffinePoint(const BaseField& x, const BaseField& y)
       : x_(x), y_(y) {}
 
@@ -146,6 +148,8 @@ class AffinePoint<
     return absl::Substitute("($0, $1)", x_.ToHexString(pad_zero),
                             y_.ToHexString(pad_zero));
   }
+
+  constexpr std::array<BaseField, 2> ToCoords() const { return {x_, y_}; }
 
  private:
   BaseField x_;

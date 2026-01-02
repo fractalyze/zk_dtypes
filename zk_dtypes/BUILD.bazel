@@ -117,6 +117,17 @@ cc_library(
 )
 
 cc_library(
+    name = "control_flow_operation",
+    hdrs = ["include/control_flow_operation.h"],
+    deps = [":control_flow_operation_forward"],
+)
+
+cc_library(
+    name = "control_flow_operation_forward",
+    hdrs = ["include/control_flow_operation_forward.h"],
+)
+
+cc_library(
     name = "intn",
     hdrs = ["include/intn.h"],
 )
@@ -578,18 +589,36 @@ cc_library(
 
 cc_library(
     name = "sw_jacobian_point",
-    hdrs = [
-        "include/elliptic_curve/short_weierstrass/jacobian_point.h",
-        "include/elliptic_curve/short_weierstrass/jacobian_point_impl.h",
-    ],
+    hdrs = ["include/elliptic_curve/short_weierstrass/jacobian_point.h"],
     deps = [
         ":batch_inverse",
         ":curve_type",
         ":point_declarations",
         ":scalar_mul",
         ":sw_curve",
+        ":sw_jacobian_point_operation",
+        ":sw_point_base",
         ":template_util",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "sw_jacobian_point_operation",
+    hdrs = ["include/elliptic_curve/short_weierstrass/jacobian_point_operation.h"],
+    deps = [
+        ":curve_type",
+        ":point_traits",
+    ],
+)
+
+cc_library(
+    name = "sw_point_base",
+    hdrs = ["include/elliptic_curve/short_weierstrass/point_base.h"],
+    deps = [
+        ":control_flow_operation",
+        ":point_traits",
+        ":str_join",
     ],
 )
 

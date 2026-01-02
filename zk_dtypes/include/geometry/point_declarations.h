@@ -32,6 +32,9 @@ class JacobianPoint;
 template <typename Curve, typename SFINAE = void>
 class PointXyzz;
 
+template <typename Derived, typename SFINAE = void>
+class JacobianPointOperation;
+
 template <typename T>
 struct IsAffinePointImpl {
   constexpr static bool value = false;
