@@ -42,10 +42,10 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
       ExtensionFieldOperationTraits<Derived>::kDegree;
 
   Derived operator+(const Derived& other) const {
-    std::array<BaseField, kDegree> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-    std::array<BaseField, kDegree> y =
-        static_cast<const Derived&>(other).ToBaseField();
+    const std::array<BaseField, kDegree>& x =
+        static_cast<const Derived&>(*this).ToBaseFields();
+    const std::array<BaseField, kDegree>& y =
+        static_cast<const Derived&>(other).ToBaseFields();
     std::array<BaseField, kDegree> z;
     for (size_t i = 0; i < kDegree; ++i) {
       z[i] = x[i] + y[i];
@@ -54,10 +54,10 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
   }
 
   Derived operator-(const Derived& other) const {
-    std::array<BaseField, kDegree> x =
-        static_cast<const Derived&>(*this).ToBaseField();
-    std::array<BaseField, kDegree> y =
-        static_cast<const Derived&>(other).ToBaseField();
+    const std::array<BaseField, kDegree>& x =
+        static_cast<const Derived&>(*this).ToBaseFields();
+    const std::array<BaseField, kDegree>& y =
+        static_cast<const Derived&>(other).ToBaseFields();
     std::array<BaseField, kDegree> z;
     for (size_t i = 0; i < kDegree; ++i) {
       z[i] = x[i] - y[i];
@@ -66,8 +66,8 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
   }
 
   Derived operator-() const {
-    std::array<BaseField, kDegree> x =
-        static_cast<const Derived&>(*this).ToBaseField();
+    const std::array<BaseField, kDegree>& x =
+        static_cast<const Derived&>(*this).ToBaseFields();
     std::array<BaseField, kDegree> y;
     for (size_t i = 0; i < kDegree; ++i) {
       y[i] = -x[i];
@@ -76,8 +76,8 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
   }
 
   Derived Double() const {
-    std::array<BaseField, kDegree> x =
-        static_cast<const Derived&>(*this).ToBaseField();
+    const std::array<BaseField, kDegree>& x =
+        static_cast<const Derived&>(*this).ToBaseFields();
     std::array<BaseField, kDegree> y;
     for (size_t i = 0; i < kDegree; ++i) {
       y[i] = x[i].Double();
@@ -97,8 +97,8 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
   //
   // Note: Child classes may override this with more efficient algorithms.
   absl::StatusOr<Derived> Inverse() const {
-    std::array<BaseField, kDegree> x =
-        static_cast<const Derived&>(*this).ToBaseField();
+    const std::array<BaseField, kDegree>& x =
+        static_cast<const Derived&>(*this).ToBaseFields();
     BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
     // Compute φ¹(x) · φ²(x) · ... · φⁿ⁻¹(x) using precomputed coefficients.
@@ -107,8 +107,8 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
     // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.-frobenius-endomorphism
     Derived frob_product =
         ComputeFrobeniusProduct(std::make_index_sequence<kDegree - 1>{});
-    std::array<BaseField, kDegree> field_product_comp =
-        frob_product.ToBaseField();
+    const std::array<BaseField, kDegree>& field_product_comp =
+        frob_product.ToBaseFields();
 
     // Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x) ∈ BaseField
     // Result is [norm, 0, ..., 0] in extension field representation.
