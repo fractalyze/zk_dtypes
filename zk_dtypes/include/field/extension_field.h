@@ -133,7 +133,7 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
   }
 
   template <typename T, std::enable_if_t<std::is_signed_v<T>>* = nullptr>
-  ExtensionField(T value) {
+  constexpr ExtensionField(T value) {
     if (value >= 0) {
       *this = ExtensionField({value});
     } else {
@@ -438,7 +438,7 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
 
   template <typename Config2 = Config,
             std::enable_if_t<Config2::kUseMontgomery>* = nullptr>
-  StdType MontReduce() const {
+  constexpr StdType MontReduce() const {
     StdType ret;
     for (size_t i = 0; i < std::size(values_); ++i) {
       ret[i] = values_[i].MontReduce();
@@ -459,15 +459,16 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
   }
 
   // ExtensionFieldOperation methods
-  std::array<BaseField, N> ToBaseField() const { return values_; }
-  ExtensionField FromBaseFields(const std::array<BaseField, N>& values) const {
+  constexpr std::array<BaseField, N> ToBaseField() const { return values_; }
+  constexpr ExtensionField FromBaseFields(
+      const std::array<BaseField, N>& values) const {
     return ExtensionField(values);
   }
-  BaseField CreateZeroBaseField() const { return BaseField::Zero(); }
-  size_t DegreeOverBasePrimeField() const {
+  constexpr BaseField CreateZeroBaseField() const { return BaseField::Zero(); }
+  constexpr size_t DegreeOverBasePrimeField() const {
     return N * BaseField::ExtensionDegree();
   }
-  const BaseField& NonResidue() const { return Config::kNonResidue; }
+  constexpr const BaseField& NonResidue() const { return Config::kNonResidue; }
   ExtensionFieldMulAlgorithm GetMulAlgorithm() const {
     if (mul_algorithm_.has_value()) {
       return mul_algorithm_.value();
