@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __all__ = [
     "__version__",
     "iinfo",
@@ -61,42 +61,42 @@ __all__ = [
 
 from typing import Type
 
-from ._iinfo import iinfo
-from ._pfinfo import pfinfo
-from ._zk_dtypes_ext import int2
-from ._zk_dtypes_ext import int4
-from ._zk_dtypes_ext import uint2
-from ._zk_dtypes_ext import uint4
-from ._zk_dtypes_ext import babybear
-from ._zk_dtypes_ext import babybear_std
-from ._zk_dtypes_ext import goldilocks
-from ._zk_dtypes_ext import goldilocks_std
-from ._zk_dtypes_ext import koalabear
-from ._zk_dtypes_ext import koalabear_std
-from ._zk_dtypes_ext import mersenne31
-from ._zk_dtypes_ext import mersenne31_std
-from ._zk_dtypes_ext import bn254_sf
-from ._zk_dtypes_ext import bn254_sf_std
-from ._zk_dtypes_ext import babybear4
-from ._zk_dtypes_ext import babybear4_std
-from ._zk_dtypes_ext import koalabear4
-from ._zk_dtypes_ext import koalabear4_std
-from ._zk_dtypes_ext import mersenne312
-from ._zk_dtypes_ext import mersenne312_std
-from ._zk_dtypes_ext import goldilocks3
-from ._zk_dtypes_ext import goldilocks3_std
-from ._zk_dtypes_ext import bn254_g1_affine
-from ._zk_dtypes_ext import bn254_g1_affine_std
-from ._zk_dtypes_ext import bn254_g1_jacobian
-from ._zk_dtypes_ext import bn254_g1_jacobian_std
-from ._zk_dtypes_ext import bn254_g1_xyzz
-from ._zk_dtypes_ext import bn254_g1_xyzz_std
-from ._zk_dtypes_ext import bn254_g2_affine
-from ._zk_dtypes_ext import bn254_g2_affine_std
-from ._zk_dtypes_ext import bn254_g2_jacobian
-from ._zk_dtypes_ext import bn254_g2_jacobian_std
-from ._zk_dtypes_ext import bn254_g2_xyzz
-from ._zk_dtypes_ext import bn254_g2_xyzz_std
+from zk_dtypes._iinfo import iinfo
+from zk_dtypes._pfinfo import pfinfo
+from zk_dtypes._zk_dtypes_ext import int2
+from zk_dtypes._zk_dtypes_ext import int4
+from zk_dtypes._zk_dtypes_ext import uint2
+from zk_dtypes._zk_dtypes_ext import uint4
+from zk_dtypes._zk_dtypes_ext import babybear
+from zk_dtypes._zk_dtypes_ext import babybear_std
+from zk_dtypes._zk_dtypes_ext import goldilocks
+from zk_dtypes._zk_dtypes_ext import goldilocks_std
+from zk_dtypes._zk_dtypes_ext import koalabear
+from zk_dtypes._zk_dtypes_ext import koalabear_std
+from zk_dtypes._zk_dtypes_ext import mersenne31
+from zk_dtypes._zk_dtypes_ext import mersenne31_std
+from zk_dtypes._zk_dtypes_ext import bn254_sf
+from zk_dtypes._zk_dtypes_ext import bn254_sf_std
+from zk_dtypes._zk_dtypes_ext import babybear4
+from zk_dtypes._zk_dtypes_ext import babybear4_std
+from zk_dtypes._zk_dtypes_ext import koalabear4
+from zk_dtypes._zk_dtypes_ext import koalabear4_std
+from zk_dtypes._zk_dtypes_ext import mersenne312
+from zk_dtypes._zk_dtypes_ext import mersenne312_std
+from zk_dtypes._zk_dtypes_ext import goldilocks3
+from zk_dtypes._zk_dtypes_ext import goldilocks3_std
+from zk_dtypes._zk_dtypes_ext import bn254_g1_affine
+from zk_dtypes._zk_dtypes_ext import bn254_g1_affine_std
+from zk_dtypes._zk_dtypes_ext import bn254_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import bn254_g1_jacobian_std
+from zk_dtypes._zk_dtypes_ext import bn254_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import bn254_g1_xyzz_std
+from zk_dtypes._zk_dtypes_ext import bn254_g2_affine
+from zk_dtypes._zk_dtypes_ext import bn254_g2_affine_std
+from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian
+from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian_std
+from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz
+from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz_std
 
 import numpy as np
 

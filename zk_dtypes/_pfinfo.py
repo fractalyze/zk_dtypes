@@ -15,16 +15,16 @@
 
 """Overload of numpy.pfinfo to handle dtypes defined in zk_dtypes."""
 
-from ._zk_dtypes_ext import babybear
-from ._zk_dtypes_ext import babybear_std
-from ._zk_dtypes_ext import goldilocks
-from ._zk_dtypes_ext import goldilocks_std
-from ._zk_dtypes_ext import koalabear
-from ._zk_dtypes_ext import koalabear_std
-from ._zk_dtypes_ext import mersenne31
-from ._zk_dtypes_ext import mersenne31_std
-from ._zk_dtypes_ext import bn254_sf
-from ._zk_dtypes_ext import bn254_sf_std
+from zk_dtypes._zk_dtypes_ext import babybear
+from zk_dtypes._zk_dtypes_ext import babybear_std
+from zk_dtypes._zk_dtypes_ext import goldilocks
+from zk_dtypes._zk_dtypes_ext import goldilocks_std
+from zk_dtypes._zk_dtypes_ext import koalabear
+from zk_dtypes._zk_dtypes_ext import koalabear_std
+from zk_dtypes._zk_dtypes_ext import mersenne31
+from zk_dtypes._zk_dtypes_ext import mersenne31_std
+from zk_dtypes._zk_dtypes_ext import bn254_sf
+from zk_dtypes._zk_dtypes_ext import bn254_sf_std
 
 import numpy as np
 
