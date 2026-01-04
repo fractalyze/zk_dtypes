@@ -624,18 +624,26 @@ cc_library(
 
 cc_library(
     name = "sw_point_xyzz",
-    hdrs = [
-        "include/elliptic_curve/short_weierstrass/point_xyzz.h",
-        "include/elliptic_curve/short_weierstrass/point_xyzz_impl.h",
-    ],
+    hdrs = ["include/elliptic_curve/short_weierstrass/point_xyzz.h"],
     deps = [
         ":batch_inverse",
         ":curve_type",
         ":point_declarations",
         ":scalar_mul",
         ":sw_curve",
+        ":sw_point_base",
+        ":sw_point_xyzz_operation",
         ":template_util",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "sw_point_xyzz_operation",
+    hdrs = ["include/elliptic_curve/short_weierstrass/point_xyzz_operation.h"],
+    deps = [
+        ":curve_type",
+        ":point_traits",
     ],
 )
 

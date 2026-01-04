@@ -78,6 +78,10 @@ class PointBase {
       const std::array<BaseField, 3>& coords) const {
     return JacobianPoint(coords);
   }
+  constexpr PointXyzz CreatePointXyzz(
+      const std::array<BaseField, 4>& coords) const {
+    return PointXyzz(coords);
+  }
   constexpr AffinePoint&& MaybeConvertToAffine(AffinePoint&& point) const {
     return std::move(point);
   }

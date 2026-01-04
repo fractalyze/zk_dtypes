@@ -16,12 +16,15 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_SHORT_WEIERSTRASS_POINT_XYZZ_H_
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_SHORT_WEIERSTRASS_POINT_XYZZ_H_
 
+#include <array>
 #include <string>
 #include <type_traits>
 
 #include "absl/strings/substitute.h"
 
 #include "zk_dtypes/include/batch_inverse.h"
+#include "zk_dtypes/include/elliptic_curve/short_weierstrass/point_base.h"
+#include "zk_dtypes/include/elliptic_curve/short_weierstrass/point_xyzz_operation.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/sw_curve.h"
 #include "zk_dtypes/include/geometry/curve_type.h"
 #include "zk_dtypes/include/geometry/point_declarations.h"
@@ -33,7 +36,8 @@ namespace zk_dtypes {
 template <typename _Curve>
 class PointXyzz<_Curve,
                 std::enable_if_t<_Curve::kType == CurveType::kShortWeierstrass>>
-    final {
+    final : public PointBase<PointXyzz<_Curve>>,
+            public PointXyzzOperation<PointXyzz<_Curve>> {
  public:
   using Curve = _Curve;
   using BaseField = typename Curve::BaseField;
@@ -54,14 +58,13 @@ class PointXyzz<_Curve,
   constexpr PointXyzz(T value) : PointXyzz(ScalarField(value)) {}
   constexpr PointXyzz(ScalarField value) {
     PointXyzz point = PointXyzz::Generator() * value;
-    x_ = point.x_;
-    y_ = point.y_;
-    zz_ = point.zz_;
-    zzz_ = point.zzz_;
+    this->coords_ = point.coords_;
   }
+  constexpr PointXyzz(const std::array<BaseField, 4>& coords)
+      : PointBase<PointXyzz<_Curve>>(coords) {}
   constexpr PointXyzz(const BaseField& x, const BaseField& y,
                       const BaseField& zz, const BaseField& zzz)
-      : x_(x), y_(y), zz_(zz), zzz_(zzz) {}
+      : PointBase<PointXyzz<_Curve>>({x, y, zz, zzz}) {}
 
   constexpr static PointXyzz Zero() { return PointXyzz(); }
 
@@ -76,113 +79,10 @@ class PointXyzz<_Curve,
     return ScalarField::Random() * Generator();
   }
 
-  constexpr const BaseField& x() const { return x_; }
-  constexpr const BaseField& y() const { return y_; }
-  constexpr const BaseField& zz() const { return zz_; }
-  constexpr const BaseField& zzz() const { return zzz_; }
-
-  constexpr bool IsZero() const { return zz_.IsZero(); }
-  constexpr bool IsOne() const {
-    return x_ == Curve::Config::kX && y_ == Curve::Config::kY && zz_.IsOne() &&
-           zzz_.IsOne();
-  }
-
-  constexpr bool operator==(const PointXyzz& other) const {
-    if (IsZero()) {
-      return other.IsZero();
-    }
-
-    if (other.IsZero()) {
-      return false;
-    }
-
-    // The points (X, Y, ZZ, ZZZ) and (X', Y', ZZ', ZZZ')
-    // are equal when (X * ZZ') = (X' * ZZ)
-    // and (Y * Z'³) = (Y' * Z³).
-    if (x_ * other.zz_ != other.x_ * zz_) {
-      return false;
-    } else {
-      return y_ * other.zzz_ == other.y_ * zzz_;
-    }
-  }
-
-  constexpr bool operator!=(const PointXyzz& other) const {
-    return !operator==(other);
-  }
-
-  constexpr PointXyzz operator+(const PointXyzz& other) const {
-    if (IsZero()) {
-      return other;
-    }
-
-    if (other.IsZero()) {
-      return *this;
-    }
-
-    PointXyzz ret;
-    Add(*this, other, ret);
-    return ret;
-  }
-
-  constexpr PointXyzz& operator+=(const PointXyzz& other) {
-    if (IsZero()) {
-      return *this = other;
-    }
-
-    if (other.IsZero()) {
-      return *this;
-    }
-
-    Add(*this, other, *this);
-    return *this;
-  }
-
-  constexpr PointXyzz operator+(const AffinePoint& other) const {
-    if (IsZero()) {
-      return other.ToXyzz();
-    }
-
-    if (other.IsZero()) {
-      return *this;
-    }
-
-    PointXyzz ret;
-    Add(*this, other, ret);
-    return ret;
-  }
-
-  constexpr PointXyzz& operator+=(const AffinePoint& other) {
-    if (IsZero()) {
-      return *this = other.ToXyzz();
-    }
-
-    if (other.IsZero()) {
-      return *this;
-    }
-
-    Add(*this, other, *this);
-    return *this;
-  }
-
-  constexpr PointXyzz Double() const;
-
-  constexpr PointXyzz operator-(const PointXyzz& other) const {
-    return operator+(-other);
-  }
-
-  constexpr PointXyzz& operator-=(const PointXyzz& other) {
-    return *this = operator-(other);
-  }
-
-  constexpr PointXyzz operator-(const AffinePoint& other) const {
-    return operator+(-other);
-  }
-
-  constexpr PointXyzz& operator-=(const AffinePoint& other) {
-    return *this = operator-(other);
-  }
-
-  constexpr PointXyzz operator-() const { return {x_, -y_, zz_, zzz_}; }
+  constexpr const BaseField& x() const { return this->coords_[0]; }
+  constexpr const BaseField& y() const { return this->coords_[1]; }
+  constexpr const BaseField& zz() const { return this->coords_[2]; }
+  constexpr const BaseField& zzz() const { return this->coords_[3]; }
 
   constexpr PointXyzz operator*(const ScalarField& v) const {
     if constexpr (kUseMontgomery) {
@@ -196,38 +96,11 @@ class PointXyzz<_Curve,
     return *this = operator*(v);
   }
 
-  // The xyzz point X, Y, ZZ, ZZZ is represented in the affine
-  // coordinates as X/ZZ, Y/ZZZ.
-  constexpr AffinePoint ToAffine() const {
-    if (IsZero()) {
-      return AffinePoint::Zero();
-    } else if (zz_.IsOne()) {
-      return AffinePoint(x_, y_);
-    } else {
-      BaseField z_inv_cubic = zzz_.Inverse();
-      BaseField z_inv_square = (z_inv_cubic * zz_).Square();
-      return AffinePoint(x_ * z_inv_square, y_ * z_inv_cubic);
-    }
-  }
-
-  // The xyzz point X, Y, ZZ, ZZZ is represented in the jacobian
-  // coordinates as X, Y, ZZZ/ZZ.
-  constexpr JacobianPoint ToJacobian() const {
-    if (IsZero()) {
-      return JacobianPoint::Zero();
-    } else if (zz_.IsOne()) {
-      return {x_, y_, BaseField::One()};
-    } else {
-      BaseField z = zz_.Inverse() * zzz_;
-      return {x_, y_, z};
-    }
-  }
-
   template <typename Curve2 = Curve,
             std::enable_if_t<Curve2::kUseMontgomery>* = nullptr>
   constexpr StdType MontReduce() const {
-    return {x_.MontReduce(), y_.MontReduce(), zz_.MontReduce(),
-            zzz_.MontReduce()};
+    return {x().MontReduce(), y().MontReduce(), zz().MontReduce(),
+            zzz().MontReduce()};
   }
 
   template <typename XyzzContainer, typename AffineContainer>
@@ -245,50 +118,27 @@ class PointXyzz<_Curve,
     std::vector<BaseField> zzz_inverses;
     zzz_inverses.reserve(std::size(point_xyzzs));
     for (const PointXyzz& point : point_xyzzs) {
-      zzz_inverses.push_back(point.zzz_);
+      zzz_inverses.push_back(point.zzz());
     }
     absl::Status status = BatchInverse(zzz_inverses, &zzz_inverses);
     if (!status.ok()) return status;
     for (size_t i = 0; i < std::size(*affine_points); ++i) {
       const PointXyzz& point_xyzz = point_xyzzs[i];
-      if (point_xyzz.zz_.IsZero()) {
+      if (point_xyzz.zz().IsZero()) {
         (*affine_points)[i] = AffinePoint::Zero();
-      } else if (point_xyzz.zz_.IsOne()) {
-        (*affine_points)[i] = {point_xyzz.x_, point_xyzz.y_};
+      } else if (point_xyzz.zz().IsOne()) {
+        (*affine_points)[i] = {point_xyzz.x(), point_xyzz.y()};
       } else {
         const BaseField& z_inv_cubic = zzz_inverses[i];
-        BaseField z_inv_square = (z_inv_cubic * point_xyzz.zz_).Square();
-        (*affine_points)[i] = {point_xyzz.x_ * z_inv_square,
-                               point_xyzz.y_ * z_inv_cubic};
+        BaseField z_inv_square = (z_inv_cubic * point_xyzz.zz()).Square();
+        (*affine_points)[i] = {point_xyzz.x() * z_inv_square,
+                               point_xyzz.y() * z_inv_cubic};
       }
     }
     return absl::OkStatus();
   }
-
-  std::string ToString() const {
-    return absl::Substitute("($0, $1, $2, $3)", x_.ToString(), y_.ToString(),
-                            zz_.ToString(), zzz_.ToString());
-  }
-  std::string ToHexString(bool pad_zero = false) const {
-    return absl::Substitute("($0, $1, $2, $3)", x_.ToHexString(pad_zero),
-                            y_.ToHexString(pad_zero), zz_.ToHexString(pad_zero),
-                            zzz_.ToHexString(pad_zero));
-  }
-
- private:
-  constexpr static void Add(const PointXyzz& a, const PointXyzz& b,
-                            PointXyzz& c);
-  constexpr static void Add(const PointXyzz& a, const AffinePoint& b,
-                            PointXyzz& c);
-
-  BaseField x_;
-  BaseField y_;
-  BaseField zz_;
-  BaseField zzz_;
 };
 
 }  // namespace zk_dtypes
-
-#include "zk_dtypes/include/elliptic_curve/short_weierstrass/point_xyzz_impl.h"
 
 #endif  // ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_SHORT_WEIERSTRASS_POINT_XYZZ_H_
