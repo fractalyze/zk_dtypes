@@ -16,12 +16,11 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_SHORT_WEIERSTRASS_AFFINE_POINT_H_
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_SHORT_WEIERSTRASS_AFFINE_POINT_H_
 
-#include <string>
+#include <array>
 #include <type_traits>
 
-#include "absl/log/log.h"
-#include "absl/strings/substitute.h"
-
+#include "zk_dtypes/include/elliptic_curve/short_weierstrass/affine_point_operation.h"
+#include "zk_dtypes/include/elliptic_curve/short_weierstrass/point_base.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/sw_curve.h"
 #include "zk_dtypes/include/geometry/curve_type.h"
 #include "zk_dtypes/include/geometry/point_declarations.h"
@@ -32,7 +31,8 @@ namespace zk_dtypes {
 template <typename _Curve>
 class AffinePoint<
     _Curve, std::enable_if_t<_Curve::kType == CurveType::kShortWeierstrass>>
-    final {
+    final : public PointBase<AffinePoint<_Curve>>,
+            public AffinePointOperation<AffinePoint<_Curve>> {
  public:
   using Curve = _Curve;
   using BaseField = typename Curve::BaseField;
@@ -51,13 +51,12 @@ class AffinePoint<
   constexpr AffinePoint(T value) : AffinePoint(ScalarField(value)) {}
   constexpr AffinePoint(ScalarField value) {
     AffinePoint point = (AffinePoint::Generator() * value).ToAffine();
-    x_ = point.x_;
-    y_ = point.y_;
+    this->coords_ = point.coords_;
   }
   constexpr AffinePoint(const std::array<BaseField, 2>& coords)
-      : x_(coords[0]), y_(coords[1]) {}
+      : PointBase<AffinePoint<_Curve>>(coords) {}
   constexpr AffinePoint(const BaseField& x, const BaseField& y)
-      : x_(x), y_(y) {}
+      : PointBase<AffinePoint<_Curve>>({x, y}) {}
 
   constexpr static AffinePoint Zero() { return AffinePoint(); }
 
@@ -75,85 +74,22 @@ class AffinePoint<
     return *JacobianPoint::Random().ToAffine();
   }
 
-  constexpr const BaseField& x() const { return x_; }
-  constexpr const BaseField& y() const { return y_; }
-
-  constexpr bool IsZero() const { return x_.IsZero() && y_.IsZero(); }
-  constexpr bool IsOne() const {
-    return x_ == Curve::Config::kX && y_ == Curve::Config::kY;
-  }
-
-  constexpr bool operator==(const AffinePoint& other) const {
-    return x_ == other.x_ && y_ == other.y_;
-  }
-
-  constexpr bool operator!=(const AffinePoint& other) const {
-    return !operator==(other);
-  }
-
-  constexpr JacobianPoint operator+(const AffinePoint& other) const {
-    return ToJacobian() + other;
-  }
-  constexpr JacobianPoint operator+(const JacobianPoint& other) const {
-    return other + *this;
-  }
-  constexpr PointXyzz operator+(const PointXyzz& other) const {
-    return other + *this;
-  }
-  constexpr AffinePoint& operator+=(const AffinePoint& other) {
-    LOG(FATAL) << "Invalid call to operator+=; this exists only to allow "
-                  "compilation with reduction. See in_process_communicator.cc "
-                  "for details";
-    return *this;
-  }
-  constexpr JacobianPoint operator-(const AffinePoint& other) const {
-    return ToJacobian() - other;
-  }
-  constexpr JacobianPoint operator-(const JacobianPoint& other) const {
-    return -(other - *this);
-  }
-  constexpr PointXyzz operator-(const PointXyzz& other) const {
-    return -(other - *this);
-  }
-  constexpr AffinePoint operator-() const { return {x_, -y_}; }
+  constexpr const BaseField& x() const { return this->coords_[0]; }
+  constexpr const BaseField& y() const { return this->coords_[1]; }
 
   constexpr JacobianPoint operator*(const ScalarField& v) const {
     if constexpr (kUseMontgomery) {
-      return ScalarMul(ToJacobian(), v.MontReduce().value());
+      return ScalarMul(this->ToJacobian(), v.MontReduce().value());
     } else {
-      return ScalarMul(ToJacobian(), v.value());
+      return ScalarMul(this->ToJacobian(), v.value());
     }
-  }
-
-  constexpr JacobianPoint ToJacobian() const {
-    if (IsZero()) return JacobianPoint::Zero();
-    return {x_, y_, BaseField::One()};
-  }
-
-  constexpr PointXyzz ToXyzz() const {
-    if (IsZero()) return PointXyzz::Zero();
-    return {x_, y_, BaseField::One(), BaseField::One()};
   }
 
   template <typename Curve2 = Curve,
             std::enable_if_t<Curve2::kUseMontgomery>* = nullptr>
   constexpr StdType MontReduce() const {
-    return {x_.MontReduce(), y_.MontReduce()};
+    return {x().MontReduce(), y().MontReduce()};
   }
-
-  std::string ToString() const {
-    return absl::Substitute("($0, $1)", x_.ToString(), y_.ToString());
-  }
-  std::string ToHexString(bool pad_zero = false) const {
-    return absl::Substitute("($0, $1)", x_.ToHexString(pad_zero),
-                            y_.ToHexString(pad_zero));
-  }
-
-  constexpr std::array<BaseField, 2> ToCoords() const { return {x_, y_}; }
-
- private:
-  BaseField x_;
-  BaseField y_;
 };
 
 }  // namespace zk_dtypes

@@ -571,9 +571,18 @@ cc_library(
         ":curve_type",
         ":point_declarations",
         ":scalar_mul",
+        ":sw_affine_point_operation",
         ":sw_curve",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/strings",
+        ":sw_point_base",
+    ],
+)
+
+cc_library(
+    name = "sw_affine_point_operation",
+    hdrs = ["include/elliptic_curve/short_weierstrass/affine_point_operation.h"],
+    deps = [
+        ":curve_type",
+        ":point_traits",
     ],
 )
 

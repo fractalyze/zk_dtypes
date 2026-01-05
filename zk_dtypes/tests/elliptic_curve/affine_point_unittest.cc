@@ -62,13 +62,16 @@ TEST(AffinePointTest, GroupOperations) {
   JacobianPoint jp3 = ap3.ToJacobian();
   JacobianPoint jp4 = ap4.ToJacobian();
   PointXyzz xp = ap.ToXyzz();
-  PointXyzz xp2 = ap2.ToXyzz();
   PointXyzz xp3 = ap3.ToXyzz();
   PointXyzz xp4 = ap4.ToXyzz();
 
   EXPECT_EQ(ap + ap2, jp3);
+  EXPECT_EQ(ap.AddToJacobian(ap2), jp3);
+  EXPECT_EQ(ap.AddToXyzz(ap2), xp3);
   EXPECT_EQ(ap + ap, jp4);
   EXPECT_EQ(ap3 - ap2, jp);
+  EXPECT_EQ(ap3.SubToJacobian(ap2), jp);
+  EXPECT_EQ(ap3.SubToXyzz(ap2), xp);
   EXPECT_EQ(ap4 - ap, jp);
 
   EXPECT_EQ(ap + jp2, jp3);
@@ -76,10 +79,9 @@ TEST(AffinePointTest, GroupOperations) {
   EXPECT_EQ(ap - jp3, -jp2);
   EXPECT_EQ(ap - jp4, -jp);
 
-  EXPECT_EQ(xp + xp2, xp3);
-  EXPECT_EQ(xp + xp, xp4);
-  EXPECT_EQ(xp - xp3, -xp2);
-  EXPECT_EQ(xp - xp4, -xp);
+  EXPECT_EQ(ap.Double(), jp4);
+  EXPECT_EQ(ap.DoubleToJacobian(), jp4);
+  EXPECT_EQ(ap.DoubleToXyzz(), xp4);
 
   EXPECT_EQ(-ap, AffinePoint(5, 2));
 
