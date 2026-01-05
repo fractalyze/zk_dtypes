@@ -19,7 +19,6 @@ limitations under the License.
 #include "absl/status/statusor.h"
 
 #include "zk_dtypes/include/field/finite_field_traits.h"
-#include "zk_dtypes/include/field/frobenius.h"
 
 namespace zk_dtypes {
 

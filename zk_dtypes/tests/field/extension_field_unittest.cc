@@ -269,6 +269,19 @@ TYPED_TEST(ExtensionFieldTypedTest, Inverse) {
   EXPECT_TRUE((a * (*a_inverse)).IsOne());
 }
 
+TYPED_TEST(ExtensionFieldTypedTest, FrobeniusInverse) {
+  using ExtF = TypeParam;
+
+  ExtF a = ExtF::Random();
+  while (a.IsZero()) {
+    a = ExtF::Random();
+  }
+
+  absl::StatusOr<ExtF> a_inverse = a.FrobeniusInverse();
+  ASSERT_TRUE(a_inverse.ok());
+  EXPECT_TRUE((a * (*a_inverse)).IsOne());
+}
+
 TYPED_TEST(ExtensionFieldTypedTest, MontReduce) {
   using ExtF = TypeParam;
   if constexpr (!ExtF::kUseMontgomery) {
