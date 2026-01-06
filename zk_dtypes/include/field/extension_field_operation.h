@@ -42,46 +42,46 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
 
   Derived operator+(const Derived& other) const {
     const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     const std::array<BaseField, kDegree>& y =
-        static_cast<const Derived&>(other).ToBaseFields();
+        static_cast<const Derived&>(other).ToCoeffs();
     std::array<BaseField, kDegree> z;
     for (size_t i = 0; i < kDegree; ++i) {
       z[i] = x[i] + y[i];
     }
-    return static_cast<const Derived&>(*this).FromBaseFields(z);
+    return static_cast<const Derived&>(*this).FromCoeffs(z);
   }
 
   Derived operator-(const Derived& other) const {
     const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     const std::array<BaseField, kDegree>& y =
-        static_cast<const Derived&>(other).ToBaseFields();
+        static_cast<const Derived&>(other).ToCoeffs();
     std::array<BaseField, kDegree> z;
     for (size_t i = 0; i < kDegree; ++i) {
       z[i] = x[i] - y[i];
     }
-    return static_cast<const Derived&>(*this).FromBaseFields(z);
+    return static_cast<const Derived&>(*this).FromCoeffs(z);
   }
 
   Derived operator-() const {
     const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     std::array<BaseField, kDegree> y;
     for (size_t i = 0; i < kDegree; ++i) {
       y[i] = -x[i];
     }
-    return static_cast<const Derived&>(*this).FromBaseFields(y);
+    return static_cast<const Derived&>(*this).FromCoeffs(y);
   }
 
   Derived Double() const {
     const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     std::array<BaseField, kDegree> y;
     for (size_t i = 0; i < kDegree; ++i) {
       y[i] = x[i].Double();
     }
-    return static_cast<const Derived&>(*this).FromBaseFields(y);
+    return static_cast<const Derived&>(*this).FromCoeffs(y);
   }
 
   absl::StatusOr<Derived> operator/(const Derived& other) const {

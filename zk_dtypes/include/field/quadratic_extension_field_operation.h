@@ -42,13 +42,13 @@ class QuadraticExtensionFieldOperation
         static_cast<const Derived&>(*this).GetSquareAlgorithm();
     if (algorithm == ExtensionFieldMulAlgorithm::kCustom) {
       const std::array<BaseField, 2>& x =
-          static_cast<const Derived&>(*this).ToBaseFields();
+          static_cast<const Derived&>(*this).ToCoeffs();
       // v₀ = x₀ - x₁
       BaseField v0 = x[0] - x[1];
       // v₁ = x₀ * x₁
       BaseField v1 = x[0] * x[1];
 
-      return static_cast<const Derived&>(*this).FromBaseFields(
+      return static_cast<const Derived&>(*this).FromCoeffs(
           {v0 * (x[0] + x[1]), v1.Double()});
     } else if (algorithm == ExtensionFieldMulAlgorithm::kCustom2) {
       // [Comparison]
@@ -62,7 +62,7 @@ class QuadraticExtensionFieldOperation
       // non-residue + sub', this algorithm is faster. This holds true for
       // almost all large prime fields assuming ξ is a small constant.
       const std::array<BaseField, 2>& x =
-          static_cast<const Derived&>(*this).ToBaseFields();
+          static_cast<const Derived&>(*this).ToCoeffs();
       BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
       // v₀ = x₀ - x₁
@@ -85,7 +85,7 @@ class QuadraticExtensionFieldOperation
       // y₁ = 2x₀x₁
       BaseField y1 = v1.Double();
 
-      return static_cast<const Derived&>(*this).FromBaseFields({y0, y1});
+      return static_cast<const Derived&>(*this).FromCoeffs({y0, y1});
     } else {
       return this->KaratsubaSquare();
     }
@@ -93,7 +93,7 @@ class QuadraticExtensionFieldOperation
 
   absl::StatusOr<Derived> Inverse() const {
     const std::array<BaseField, 2>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
     // See https://www.math.u-bordeaux.fr/~damienrobert/csi/book/book.pdf
@@ -106,7 +106,7 @@ class QuadraticExtensionFieldOperation
     absl::StatusOr<BaseField> v0_inv = v0.Inverse();
     if (!v0_inv.ok()) return v0_inv.status();
     std::array<BaseField, 2> y{x[0] * (*v0_inv), -x[1] * (*v0_inv)};
-    return static_cast<const Derived&>(*this).FromBaseFields(y);
+    return static_cast<const Derived&>(*this).FromCoeffs(y);
   }
 };
 

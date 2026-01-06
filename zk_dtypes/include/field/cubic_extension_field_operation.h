@@ -68,7 +68,7 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
       // y₂ = s₁ + s₂ + s₃ - s₀ - s₄
 
       const std::array<BaseField, 3>& x =
-          static_cast<const Derived&>(*this).ToBaseFields();
+          static_cast<const Derived&>(*this).ToCoeffs();
       BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
       // s₀ = x₀²
@@ -91,7 +91,7 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
       //    = (x₁² + 2x₀x₂)  <-- Verified term
       BaseField y2 = s1 + s2 + s3 - s0 - s4;
 
-      return static_cast<const Derived&>(*this).FromBaseFields({y0, y1, y2});
+      return static_cast<const Derived&>(*this).FromCoeffs({y0, y1, y2});
     } else {
       return this->KaratsubaSquare();
     }
@@ -109,7 +109,7 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     // the first column of the inverse directly, avoiding the overhead of
     // a full extension field multiplication required by Itoh-Tsujii.
     const std::array<BaseField, 3>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     BaseField xi = static_cast<const Derived&>(*this)
                        .NonResidue();  // ξ: Irreducible polynomial constant
                                        // [Comparison]
@@ -146,7 +146,7 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     // adjugate.
     std::array<BaseField, 3> y{t0 * *t3_inv, t1 * *t3_inv, t2 * *t3_inv};
 
-    return static_cast<const Derived&>(*this).FromBaseFields(y);
+    return static_cast<const Derived&>(*this).FromCoeffs(y);
   }
 };
 

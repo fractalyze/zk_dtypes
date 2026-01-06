@@ -476,10 +476,8 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
   }
 
   // ExtensionFieldOperation methods
-  constexpr const std::array<BaseField, N>& ToBaseFields() const {
-    return values_;
-  }
-  constexpr ExtensionField FromBaseFields(
+  constexpr const std::array<BaseField, N>& ToCoeffs() const { return values_; }
+  constexpr ExtensionField FromCoeffs(
       const std::array<BaseField, N>& values) const {
     return ExtensionField(values);
   }
