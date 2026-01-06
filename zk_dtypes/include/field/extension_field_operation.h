@@ -40,7 +40,7 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
   constexpr static size_t kDegree =
       ExtensionFieldOperationTraits<Derived>::kDegree;
 
-  Derived operator+(const Derived& other) const {
+  constexpr Derived operator+(const Derived& other) const {
     const std::array<BaseField, kDegree>& x =
         static_cast<const Derived&>(*this).ToCoeffs();
     const std::array<BaseField, kDegree>& y =
@@ -52,7 +52,7 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
     return static_cast<const Derived&>(*this).FromCoeffs(z);
   }
 
-  Derived operator-(const Derived& other) const {
+  constexpr Derived operator-(const Derived& other) const {
     const std::array<BaseField, kDegree>& x =
         static_cast<const Derived&>(*this).ToCoeffs();
     const std::array<BaseField, kDegree>& y =
@@ -64,7 +64,7 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
     return static_cast<const Derived&>(*this).FromCoeffs(z);
   }
 
-  Derived operator-() const {
+  constexpr Derived operator-() const {
     const std::array<BaseField, kDegree>& x =
         static_cast<const Derived&>(*this).ToCoeffs();
     std::array<BaseField, kDegree> y;
@@ -74,7 +74,7 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
     return static_cast<const Derived&>(*this).FromCoeffs(y);
   }
 
-  Derived Double() const {
+  constexpr Derived Double() const {
     const std::array<BaseField, kDegree>& x =
         static_cast<const Derived&>(*this).ToCoeffs();
     std::array<BaseField, kDegree> y;
@@ -85,7 +85,7 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
   }
 
   // Scalar multiplication: ExtensionField * BaseField
-  Derived operator*(const BaseField& scalar) const {
+  constexpr Derived operator*(const BaseField& scalar) const {
     const std::array<BaseField, kDegree>& x =
         static_cast<const Derived&>(*this).ToCoeffs();
     std::array<BaseField, kDegree> y;
@@ -95,7 +95,7 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
     return static_cast<const Derived&>(*this).FromCoeffs(y);
   }
 
-  Derived operator/(const Derived& other) const {
+  constexpr Derived operator/(const Derived& other) const {
     return static_cast<const Derived&>(*this) * other.Inverse();
   }
 };
