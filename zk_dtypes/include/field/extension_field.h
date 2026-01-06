@@ -481,7 +481,6 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
       const std::array<BaseField, N>& values) const {
     return ExtensionField(values);
   }
-  constexpr BaseField CreateZeroBaseField() const { return BaseField::Zero(); }
   constexpr BaseField CreateConstBaseField(int x) const { return BaseField(x); }
   constexpr size_t DegreeOverBasePrimeField() const {
     return N * BaseField::ExtensionDegree();

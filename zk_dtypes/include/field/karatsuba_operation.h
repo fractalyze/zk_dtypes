@@ -149,7 +149,7 @@ class KaratsubaOperation {
   // xᵢ·yⱼ contributes to the coefficient of uⁱ⁺ʲ.
   std::array<BaseField, kNumEvaluation> AssembleMulPolynomial(
       const MulEvaluationResult& evals) const {
-    BaseField zero = static_cast<const Derived&>(*this).CreateZeroBaseField();
+    BaseField zero = static_cast<const Derived&>(*this).CreateConstBaseField(0);
 
     std::array<BaseField, kNumEvaluation> c;
     for (size_t i = 0; i < c.size(); ++i) {
@@ -177,7 +177,7 @@ class KaratsubaOperation {
   // xᵢ·xⱼ contributes to the coefficient of uⁱ⁺ʲ.
   std::array<BaseField, kNumEvaluation> AssembleSqrPolynomial(
       const SqrEvaluationResult& evals) const {
-    BaseField zero = static_cast<const Derived&>(*this).CreateZeroBaseField();
+    BaseField zero = static_cast<const Derived&>(*this).CreateConstBaseField(0);
 
     std::array<BaseField, kNumEvaluation> c;
     for (size_t i = 0; i < c.size(); ++i) {
