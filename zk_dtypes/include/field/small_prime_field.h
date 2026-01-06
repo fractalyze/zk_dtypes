@@ -312,6 +312,11 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
     }
   }
 
+  // ExtensionFieldOperation methods
+  constexpr PrimeField CreateConst(int64_t value) const {
+    return PrimeField(value);
+  }
+
  private:
   template <typename Config2, typename>
   friend class PrimeField;

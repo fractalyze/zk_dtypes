@@ -481,9 +481,11 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
       const std::array<BaseField, N>& values) const {
     return ExtensionField(values);
   }
-  constexpr BaseField CreateConstBaseField(int x) const { return BaseField(x); }
-  constexpr size_t DegreeOverBasePrimeField() const {
-    return N * BaseField::ExtensionDegree();
+  constexpr ExtensionField CreateConst(int64_t value) const {
+    return ExtensionField(value);
+  }
+  constexpr BaseField CreateConstBaseField(int64_t value) const {
+    return BaseField(value);
   }
   constexpr const BaseField& NonResidue() const { return Config::kNonResidue; }
   ExtensionFieldMulAlgorithm GetMulAlgorithm() const {
