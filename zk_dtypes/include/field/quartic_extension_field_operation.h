@@ -140,7 +140,8 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     }
   }
 
-  absl::StatusOr<Derived> Inverse() const {
+  // Returns the multiplicative inverse. Returns Zero() if not invertible.
+  Derived Inverse() const {
     // [Comparison]
     // Tower Extension over Fp2:
     // - square: 6, mul: 12, inv: 1 (base field ops)
@@ -182,17 +183,14 @@ class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     BaseField D1 = A1 - B0;
 
     // 3) Compute the norm N = D₀² − ξ·D₁² ∈ Fp and its inverse N⁻¹ in the base
-    // field.
+    // field. Inverse() returns Zero() if not invertible.
     BaseField N = D0.Square() - xi * D1.Square();
-    absl::StatusOr<BaseField> N_inv = N.Inverse();
-    if (!N_inv.ok()) {
-      return N_inv.status();
-    }
+    BaseField N_inv = N.Inverse();
 
     // 4) Invert D in Fp₂: D⁻¹ = (D₀ − D₁·v) · N⁻¹ = C₀ + C₁·v, where C₀ =
     // D₀·N⁻¹ and C₁ = −D₁·N⁻¹.
-    BaseField C0 = D0 * *N_inv;
-    BaseField C1 = -D1 * *N_inv;
+    BaseField C0 = D0 * N_inv;
+    BaseField C1 = -D1 * N_inv;
 
     // 5) Final expansion: x⁻¹ = (A − B·u) · (C₀ + C₁·v), with v = u².
     // In the basis {1, u, u², u³}:

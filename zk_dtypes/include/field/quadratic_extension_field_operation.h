@@ -91,7 +91,8 @@ class QuadraticExtensionFieldOperation
     }
   }
 
-  absl::StatusOr<Derived> Inverse() const {
+  // Returns the multiplicative inverse. Returns Zero() if not invertible.
+  Derived Inverse() const {
     const std::array<BaseField, 2>& x =
         static_cast<const Derived&>(*this).ToCoeffs();
     BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
@@ -103,9 +104,9 @@ class QuadraticExtensionFieldOperation
     // v0 = x[0]² - q * v1
     BaseField v0 = x[0].Square() - v1 * non_residue;
 
-    absl::StatusOr<BaseField> v0_inv = v0.Inverse();
-    if (!v0_inv.ok()) return v0_inv.status();
-    std::array<BaseField, 2> y{x[0] * (*v0_inv), -x[1] * (*v0_inv)};
+    // Inverse() returns Zero() if not invertible.
+    BaseField v0_inv = v0.Inverse();
+    std::array<BaseField, 2> y{x[0] * v0_inv, -x[1] * v0_inv};
     return static_cast<const Derived&>(*this).FromCoeffs(y);
   }
 };

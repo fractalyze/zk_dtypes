@@ -97,7 +97,8 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     }
   }
 
-  absl::StatusOr<Derived> Inverse() const {
+  // Returns the multiplicative inverse. Returns Zero() if not invertible.
+  Derived Inverse() const {
     // [Comparison]
     // This Algorithm (Matrix Method / Cramer's Rule):
     // - square: 3, mul: 9, inv: 1 (base field ops)
@@ -135,16 +136,13 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     // ξx₁*t₂
     BaseField t3 = x[0] * t0 + xi * (x[2] * t1 + x[1] * t2);
 
-    // 3. Check for existence (det ≠ 0) and invert the determinant
-    absl::StatusOr<BaseField> t3_inv = t3.Inverse();
-    if (!t3_inv.ok()) {
-      return t3_inv.status();  // Error if the element is zero (not invertible)
-    }
+    // 3. Invert the determinant. Inverse() returns Zero() if not invertible.
+    BaseField t3_inv = t3.Inverse();
 
     // 4. Final Inverse result: (t₀, t₁, t₂) / det
     // Since the field is commutative, we only need the first column of the
     // adjugate.
-    std::array<BaseField, 3> y{t0 * *t3_inv, t1 * *t3_inv, t2 * *t3_inv};
+    std::array<BaseField, 3> y{t0 * t3_inv, t1 * t3_inv, t2 * t3_inv};
 
     return static_cast<const Derived&>(*this).FromCoeffs(y);
   }

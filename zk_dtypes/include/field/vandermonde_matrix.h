@@ -45,7 +45,7 @@ class VandermondeMatrix {
   }
 
   // Creates a rational constant (x / y) in the base field.
-  auto C2(int x, int y) const { return *(C(x) / C(y)); }
+  auto C2(int x, int y) const { return C(x) / C(y); }
 
  public:
   template <size_t N2 = N, std::enable_if_t<N2 == 4>* = nullptr>

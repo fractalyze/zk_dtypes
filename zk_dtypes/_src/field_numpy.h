@@ -360,7 +360,7 @@ PyObject* PyField_nb_true_divide(PyObject* a, PyObject* b) {
       PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
       return nullptr;
     }
-    return PyField_FromValue(*(x / y)).release();
+    return PyField_FromValue(x / y).release();
   } else {
     PyErr_Format(PyExc_TypeError, "expected %s as argument for division",
                  TypeDescriptor<T>::kTypeName);
@@ -472,7 +472,7 @@ PyObject* PyField_nb_power(PyObject* a, PyObject* b) {
                         "inverse of zero encountered in power");
         return nullptr;
       }
-      return PyField_FromValue(x.Inverse()->Pow(caster.abs_value())).release();
+      return PyField_FromValue(x.Inverse().Pow(caster.abs_value())).release();
     } else {
       return PyField_FromValue(x.Pow(caster.abs_value())).release();
     }

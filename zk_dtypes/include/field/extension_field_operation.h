@@ -87,18 +87,16 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
   // Scalar multiplication: ExtensionField * BaseField
   Derived operator*(const BaseField& scalar) const {
     const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     std::array<BaseField, kDegree> y;
     for (size_t i = 0; i < kDegree; ++i) {
       y[i] = x[i] * scalar;
     }
-    return static_cast<const Derived&>(*this).FromBaseFields(y);
+    return static_cast<const Derived&>(*this).FromCoeffs(y);
   }
 
-  absl::StatusOr<Derived> operator/(const Derived& other) const {
-    absl::StatusOr<Derived> inv = other.Inverse();
-    if (!inv.ok()) return inv.status();
-    return static_cast<const Derived&>(*this) * inv.value();
+  Derived operator/(const Derived& other) const {
+    return static_cast<const Derived&>(*this) * other.Inverse();
   }
 };
 

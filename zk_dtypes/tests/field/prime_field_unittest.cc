@@ -146,9 +146,11 @@ TYPED_TEST(PrimeFieldTypedTest, Inverse) {
   while (a.IsZero()) {
     a = F::Random();
   }
-  absl::StatusOr<F> a_inv = a.Inverse();
-  ASSERT_TRUE(a_inv.ok());
-  EXPECT_TRUE((a * (*a_inv)).IsOne());
+  F a_inv = a.Inverse();
+  EXPECT_TRUE((a * a_inv).IsOne());
+
+  // Inverse of zero returns zero.
+  EXPECT_TRUE(F::Zero().Inverse().IsZero());
 }
 
 }  // namespace zk_dtypes

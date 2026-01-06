@@ -279,9 +279,11 @@ TYPED_TEST(ExtensionFieldTypedTest, Inverse) {
   while (a.IsZero()) {
     a = ExtF::Random();
   }
-  absl::StatusOr<ExtF> a_inverse = a.Inverse();
-  ASSERT_TRUE(a_inverse.ok());
-  EXPECT_TRUE((a * (*a_inverse)).IsOne());
+  ExtF a_inverse = a.Inverse();
+  EXPECT_TRUE((a * a_inverse).IsOne());
+
+  // Inverse of zero returns zero.
+  EXPECT_TRUE(ExtF::Zero().Inverse().IsZero());
 }
 
 TYPED_TEST(ExtensionFieldTypedTest, FrobeniusInverse) {
@@ -292,9 +294,11 @@ TYPED_TEST(ExtensionFieldTypedTest, FrobeniusInverse) {
     a = ExtF::Random();
   }
 
-  absl::StatusOr<ExtF> a_inverse = a.FrobeniusInverse();
-  ASSERT_TRUE(a_inverse.ok());
-  EXPECT_TRUE((a * (*a_inverse)).IsOne());
+  ExtF a_inverse = a.FrobeniusInverse();
+  EXPECT_TRUE((a * a_inverse).IsOne());
+
+  // FrobeniusInverse of zero returns zero.
+  EXPECT_TRUE(ExtF::Zero().FrobeniusInverse().IsZero());
 }
 
 TYPED_TEST(ExtensionFieldTypedTest, MontReduce) {
