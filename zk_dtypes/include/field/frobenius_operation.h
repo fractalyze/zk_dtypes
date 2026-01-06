@@ -37,8 +37,8 @@ namespace zk_dtypes {
 // Derived class must implement:
 //   - GetFrobeniusCoeffs(): returns (n - 1) × (n - 1) array of coefficients
 //     where coeffs[E - 1][i - 1] = ξ^(i * (pᴱ - 1) / n)
-//   - ToBaseFields(): converts to array of base field elements
-//   - FromBaseFields(): constructs from array of base field elements
+//   - ToCoeffs(): converts to array of base field elements
+//   - FromCoeffs(): constructs from array of base field elements
 //
 // References:
 // - https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion
@@ -66,7 +66,7 @@ class FrobeniusOperation {
   template <size_t E = 1>
   Derived Frobenius() const {
     const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     std::array<BaseField, kDegree> y;
     const std::array<std::array<BaseField, kDegree - 1>, kDegree - 1>& coeffs =
         static_cast<const Derived&>(*this).GetFrobeniusCoeffs();
@@ -78,7 +78,7 @@ class FrobeniusOperation {
       y[i] = x[i] * coeffs[E - 1][i - 1];
     }
 
-    return static_cast<const Derived&>(*this).FromBaseFields(y);
+    return static_cast<const Derived&>(*this).FromCoeffs(y);
   }
 
   // Inverse in extension field using Frobenius endomorphism.
@@ -95,7 +95,7 @@ class FrobeniusOperation {
   // Note: Child classes may override this with more efficient algorithms.
   absl::StatusOr<Derived> FrobeniusInverse() const {
     const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
     // Compute φ¹(x) · φ²(x) · ... · φⁿ⁻¹(x) using precomputed coefficients.
@@ -105,7 +105,7 @@ class FrobeniusOperation {
     Derived frob_product =
         ComputeFrobeniusProduct(std::make_index_sequence<kDegree - 1>{});
     const std::array<BaseField, kDegree>& field_product_comp =
-        frob_product.ToBaseFields();
+        frob_product.ToCoeffs();
 
     // Norm(x) = x · φ(x) · ... · φⁿ⁻¹(x) ∈ BaseField
     // Result is [norm, 0, ..., 0] in extension field representation.

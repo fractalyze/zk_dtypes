@@ -83,7 +83,7 @@ class QuarticExtensionFieldOperation
       // y₃ = m₃ - m₀ - m₁
 
       const std::array<BaseField, 4>& x =
-          static_cast<const Derived&>(*this).ToBaseFields();
+          static_cast<const Derived&>(*this).ToCoeffs();
       BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
 
       // 1. Squares (xᵢ²)
@@ -134,8 +134,7 @@ class QuarticExtensionFieldOperation
       //    = m₃ - m₀ - m₁
       BaseField y3 = m3 - m0 - m1;
 
-      return static_cast<const Derived&>(*this).FromBaseFields(
-          {y0, y1, y2, y3});
+      return static_cast<const Derived&>(*this).FromCoeffs({y0, y1, y2, y3});
     } else if (algorithm == ExtensionFieldMulAlgorithm::kToomCook) {
       return this->ToomCookSquare();
     } else {
@@ -163,7 +162,7 @@ class QuarticExtensionFieldOperation
     // {1,u,u²,u³}.
 
     const std::array<BaseField, 4>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     BaseField xi = static_cast<const Derived&>(*this).NonResidue();  // ξ
 
     // 1) Compute A² and B² in Fp₂[v]/(v² − ξ), for A = x₀ + x₂·v and B = x₁ +
@@ -208,7 +207,7 @@ class QuarticExtensionFieldOperation
     BaseField y2 = x[2] * C0 + x[0] * C1;
     BaseField y3 = -(x[3] * C0 + x[1] * C1);
 
-    return static_cast<const Derived&>(*this).FromBaseFields({y0, y1, y2, y3});
+    return static_cast<const Derived&>(*this).FromCoeffs({y0, y1, y2, y3});
   }
 
  private:

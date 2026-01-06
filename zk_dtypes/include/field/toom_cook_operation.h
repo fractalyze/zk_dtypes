@@ -50,9 +50,9 @@ class ToomCookOperation {
   // Multiplies this element with another using the Toom-Cook method.
   Derived ToomCookMultiply(const Derived& other) const {
     const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
     const std::array<BaseField, kDegree>& y =
-        static_cast<const Derived&>(other).ToBaseFields();
+        static_cast<const Derived&>(other).ToCoeffs();
 
     // Step 1 & 2: Evaluation and Pointwise Multiplication
     auto evaluations_x = Derived::ComputeEvaluations(x);
@@ -69,7 +69,7 @@ class ToomCookOperation {
   // Squares this element using the Toom-Cook method.
   Derived ToomCookSquare() const {
     const std::array<BaseField, kDegree>& x =
-        static_cast<const Derived&>(*this).ToBaseFields();
+        static_cast<const Derived&>(*this).ToCoeffs();
 
     auto evaluations_x = Derived::ComputeEvaluations(x);
     decltype(evaluations_x) evaluations_y;
@@ -121,7 +121,7 @@ class ToomCookOperation {
       ret[i] = c[i] + non_residue * c[i + kDegree];
     }
     ret[kDegree - 1] = c[kDegree - 1];
-    return static_cast<const Derived&>(*this).FromBaseFields(ret);
+    return static_cast<const Derived&>(*this).FromCoeffs(ret);
   }
 };
 
