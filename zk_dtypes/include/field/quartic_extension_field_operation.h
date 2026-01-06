@@ -26,12 +26,10 @@ limitations under the License.
 namespace zk_dtypes {
 
 template <typename Derived>
-class QuarticExtensionFieldOperation
-    : public ExtensionFieldOperation<Derived>,
-      public ToomCookOperation<Derived>,
-      public KaratsubaOperation<Derived>,
-      public VandermondeMatrix<
-          typename ExtensionFieldOperationTraits<Derived>::BaseField, 4> {
+class QuarticExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
+                                       public ToomCookOperation<Derived>,
+                                       public KaratsubaOperation<Derived>,
+                                       public VandermondeMatrix<Derived, 4> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
 
