@@ -76,10 +76,8 @@ TEST(JacobianPointTest, GroupOperations) {
   JacobianPoint p2(3, 2, 1);
   JacobianPoint p3(3, 5, 1);
   JacobianPoint p4(6, 5, 1);
-  absl::StatusOr<AffinePoint> ap = p.ToAffine();
-  ASSERT_TRUE(ap.ok());
-  absl::StatusOr<AffinePoint> ap2 = p2.ToAffine();
-  ASSERT_TRUE(ap2.ok());
+  AffinePoint ap = p.ToAffine();
+  AffinePoint ap2 = p2.ToAffine();
 
   EXPECT_EQ(p + p2, p3);
   EXPECT_EQ(p - p3, -p2);
@@ -94,8 +92,8 @@ TEST(JacobianPointTest, GroupOperations) {
     EXPECT_EQ(p_tmp, p);
   }
 
-  EXPECT_EQ(p + (*ap2), p3);
-  EXPECT_EQ(p + (*ap), p4);
+  EXPECT_EQ(p + ap2, p3);
+  EXPECT_EQ(p + ap, p4);
   EXPECT_EQ(p - p3, -p2);
   EXPECT_EQ(p - p4, -p);
 
@@ -111,10 +109,8 @@ TEST(JacobianPointTest, GroupOperations) {
 TEST(JacobianPointTest, CyclicScalarMul) {
   std::vector<AffinePoint> points;
   for (size_t i = 0; i < 7; ++i) {
-    absl::StatusOr<AffinePoint> ap =
-        (Fr(i) * JacobianPoint::Generator()).ToAffine();
-    ASSERT_TRUE(ap.ok());
-    points.push_back(*ap);
+    AffinePoint ap = (Fr(i) * JacobianPoint::Generator()).ToAffine();
+    points.push_back(ap);
   }
 
   EXPECT_THAT(points,
@@ -133,20 +129,17 @@ TEST(JacobianPointTest, ToAffine) {
   JacobianPoint p(1, 2, 0);
   JacobianPoint p2(1, 2, 1);
   JacobianPoint p3(1, 2, 3);
-  absl::StatusOr<AffinePoint> ap = p.ToAffine();
-  ASSERT_TRUE(ap.ok());
-  absl::StatusOr<AffinePoint> ap2 = p2.ToAffine();
-  ASSERT_TRUE(ap2.ok());
-  absl::StatusOr<AffinePoint> ap3 = p3.ToAffine();
-  ASSERT_TRUE(ap3.ok());
-  EXPECT_EQ(*ap, AffinePoint::Zero());
-  EXPECT_EQ(*ap2, AffinePoint(1, 2));
-  EXPECT_EQ(*ap3, AffinePoint(4, 5));
+  AffinePoint ap = p.ToAffine();
+  AffinePoint ap2 = p2.ToAffine();
+  AffinePoint ap3 = p3.ToAffine();
+  EXPECT_EQ(ap, AffinePoint::Zero());
+  EXPECT_EQ(ap2, AffinePoint(1, 2));
+  EXPECT_EQ(ap3, AffinePoint(4, 5));
 }
 
 TEST(JacobianPointTest, ToXyzz) {
   auto p = JacobianPoint::Random();
-  EXPECT_EQ(p.ToXyzz(), p.ToAffine()->ToXyzz());
+  EXPECT_EQ(p.ToXyzz(), p.ToAffine().ToXyzz());
 }
 
 TEST(JacobianPointTest, BatchToAffine) {

@@ -90,10 +90,8 @@ TEST(AffinePointTest, GroupOperations) {
 TEST(AffinePointTest, CyclicScalarMul) {
   std::vector<AffinePoint> points;
   for (size_t i = 0; i < 7; ++i) {
-    absl::StatusOr<AffinePoint> ap =
-        (Fr(i) * AffinePoint::Generator()).ToAffine();
-    ASSERT_TRUE(ap.ok());
-    points.push_back(*ap);
+    AffinePoint ap = (Fr(i) * AffinePoint::Generator()).ToAffine();
+    points.push_back(ap);
   }
 
   EXPECT_THAT(points,
@@ -130,7 +128,7 @@ TEST(AffinePointTest, MontReduce) {
 
 TEST(AffinePointTypedTest, CreateFromX) {
   for (size_t i = 0; i < 7; ++i) {
-    AffinePoint ap = *(Fr(i) * AffinePoint::Generator()).ToAffine();
+    AffinePoint ap = (Fr(i) * AffinePoint::Generator()).ToAffine();
     absl::StatusOr<AffinePoint> q = AffinePoint::CreateFromX(ap.x());
     if (i == 0) {
       ASSERT_FALSE(q.ok());

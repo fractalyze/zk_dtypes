@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "absl/base/optimization.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
 
 #include "zk_dtypes/include/template_util.h"
@@ -53,9 +52,7 @@ absl::Status BatchInverse(const T& inputs, R* outputs,
 
   // Invert product.
   // (a₁ * a₂ * ... *  aₙ)⁻¹
-  absl::StatusOr<value_type> product_inv_or = product.Inverse();
-  if (!product_inv_or.ok()) return product_inv_or.status();
-  value_type product_inv = *product_inv_or;
+  value_type product_inv = product.Inverse();
 
   // Multiply product_inv by c, so all inverses will be scaled by c.
   // c * (a₁ * a₂ * ... *  aₙ)⁻¹

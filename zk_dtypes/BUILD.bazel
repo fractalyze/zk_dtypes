@@ -61,7 +61,6 @@ cc_library(
         ":template_util",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -75,7 +74,6 @@ cc_library(
         ":bit_traits_forward",
         ":random",
         "@com_google_absl//absl/base",
-        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/status:statusor",
@@ -582,7 +580,6 @@ cc_library(
         ":scalar_mul",
         ":sw_curve",
         ":template_util",
-        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -600,7 +597,6 @@ cc_library(
         ":scalar_mul",
         ":sw_curve",
         ":template_util",
-        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
 )

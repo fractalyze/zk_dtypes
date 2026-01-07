@@ -61,7 +61,7 @@ class FrobeniusCoeffs {
       BigInt<kLimbNums> n_big(N);
       for (size_t e = 1; e < N; ++e) {
         // qₑ = (pᵉ - 1) / n
-        auto q_e = ((p_e - 1) / n_big).value();
+        auto q_e = (p_e - 1) / n_big;
         BaseField nr_q_e = zk_dtypes::Pow(nr, q_e);
 
         result[e - 1][0] = nr_q_e;

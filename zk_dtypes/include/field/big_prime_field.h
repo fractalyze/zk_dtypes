@@ -325,7 +325,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     memcpy(&mul[N], &value.hi[0], sizeof(uint64_t) * N);
     BigInt<2 * N> modulus = BigInt<2 * N>::Zero();
     memcpy(&modulus[0], &Config::kModulus[0], sizeof(uint64_t) * N);
-    BigInt<2 * N> mul_mod = *(mul % modulus);
+    BigInt<2 * N> mul_mod = mul % modulus;
     memcpy(&c.value_[0], &mul_mod[0], sizeof(uint64_t) * N);
   }
 

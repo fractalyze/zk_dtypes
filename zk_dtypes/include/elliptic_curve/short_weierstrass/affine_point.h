@@ -50,7 +50,7 @@ class AffinePoint<
                             std::is_constructible_v<ScalarField, T>>* = nullptr>
   constexpr AffinePoint(T value) : AffinePoint(ScalarField(value)) {}
   constexpr AffinePoint(ScalarField value) {
-    AffinePoint point = *(AffinePoint::Generator() * value).ToAffine();
+    AffinePoint point = (AffinePoint::Generator() * value).ToAffine();
     x_ = point.x_;
     y_ = point.y_;
   }

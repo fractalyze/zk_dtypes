@@ -28,7 +28,6 @@ limitations under the License.
 #include <type_traits>
 
 #include "absl/base/casts.h"
-#include "absl/base/optimization.h"
 #include "absl/log/check.h"
 #include "absl/status/statusor.h"
 
@@ -325,16 +324,12 @@ class BigInt {
     return *this;
   }
 
-  constexpr absl::StatusOr<BigInt> operator/(const BigInt& other) const {
-    absl::StatusOr<internal::DivResult<BigInt>> div_result = Div(*this, other);
-    if (!div_result.ok()) return div_result.status();
-    return div_result.value().quotient;
+  constexpr BigInt operator/(const BigInt& other) const {
+    return Div(*this, other).quotient;
   }
 
-  constexpr absl::StatusOr<BigInt> operator%(const BigInt& other) const {
-    absl::StatusOr<internal::DivResult<BigInt>> div_result = Div(*this, other);
-    if (!div_result.ok()) return div_result.status();
-    return div_result.value().remainder;
+  constexpr BigInt operator%(const BigInt& other) const {
+    return Div(*this, other).remainder;
   }
 
   constexpr uint64_t& operator[](size_t i) {
@@ -521,13 +516,15 @@ class BigInt {
     return borrow;
   }
 
-  constexpr static absl::StatusOr<internal::DivResult<BigInt>> Div(
-      const BigInt<N>& a, const BigInt<N>& b) {
-    if (b.IsZero()) return absl::InvalidArgumentError("Division by zero");
+  constexpr static internal::DivResult<BigInt> Div(const BigInt<N>& a,
+                                                   const BigInt<N>& b) {
+    bool is_zero = b.IsZero();
+    DCHECK(!is_zero);
+    internal::DivResult<BigInt> ret;
+    if (is_zero) return ret;
 
     // Stupid slow base-2 long division taken from
     // https://en.wikipedia.org/wiki/Division_algorithm
-    internal::DivResult<BigInt> ret;
     size_t bits = BitTraits<BigInt>::GetNumBits(a);
     uint64_t& smallest_bit = ret.remainder[0];
     for (size_t i = bits - 1; i != SIZE_MAX; --i) {
@@ -535,8 +532,22 @@ class BigInt {
       smallest_bit |= BitTraits<BigInt>::TestBit(a, i);
       if (ret.remainder >= b || carry) {
         uint64_t borrow = Sub(ret.remainder, b, ret.remainder);
-        if (ABSL_PREDICT_FALSE(borrow != carry))
-          return absl::InternalError("Division error: borrow/carry mismatch");
+        // NOTE(chokobole): We use `DCHECK` here because the condition
+        // `borrow == carry` is a mathematical invariant of this bit-by-bit
+        // division algorithm.
+        //
+        // 1. If `carry` is 1, it means the current `remainder`
+        //    (before subtraction) exceeded the capacity of `BigInt<N>`, so it
+        //    is guaranteed to be greater than `b`. Thus, a `borrow` must occur
+        //    to bring it back within range.
+        // 2. If `carry` is 0, the `if (ret.remainder >= b)` check ensures that
+        //    we only subtract when the remainder is large enough, meaning
+        //    no `borrow` will occur.
+        //
+        // Since this is logically guaranteed, we omit the check in Release mode
+        // to avoid unnecessary performance overhead.
+        std::ignore = borrow;
+        DCHECK_EQ(borrow, carry);
         BitTraits<BigInt>::SetBit(ret.quotient, i, 1);
       }
     }

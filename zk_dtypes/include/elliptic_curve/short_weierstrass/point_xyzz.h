@@ -19,7 +19,6 @@ limitations under the License.
 #include <string>
 #include <type_traits>
 
-#include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
 
 #include "zk_dtypes/include/batch_inverse.h"
@@ -199,16 +198,15 @@ class PointXyzz<_Curve,
 
   // The xyzz point X, Y, ZZ, ZZZ is represented in the affine
   // coordinates as X/ZZ, Y/ZZZ.
-  constexpr absl::StatusOr<AffinePoint> ToAffine() const {
+  constexpr AffinePoint ToAffine() const {
     if (IsZero()) {
       return AffinePoint::Zero();
     } else if (zz_.IsOne()) {
       return AffinePoint(x_, y_);
     } else {
-      absl::StatusOr<BaseField> z_inv_cubic = zzz_.Inverse();
-      if (!z_inv_cubic.ok()) return z_inv_cubic.status();
-      BaseField z_inv_square = ((*z_inv_cubic) * zz_).Square();
-      return AffinePoint(x_ * z_inv_square, y_ * (*z_inv_cubic));
+      BaseField z_inv_cubic = zzz_.Inverse();
+      BaseField z_inv_square = (z_inv_cubic * zz_).Square();
+      return AffinePoint(x_ * z_inv_square, y_ * z_inv_cubic);
     }
   }
 
