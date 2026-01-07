@@ -482,9 +482,6 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
     return ExtensionField(values);
   }
   constexpr BaseField CreateZeroBaseField() const { return BaseField::Zero(); }
-  constexpr size_t DegreeOverBasePrimeField() const {
-    return N * BaseField::ExtensionDegree();
-  }
   constexpr const BaseField& NonResidue() const { return Config::kNonResidue; }
   ExtensionFieldMulAlgorithm GetMulAlgorithm() const {
     if (mul_algorithm_.has_value()) {
