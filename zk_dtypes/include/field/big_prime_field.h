@@ -214,26 +214,24 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     }
   }
 
-  constexpr absl::StatusOr<PrimeField> operator/(
-      const PrimeField& other) const {
-    absl::StatusOr<PrimeField> inv = other.Inverse();
-    if (!inv.ok()) return inv;
-    return operator*(inv.value());
+  constexpr PrimeField operator/(const PrimeField& other) const {
+    return operator*(other.Inverse());
   }
 
-  constexpr absl::StatusOr<PrimeField> Inverse() const {
+  // Returns the multiplicative inverse. Returns Zero() if not invertible.
+  constexpr PrimeField Inverse() const {
     PrimeField ret;
     if constexpr (kUseMontgomery) {
       constexpr BYInverter<N> inverter =
           BYInverter<N>(Config::kModulus, Config::kRSquared);
       if (!inverter.Invert(value_, ret.value_)) {
-        return absl::InvalidArgumentError("division by zero");
+        return Zero();
       }
     } else {
       constexpr BYInverter<N> inverter =
           BYInverter<N>(Config::kModulus, Config::kOne);
       if (!inverter.Invert(value_, ret.value_)) {
-        return absl::InvalidArgumentError("division by zero");
+        return Zero();
       }
     }
     return ret;

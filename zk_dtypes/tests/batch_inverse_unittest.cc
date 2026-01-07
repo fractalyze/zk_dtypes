@@ -33,11 +33,8 @@ class BatchInverseTest : public testing::Test {
       // NOTE: BatchInverse supports zero values.
       auto value = Fr::Random();
       inputs_.push_back(value);
-      if (value.IsZero()) {
-        answers_.push_back(Fr::Zero());
-      } else {
-        answers_.push_back(*value.Inverse());
-      }
+      // Inverse() returns Zero() for non-invertible elements.
+      answers_.push_back(value.Inverse());
     }
   }
 

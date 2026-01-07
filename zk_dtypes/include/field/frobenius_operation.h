@@ -93,7 +93,8 @@ class FrobeniusOperation {
   // extension field inverse).
   //
   // Note: Child classes may override this with more efficient algorithms.
-  absl::StatusOr<Derived> FrobeniusInverse() const {
+  // Returns the multiplicative inverse. Returns Zero() if not invertible.
+  Derived FrobeniusInverse() const {
     const std::array<BaseField, kDegree>& x =
         static_cast<const Derived&>(*this).ToCoeffs();
     BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
@@ -118,11 +119,11 @@ class FrobeniusOperation {
     norm *= non_residue;
     norm += x[0] * field_product_comp[0];
 
-    // BaseField inverse (cheaper than extension field inverse)
-    absl::StatusOr<BaseField> norm_inv = norm.Inverse();
-    if (!norm_inv.ok()) return norm_inv.status();
+    // BaseField inverse (cheaper than extension field inverse).
+    // Inverse() returns Zero() if not invertible.
+    BaseField norm_inv = norm.Inverse();
     // x⁻¹ = φ(x) · ... · φⁿ⁻¹(x) · norm⁻¹
-    return frob_product * (*norm_inv);
+    return frob_product * norm_inv;
   }
 
  private:

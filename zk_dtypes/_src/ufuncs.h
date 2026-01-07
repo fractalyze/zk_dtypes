@@ -110,7 +110,7 @@ struct TrueDivide {
                    "divide by zero encountered in true_divide", 1);
       return T(0);
     }
-    return *(a / b);
+    return a / b;
   }
 };
 
@@ -164,7 +164,7 @@ struct Power {
                      "inverse of zero encountered in power", 1);
         return T(0);
       }
-      return a.Inverse()->Pow(static_cast<uint32_t>(-b));
+      return a.Inverse().Pow(static_cast<uint32_t>(-b));
     } else {
       return a.Pow(b);
     }

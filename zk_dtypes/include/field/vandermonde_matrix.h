@@ -24,6 +24,7 @@ namespace zk_dtypes {
 
 // Mixin providing Vandermonde inverse matrix for Toom-Cook multiplication.
 //
+// Uses CRTP pattern: Derived class must implement CreateConstBaseField(int).
 // Template parameter N is the extension degree (e.g., N=4 for Toom-Cook4).
 // Returns the (2N - 1) x (2N - 1) inverse Vandermonde matrix V⁻¹.
 //
@@ -31,20 +32,26 @@ namespace zk_dtypes {
 // c = V⁻¹ * v where:
 //   v = {v₀, v₁, v₂, v₃, v₄, v₅, v₆} are evaluation results
 //   c = {c₀, c₁, c₂, c₃, c₄, c₅, c₆} are polynomial coefficients
-//
-// TODO(junbeomlee): Share this matrix with zkir by adding CreateConstant() and
-// CreateRationalConstant() methods to the Derived class interface.
-template <typename F, size_t N>
+template <typename Derived, size_t N>
 class VandermondeMatrix {
  public:
   static constexpr size_t kNumEvaluation = 2 * N - 1;
 
+ protected:
+  // Creates a constant base field element from an integer.
+  // Derived class must implement CreateConstBaseField(int).
+  auto C(int x) const {
+    return static_cast<const Derived&>(*this).CreateConstBaseField(x);
+  }
+
+  // Creates a rational constant (x / y) in the base field.
+  auto C2(int x, int y) const { return C(x) / C(y); }
+
+ public:
   template <size_t N2 = N, std::enable_if_t<N2 == 4>* = nullptr>
-  const std::array<std::array<F, kNumEvaluation>, kNumEvaluation>&
-  GetVandermondeInverseMatrix() const {
-    static const auto matrix = []() {
-#define C(x) F(x)
-#define C2(x, y) (*(F(x) / F(y)))
+  const auto& GetVandermondeInverseMatrix() const {
+    using F = decltype(C(0));
+    static const auto matrix = [this]() {
       // clang-format off
       // V⁻¹ matrix for Toom-Cook4 interpolation
       // Row i gives coefficients for cᵢ in terms of v₀...v₆
@@ -65,9 +72,6 @@ class VandermondeMatrix {
         {C(0), C(0), C(0), C(0), C(0), C(0), C(1)},
       }};
       // clang-format on
-
-#undef C
-#undef C2
     }();
     return matrix;
   }

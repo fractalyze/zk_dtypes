@@ -220,7 +220,7 @@ class PointXyzz<_Curve,
     } else if (zz_.IsOne()) {
       return {x_, y_, BaseField::One()};
     } else {
-      BaseField z = (*zz_.Inverse()) * zzz_;
+      BaseField z = zz_.Inverse() * zzz_;
       return {x_, y_, z};
     }
   }
