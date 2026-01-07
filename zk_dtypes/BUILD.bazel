@@ -484,6 +484,15 @@ cc_library(
     hdrs = ["include/group/group.h"],
 )
 
+cc_library(
+    name = "point_traits",
+    hdrs = ["include/geometry/point_traits.h"],
+    deps = [
+        ":curve_type",
+        ":point_declarations",
+    ],
+)
+
 ##################
 # Elliptic Curve #
 ##################
