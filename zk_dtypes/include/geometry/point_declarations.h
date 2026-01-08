@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <ostream>
 
+#include "zk_dtypes/include/comparable_traits.h"
 #include "zk_dtypes/include/group/group.h"
 
 namespace zk_dtypes {
@@ -77,6 +78,11 @@ constexpr bool IsEcPoint =
 template <typename T>
 struct IsAdditiveGroupImpl<T, std::enable_if_t<IsEcPoint<T>>> {
   constexpr static bool value = true;
+};
+
+template <typename T>
+struct IsComparableImpl<T, std::enable_if_t<IsEcPoint<T>>> {
+  constexpr static bool value = false;
 };
 
 template <typename T>

@@ -33,6 +33,7 @@ limitations under the License.
 
 #include "zk_dtypes/include/always_false.h"
 #include "zk_dtypes/include/big_int.h"
+#include "zk_dtypes/include/comparable_traits.h"
 #include "zk_dtypes/include/field/cubic_extension_field_operation.h"
 #include "zk_dtypes/include/field/finite_field.h"
 #include "zk_dtypes/include/field/frobenius_coeffs.h"
@@ -576,6 +577,11 @@ struct IsExtensionFieldImpl<ExtensionField<Config>> {
 
 template <typename T>
 constexpr bool IsExtensionField = IsExtensionFieldImpl<T>::value;
+
+template <typename T>
+struct IsComparableImpl<T, std::enable_if_t<IsExtensionField<T>>> {
+  constexpr static bool value = false;
+};
 
 }  // namespace zk_dtypes
 

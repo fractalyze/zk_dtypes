@@ -114,6 +114,11 @@ cc_library(
 )
 
 cc_library(
+    name = "comparable_traits",
+    hdrs = ["include/comparable_traits.h"],
+)
+
+cc_library(
     name = "intn",
     hdrs = ["include/intn.h"],
 )
@@ -221,6 +226,7 @@ cc_library(
     hdrs = ["include/field/extension_field.h"],
     deps = [
         ":always_false",
+        ":comparable_traits",
         ":extension_field_operations",
         ":finite_field",
         ":frobenius_coeffs",
@@ -379,7 +385,10 @@ cc_library(
 cc_library(
     name = "prime_field",
     hdrs = ["include/field/prime_field.h"],
-    deps = [":finite_field_traits"],
+    deps = [
+        ":comparable_traits",
+        ":finite_field_traits",
+    ],
 )
 
 cc_library(
@@ -463,7 +472,10 @@ cc_library(
 cc_library(
     name = "point_declarations",
     hdrs = ["include/geometry/point_declarations.h"],
-    deps = [":group"],
+    deps = [
+        ":comparable_traits",
+        ":group",
+    ],
 )
 
 #########
