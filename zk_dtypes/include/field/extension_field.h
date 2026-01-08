@@ -28,7 +28,6 @@ limitations under the License.
 
 #include "absl/base/call_once.h"
 #include "absl/log/check.h"
-#include "absl/strings/substitute.h"
 #include "absl/types/span.h"
 
 #include "zk_dtypes/include/always_false.h"
