@@ -23,6 +23,12 @@ limitations under the License.
 namespace zk_dtypes::test {
 namespace {
 
+TEST(PointXyzzTest, Traits) {
+  static_assert(!IsComparable<PointXyzz>);
+  static_assert(IsAdditiveGroup<PointXyzz>);
+  static_assert(IsEcPoint<PointXyzz>);
+}
+
 TEST(PointXyzzTest, Zero) {
   EXPECT_TRUE(PointXyzz(0).IsZero());
   EXPECT_TRUE(PointXyzz::Zero().IsZero());

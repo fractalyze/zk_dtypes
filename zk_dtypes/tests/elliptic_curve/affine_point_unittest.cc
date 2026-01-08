@@ -23,6 +23,12 @@ limitations under the License.
 namespace zk_dtypes::test {
 namespace {
 
+TEST(AffinePointTest, Traits) {
+  static_assert(!IsComparable<AffinePoint>);
+  static_assert(IsAdditiveGroup<AffinePoint>);
+  static_assert(IsEcPoint<AffinePoint>);
+}
+
 TEST(AffinePointTest, Zero) {
   EXPECT_TRUE(AffinePoint(0).IsZero());
   EXPECT_TRUE(AffinePoint::Zero().IsZero());
