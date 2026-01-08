@@ -463,6 +463,16 @@ cc_library(
 cc_library(
     name = "point_declarations",
     hdrs = ["include/geometry/point_declarations.h"],
+    deps = [":group"],
+)
+
+#########
+# Group #
+#########
+
+cc_library(
+    name = "group",
+    hdrs = ["include/group/group.h"],
 )
 
 ##################
