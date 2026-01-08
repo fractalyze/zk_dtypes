@@ -91,7 +91,7 @@ Related: #<issue number>
 #   │       │     │
 #   │       │     └─⫸ Optional "!" after scope indicates a BREAKING CHANGE
 #   │       │
-#   │       └─⫸ Commit Scope: field|elliptic_curve
+#   │       └─⫸ Commit Scope: elliptic_curve|field|group
 #   │
 #   └─⫸ Commit Type: build|chore|ci|docs|feat|fix|perf|refactor|style|test
 # ```
