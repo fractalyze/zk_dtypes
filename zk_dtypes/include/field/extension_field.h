@@ -134,7 +134,13 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
 
   template <typename T, std::enable_if_t<std::is_signed_v<T>>* = nullptr>
   constexpr ExtensionField(T value) {
-    if (value >= 0) {
+    if (value == 0) return;
+    if (value == 1) {
+      *this = One();
+      return;
+    }
+
+    if (value > 0) {
       *this = ExtensionField({value});
     } else {
       *this = -ExtensionField({-value});
@@ -481,9 +487,11 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
       const std::array<BaseField, N>& values) const {
     return ExtensionField(values);
   }
-  constexpr BaseField CreateConstBaseField(int x) const { return BaseField(x); }
-  constexpr size_t DegreeOverBasePrimeField() const {
-    return N * BaseField::ExtensionDegree();
+  constexpr ExtensionField CreateConst(int64_t value) const {
+    return ExtensionField(value);
+  }
+  constexpr BaseField CreateConstBaseField(int64_t value) const {
+    return BaseField(value);
   }
   constexpr const BaseField& NonResidue() const { return Config::kNonResidue; }
   ExtensionFieldMulAlgorithm GetMulAlgorithm() const {

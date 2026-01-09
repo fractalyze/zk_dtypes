@@ -70,7 +70,13 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   constexpr PrimeField() = default;
   template <typename T, std::enable_if_t<std::is_signed_v<T>>* = nullptr>
   constexpr PrimeField(T value) {
-    if (value >= 0) {
+    if (value == 0) return;
+    if (value == 1) {
+      *this = One();
+      return;
+    }
+
+    if (value > 0) {
       *this = PrimeField(static_cast<UnderlyingType>(value));
     } else {
       *this = -PrimeField(static_cast<UnderlyingType>(-value));
@@ -310,6 +316,11 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
       }
       return str;
     }
+  }
+
+  // ExtensionFieldOperation methods
+  constexpr PrimeField CreateConst(int64_t value) const {
+    return PrimeField(value);
   }
 
  private:

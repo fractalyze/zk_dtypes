@@ -109,13 +109,13 @@ TYPED_TEST(PrimeFieldTypedTest, Operations) {
                            F::Config::kModulus));
       }
     } else {
-      EXPECT_EQ(a + b, F(*((a_value + b_value) % F::Config::kModulus)));
-      EXPECT_EQ(a.Double(), F(*((a_value + a_value) % F::Config::kModulus)));
+      EXPECT_EQ(a + b, F((a_value + b_value) % F::Config::kModulus));
+      EXPECT_EQ(a.Double(), F((a_value + a_value) % F::Config::kModulus));
       if (a >= b) {
-        EXPECT_EQ(a - b, F(*((a_value - b_value) % F::Config::kModulus)));
+        EXPECT_EQ(a - b, F((a_value - b_value) % F::Config::kModulus));
       } else {
-        EXPECT_EQ(a - b, F(*((a_value + F::Config::kModulus - b_value) %
-                             F::Config::kModulus)));
+        EXPECT_EQ(a - b, F((a_value + F::Config::kModulus - b_value) %
+                           F::Config::kModulus));
       }
     }
   }

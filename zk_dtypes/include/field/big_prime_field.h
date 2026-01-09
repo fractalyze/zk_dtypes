@@ -61,7 +61,13 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   constexpr PrimeField() = default;
   template <typename T, std::enable_if_t<std::is_signed_v<T>>* = nullptr>
   constexpr PrimeField(T value) {
-    if (value >= 0) {
+    if (value == 0) return;
+    if (value == 1) {
+      *this = One();
+      return;
+    }
+
+    if (value > 0) {
       *this = PrimeField(BigInt<N>(value));
     } else {
       *this = -PrimeField(BigInt<N>(-value));
@@ -310,6 +316,11 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     }
   }
 
+  // ExtensionFieldOperation methods
+  constexpr PrimeField CreateConst(int64_t value) const {
+    return PrimeField(value);
+  }
+
  private:
   template <typename Config2, typename>
   friend class PrimeField;
@@ -325,7 +336,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     memcpy(&mul[N], &value.hi[0], sizeof(uint64_t) * N);
     BigInt<2 * N> modulus = BigInt<2 * N>::Zero();
     memcpy(&modulus[0], &Config::kModulus[0], sizeof(uint64_t) * N);
-    BigInt<2 * N> mul_mod = *(mul % modulus);
+    BigInt<2 * N> mul_mod = mul % modulus;
     memcpy(&c.value_[0], &mul_mod[0], sizeof(uint64_t) * N);
   }
 

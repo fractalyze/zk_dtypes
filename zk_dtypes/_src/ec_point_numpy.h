@@ -186,7 +186,7 @@ bool CastToEcPoint(PyObject* arg, T* output) {
           *output = T::Zero();
           return true;
         }
-        *output = *(T::Generator() * scalar).ToAffine();
+        *output = (T::Generator() * scalar).ToAffine();
       } else {
         *output = T::Generator() * scalar;
       }

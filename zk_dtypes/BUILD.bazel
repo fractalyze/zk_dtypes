@@ -61,7 +61,6 @@ cc_library(
         ":template_util",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -75,7 +74,6 @@ cc_library(
         ":bit_traits_forward",
         ":random",
         "@com_google_absl//absl/base",
-        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/status:statusor",
@@ -116,6 +114,17 @@ cc_library(
 cc_library(
     name = "comparable_traits",
     hdrs = ["include/comparable_traits.h"],
+)
+
+cc_library(
+    name = "control_flow_operation",
+    hdrs = ["include/control_flow_operation.h"],
+    deps = [":control_flow_operation_forward"],
+)
+
+cc_library(
+    name = "control_flow_operation_forward",
+    hdrs = ["include/control_flow_operation_forward.h"],
 )
 
 cc_library(
@@ -486,6 +495,15 @@ cc_library(
     hdrs = ["include/group/group.h"],
 )
 
+cc_library(
+    name = "point_traits",
+    hdrs = ["include/geometry/point_traits.h"],
+    deps = [
+        ":curve_type",
+        ":point_declarations",
+    ],
+)
+
 ##################
 # Elliptic Curve #
 ##################
@@ -553,9 +571,18 @@ cc_library(
         ":curve_type",
         ":point_declarations",
         ":scalar_mul",
+        ":sw_affine_point_operation",
         ":sw_curve",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/strings",
+        ":sw_point_base",
+    ],
+)
+
+cc_library(
+    name = "sw_affine_point_operation",
+    hdrs = ["include/elliptic_curve/short_weierstrass/affine_point_operation.h"],
+    deps = [
+        ":curve_type",
+        ":point_traits",
     ],
 )
 
@@ -571,37 +598,61 @@ cc_library(
 
 cc_library(
     name = "sw_jacobian_point",
-    hdrs = [
-        "include/elliptic_curve/short_weierstrass/jacobian_point.h",
-        "include/elliptic_curve/short_weierstrass/jacobian_point_impl.h",
-    ],
+    hdrs = ["include/elliptic_curve/short_weierstrass/jacobian_point.h"],
     deps = [
         ":batch_inverse",
         ":curve_type",
         ":point_declarations",
         ":scalar_mul",
         ":sw_curve",
+        ":sw_jacobian_point_operation",
+        ":sw_point_base",
         ":template_util",
-        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
 )
 
 cc_library(
-    name = "sw_point_xyzz",
-    hdrs = [
-        "include/elliptic_curve/short_weierstrass/point_xyzz.h",
-        "include/elliptic_curve/short_weierstrass/point_xyzz_impl.h",
+    name = "sw_jacobian_point_operation",
+    hdrs = ["include/elliptic_curve/short_weierstrass/jacobian_point_operation.h"],
+    deps = [
+        ":curve_type",
+        ":point_traits",
     ],
+)
+
+cc_library(
+    name = "sw_point_base",
+    hdrs = ["include/elliptic_curve/short_weierstrass/point_base.h"],
+    deps = [
+        ":control_flow_operation",
+        ":point_traits",
+        ":str_join",
+    ],
+)
+
+cc_library(
+    name = "sw_point_xyzz",
+    hdrs = ["include/elliptic_curve/short_weierstrass/point_xyzz.h"],
     deps = [
         ":batch_inverse",
         ":curve_type",
         ":point_declarations",
         ":scalar_mul",
         ":sw_curve",
+        ":sw_point_base",
+        ":sw_point_xyzz_operation",
         ":template_util",
-        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "sw_point_xyzz_operation",
+    hdrs = ["include/elliptic_curve/short_weierstrass/point_xyzz_operation.h"],
+    deps = [
+        ":curve_type",
+        ":point_traits",
     ],
 )
 

@@ -78,10 +78,8 @@ TEST(PointXyzzTest, GroupOperations) {
   PointXyzz p2(3, 2, 1, 1);
   PointXyzz p3(3, 5, 1, 1);
   PointXyzz p4(6, 5, 1, 1);
-  absl::StatusOr<AffinePoint> ap = p.ToAffine();
-  ASSERT_TRUE(ap.ok());
-  absl::StatusOr<AffinePoint> ap2 = p2.ToAffine();
-  ASSERT_TRUE(ap2.ok());
+  AffinePoint ap = p.ToAffine();
+  AffinePoint ap2 = p2.ToAffine();
 
   EXPECT_EQ(p + p2, p3);
   EXPECT_EQ(p - p3, -p2);
@@ -96,8 +94,8 @@ TEST(PointXyzzTest, GroupOperations) {
     EXPECT_EQ(p_tmp, p);
   }
 
-  EXPECT_EQ(p + (*ap2), p3);
-  EXPECT_EQ(p + (*ap), p4);
+  EXPECT_EQ(p + ap2, p3);
+  EXPECT_EQ(p + ap, p4);
   EXPECT_EQ(p - p3, -p2);
   EXPECT_EQ(p - p4, -p);
 
@@ -113,10 +111,8 @@ TEST(PointXyzzTest, GroupOperations) {
 TEST(PointXyzzTest, CyclicScalarMul) {
   std::vector<AffinePoint> points;
   for (size_t i = 0; i < 7; ++i) {
-    absl::StatusOr<AffinePoint> ap =
-        (Fr(i) * PointXyzz::Generator()).ToAffine();
-    ASSERT_TRUE(ap.ok());
-    points.push_back(*ap);
+    AffinePoint ap = (Fr(i) * PointXyzz::Generator()).ToAffine();
+    points.push_back(ap);
   }
 
   EXPECT_THAT(points,
@@ -130,20 +126,17 @@ TEST(PointXyzzTest, ToAffine) {
   PointXyzz p(1, 2, 0, 0);
   PointXyzz p2(1, 2, 1, 1);
   PointXyzz p3(1, 2, 2, 6);
-  absl::StatusOr<AffinePoint> ap = p.ToAffine();
-  ASSERT_TRUE(ap.ok());
-  absl::StatusOr<AffinePoint> ap2 = p2.ToAffine();
-  ASSERT_TRUE(ap2.ok());
-  absl::StatusOr<AffinePoint> ap3 = p3.ToAffine();
-  ASSERT_TRUE(ap3.ok());
-  EXPECT_EQ(*ap, AffinePoint::Zero());
-  EXPECT_EQ(*ap2, AffinePoint(1, 2));
-  EXPECT_EQ(*ap3, AffinePoint(4, 5));
+  AffinePoint ap = p.ToAffine();
+  AffinePoint ap2 = p2.ToAffine();
+  AffinePoint ap3 = p3.ToAffine();
+  EXPECT_EQ(ap, AffinePoint::Zero());
+  EXPECT_EQ(ap2, AffinePoint(1, 2));
+  EXPECT_EQ(ap3, AffinePoint(4, 5));
 }
 
 TEST(PointXyzzTest, ToJacobian) {
   auto p = PointXyzz::Random();
-  EXPECT_EQ(p.ToJacobian(), p.ToAffine()->ToJacobian());
+  EXPECT_EQ(p.ToJacobian(), p.ToAffine().ToJacobian());
 }
 
 TEST(PointXyzzTest, BatchToAffine) {
