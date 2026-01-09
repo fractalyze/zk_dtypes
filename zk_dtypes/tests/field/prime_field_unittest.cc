@@ -34,6 +34,14 @@ using PrimeFieldTypes = testing::Types<
     test::FrStd>;
 TYPED_TEST_SUITE(PrimeFieldTypedTest, PrimeFieldTypes);
 
+TYPED_TEST(PrimeFieldTypedTest, Traits) {
+  using F = TypeParam;
+
+  static_assert(IsComparable<F>);
+  static_assert(IsField<F>);
+  static_assert(IsPrimeField<F>);
+}
+
 // See https://github.com/fractalyze/zkx/pull/165#discussion_r2650000397
 TYPED_TEST(PrimeFieldTypedTest, FromUncheckedWithIntN) {
   using F = TypeParam;

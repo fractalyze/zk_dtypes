@@ -18,6 +18,9 @@ limitations under the License.
 
 #include <ostream>
 
+#include "zk_dtypes/include/comparable_traits.h"
+#include "zk_dtypes/include/group/group.h"
+
 namespace zk_dtypes {
 
 template <typename Curve, typename SFINAE = void>
@@ -71,6 +74,16 @@ constexpr bool IsPointXyzz = IsPointXyzzImpl<T>::value;
 template <typename T>
 constexpr bool IsEcPoint =
     IsAffinePoint<T> || IsJacobianPoint<T> || IsPointXyzz<T>;
+
+template <typename T>
+struct IsAdditiveGroupImpl<T, std::enable_if_t<IsEcPoint<T>>> {
+  constexpr static bool value = true;
+};
+
+template <typename T>
+struct IsComparableImpl<T, std::enable_if_t<IsEcPoint<T>>> {
+  constexpr static bool value = false;
+};
 
 template <typename T>
 struct AddResult {

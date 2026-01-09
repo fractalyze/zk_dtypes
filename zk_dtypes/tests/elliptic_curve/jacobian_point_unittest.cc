@@ -23,6 +23,12 @@ limitations under the License.
 namespace zk_dtypes::test {
 namespace {
 
+TEST(JacobianPointTest, Traits) {
+  static_assert(!IsComparable<JacobianPoint>);
+  static_assert(IsAdditiveGroup<JacobianPoint>);
+  static_assert(IsEcPoint<JacobianPoint>);
+}
+
 TEST(JacobianPointTest, Zero) {
   EXPECT_TRUE(JacobianPoint(0).IsZero());
   EXPECT_TRUE(JacobianPoint::Zero().IsZero());

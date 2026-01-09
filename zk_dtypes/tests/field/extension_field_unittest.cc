@@ -50,6 +50,14 @@ using ExtensionFieldTypes = testing::Types<
 
 TYPED_TEST_SUITE(ExtensionFieldTypedTest, ExtensionFieldTypes);
 
+TYPED_TEST(ExtensionFieldTypedTest, Traits) {
+  using ExtF = TypeParam;
+
+  static_assert(!IsComparable<ExtF>);
+  static_assert(IsField<ExtF>);
+  static_assert(IsExtensionField<ExtF>);
+}
+
 TYPED_TEST(ExtensionFieldTypedTest, Zero) {
   using ExtF = TypeParam;
 

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <ostream>
 
+#include "zk_dtypes/include/comparable_traits.h"
 #include "zk_dtypes/include/field/finite_field_traits.h"
 
 namespace zk_dtypes {
@@ -39,6 +40,11 @@ template <typename Config>
 std::ostream& operator<<(std::ostream& os, const PrimeField<Config>& pf) {
   return os << pf.ToString();
 }
+
+template <typename T>
+struct IsComparableImpl<T, std::enable_if_t<IsPrimeField<T>>> {
+  constexpr static bool value = true;
+};
 
 }  // namespace zk_dtypes
 
