@@ -134,7 +134,13 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
 
   template <typename T, std::enable_if_t<std::is_signed_v<T>>* = nullptr>
   constexpr ExtensionField(T value) {
-    if (value >= 0) {
+    if (value == 0) return;
+    if (value == 1) {
+      *this = One();
+      return;
+    }
+
+    if (value > 0) {
       *this = ExtensionField({value});
     } else {
       *this = -ExtensionField({-value});
