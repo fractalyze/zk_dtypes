@@ -71,7 +71,7 @@ class AffinePoint<
   }
 
   constexpr static AffinePoint Random() {
-    return *JacobianPoint::Random().ToAffine();
+    return JacobianPoint::Random().ToAffine();
   }
 
   constexpr const BaseField& x() const { return this->coords_[0]; }
