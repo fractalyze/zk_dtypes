@@ -16,12 +16,34 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_FIELD_PRIME_FIELD_H_
 #define ZK_DTYPES_INCLUDE_FIELD_PRIME_FIELD_H_
 
+#include <cstdint>
 #include <ostream>
 
 #include "zk_dtypes/include/comparable_traits.h"
 #include "zk_dtypes/include/field/finite_field_traits.h"
 
 namespace zk_dtypes {
+
+template <typename Config>
+using UnderlyingType = std::conditional_t<
+    Config::kStorageBits <= 32,
+    std::conditional_t<
+        Config::kStorageBits <= 16,
+        std::conditional_t<Config::kStorageBits <= 8, uint8_t, uint16_t>,
+        uint32_t>,
+    uint64_t>;
+
+template <typename T, typename = void>
+struct HasSpecialMulImpl : std::false_type {};
+
+template <typename T>
+struct HasSpecialMulImpl<T, std::void_t<decltype(std::declval<T>().SpecialMul(
+                                std::declval<UnderlyingType<T>>(),
+                                std::declval<UnderlyingType<T>>()))>>
+    : std::true_type {};
+
+template <typename T>
+constexpr bool HasSpecialMul = HasSpecialMulImpl<T>::value;
 
 template <typename T>
 struct IsPrimeFieldImpl {
