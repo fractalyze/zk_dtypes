@@ -39,6 +39,7 @@ struct GoldilocksBaseConfig {
 
 struct GoldilocksStdConfig : public GoldilocksBaseConfig {
   constexpr static bool kUseMontgomery = false;
+  constexpr static bool kUseBarrett = false;
 
   using StdConfig = GoldilocksStdConfig;
 
