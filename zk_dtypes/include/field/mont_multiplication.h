@@ -101,7 +101,7 @@ constexpr void MontMulReduce(BigInt<2 * N>& a, BigInt<N>& b,
 }
 
 template <typename T,
-          std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 64>* = nullptr>
+          std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8>* = nullptr>
 constexpr void MontMul(T a, T b, T& c, T modulus, T n_prime) {
   using ExtT = internal::make_promoted_t<T>;
 
