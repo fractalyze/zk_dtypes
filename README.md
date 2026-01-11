@@ -147,6 +147,16 @@ dtype(babybear)
 See [examples/zk_dtypes_examples.ipynb](/examples/zk_dtypes_examples.ipynb) for
 more examples.
 
+## Benchmarks
+
+Benchmarks are disabled by default (though CI verifies their validity). To
+execute a specific benchmark (e.g., `field_mul_benchmark`), run the following
+command manually:
+
+```shell
+bazel run -c opt //zk_dtypes:field_mul_benchmark
+```
+
 ## License
 
 The `zk_dtypes` source code is a modified derivative of the `ml_dtypes` project
