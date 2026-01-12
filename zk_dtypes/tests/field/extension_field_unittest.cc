@@ -46,7 +46,7 @@ using ExtensionFieldTypes = testing::Types<
     ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(EXTENSION_FIELD_TYPE)
 #undef EXTENSION_FIELD_TYPE
         Mersenne314,
-    Mersenne314Std, test::Fq2, test::Fq2Std>;
+    test::Fq2, test::Fq2Std>;
 
 TYPED_TEST_SUITE(ExtensionFieldTypedTest, ExtensionFieldTypes);
 
@@ -265,8 +265,7 @@ TYPED_TEST(ExtensionFieldTypedTest, SquareRoot) {
                 std::is_same_v<ExtF, Babybear4Std> ||
                 std::is_same_v<ExtF, Koalabear4> ||
                 std::is_same_v<ExtF, Koalabear4Std> ||
-                std::is_same_v<ExtF, Mersenne314> ||
-                std::is_same_v<ExtF, Mersenne314Std>) {
+                std::is_same_v<ExtF, Mersenne314>) {
     GTEST_SKIP() << "SquareRoot is not implemented for quartic extension "
                     "fields.";
   } else if constexpr (std::is_same_v<ExtF, Goldilocks3> ||  // NOLINT(readability/braces)
@@ -353,7 +352,7 @@ TYPED_TEST(ExtensionFieldTypedTest, AsBasePrimeFields) {
 
 // Define Fq4 as a quadratic extension over Fq2.
 // u² - (2 + 1i) = 0, where (2 + 1i) is in Fq2.
-REGISTER_EXTENSION_FIELD_WITH_TOWER(Fq4, test::Fq2, test::Fq, 2, {2, 1});
+REGISTER_EXTENSION_FIELD_TOWER_WITH_MONT(Fq4, test::Fq2, test::Fq, 2, {2, 1});
 
 TEST(ExtensionFieldTest, BasePrimeFieldIteratorWithTower) {
   using Fq = test::Fq;
