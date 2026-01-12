@@ -55,6 +55,8 @@ TYPED_TEST(ExtensionFieldTypedTest, Traits) {
 
   static_assert(!IsComparable<ExtF>);
   static_assert(IsField<ExtF>);
+  static_assert(IsAdditiveGroup<ExtF>);
+  static_assert(IsMultiplicativeGroup<ExtF>);
   static_assert(IsExtensionField<ExtF>);
 }
 

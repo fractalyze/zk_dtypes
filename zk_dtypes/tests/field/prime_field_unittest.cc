@@ -39,6 +39,8 @@ TYPED_TEST(PrimeFieldTypedTest, Traits) {
 
   static_assert(IsComparable<F>);
   static_assert(IsField<F>);
+  static_assert(IsAdditiveGroup<F>);
+  static_assert(IsMultiplicativeGroup<F>);
   static_assert(IsPrimeField<F>);
 }
 
