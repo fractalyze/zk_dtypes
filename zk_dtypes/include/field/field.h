@@ -16,6 +16,10 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_FIELD_FIELD_H_
 #define ZK_DTYPES_INCLUDE_FIELD_FIELD_H_
 
+#include <type_traits>
+
+#include "zk_dtypes/include/group/group.h"
+
 namespace zk_dtypes {
 
 template <typename T, typename SFINAE = void>
@@ -25,6 +29,16 @@ struct IsFieldImpl {
 
 template <typename T>
 constexpr bool IsField = IsFieldImpl<T>::value;
+
+template <typename T>
+struct IsAdditiveGroupImpl<T, std::enable_if_t<IsField<T>>> {
+  constexpr static bool value = true;
+};
+
+template <typename T>
+struct IsMultiplicativeGroupImpl<T, std::enable_if_t<IsField<T>>> {
+  constexpr static bool value = true;
+};
 
 }  // namespace zk_dtypes
 
