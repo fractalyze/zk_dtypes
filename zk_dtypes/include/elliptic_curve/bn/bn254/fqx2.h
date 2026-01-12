@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace zk_dtypes::bn254 {
 
-REGISTER_EXTENSION_FIELD(FqX2, Fq, 2, -1);
+REGISTER_EXTENSION_FIELD_WITH_MONT(FqX2, Fq, 2, -1);
 
 }  // namespace zk_dtypes::bn254
 

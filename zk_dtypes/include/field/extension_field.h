@@ -41,41 +41,66 @@ limitations under the License.
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/str_join.h"
 
+#define REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT(                   \
+    Name, BaseFieldIn, BasePrimeFieldIn, Degree, ...)                 \
+  template <typename BaseField>                                       \
+  class Name##BaseConfig {                                            \
+   public:                                                            \
+    constexpr static uint32_t kDegreeOverBaseField = Degree;          \
+    constexpr static BaseField kNonResidue = __VA_ARGS__;             \
+  };                                                                  \
+                                                                      \
+  class Name##StdConfig : public Name##BaseConfig<BaseFieldIn##Std> { \
+   public:                                                            \
+    constexpr static bool kUseMontgomery = false;                     \
+    using StdConfig = Name##StdConfig;                                \
+    using BaseField = BaseFieldIn##Std;                               \
+    using BasePrimeField = BasePrimeFieldIn##Std;                     \
+  };                                                                  \
+                                                                      \
+  class Name##Config : public Name##BaseConfig<BaseFieldIn> {         \
+   public:                                                            \
+    constexpr static bool kUseMontgomery = true;                      \
+    using StdConfig = Name##StdConfig;                                \
+    using BaseField = BaseFieldIn;                                    \
+    using BasePrimeField = BasePrimeFieldIn;                          \
+  };                                                                  \
+                                                                      \
+  using Name = ExtensionField<Name##Config>;                          \
+  using Name##Std = ExtensionField<Name##StdConfig>
+
+#define REGISTER_EXTENSION_FIELD_WITH_MONT(Name, BaseFieldIn, Degree,        \
+                                           NonResidue)                       \
+  REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT(Name, BaseFieldIn, BaseFieldIn, \
+                                             Degree, NonResidue)
+
+#define REGISTER_EXTENSION_FIELD_TOWER_WITH_MONT(     \
+    Name, BaseFieldIn, BasePrimeFieldIn, Degree, ...) \
+  REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT(         \
+      Name, BaseFieldIn, BasePrimeFieldIn, Degree, __VA_ARGS__)
+
 #define REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BasePrimeFieldIn, \
                                          Degree, ...)                         \
-  template <typename BaseField>                                               \
-  class Name##BaseConfig {                                                    \
+  class Name##Config {                                                        \
    public:                                                                    \
     constexpr static uint32_t kDegreeOverBaseField = Degree;                  \
-    constexpr static BaseField kNonResidue = __VA_ARGS__;                     \
-  };                                                                          \
+    constexpr static BaseFieldIn kNonResidue = __VA_ARGS__;                   \
                                                                               \
-  class Name##StdConfig : public Name##BaseConfig<BaseFieldIn##Std> {         \
-   public:                                                                    \
     constexpr static bool kUseMontgomery = false;                             \
-    using StdConfig = Name##StdConfig;                                        \
-    using BaseField = BaseFieldIn##Std;                                       \
-    using BasePrimeField = BasePrimeFieldIn##Std;                             \
-  };                                                                          \
-                                                                              \
-  class Name##Config : public Name##BaseConfig<BaseFieldIn> {                 \
-   public:                                                                    \
-    constexpr static bool kUseMontgomery = true;                              \
-    using StdConfig = Name##StdConfig;                                        \
+    using StdConfig = Name##Config;                                           \
     using BaseField = BaseFieldIn;                                            \
     using BasePrimeField = BasePrimeFieldIn;                                  \
   };                                                                          \
                                                                               \
-  using Name = ExtensionField<Name##Config>;                                  \
-  using Name##Std = ExtensionField<Name##StdConfig>
+  using Name = ExtensionField<Name##Config>
 
 #define REGISTER_EXTENSION_FIELD(Name, BaseFieldIn, Degree, NonResidue)    \
   REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BaseFieldIn, Degree, \
                                    NonResidue)
 
-#define REGISTER_EXTENSION_FIELD_WITH_TOWER(Name, BaseFieldIn,             \
-                                            BasePrimeFieldIn, Degree, ...) \
-  REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BasePrimeFieldIn,    \
+#define REGISTER_EXTENSION_FIELD_TOWER(Name, BaseFieldIn, BasePrimeFieldIn, \
+                                       Degree, ...)                         \
+  REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BasePrimeFieldIn,     \
                                    Degree, __VA_ARGS__)
 
 namespace zk_dtypes {

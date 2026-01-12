@@ -35,31 +35,17 @@ struct Mersenne31BaseConfig {
   constexpr static bool kHasLargeSubgroupRootOfUnity = false;
 };
 
-struct Mersenne31StdConfig : public Mersenne31BaseConfig {
+struct Mersenne31Config : public Mersenne31BaseConfig {
   constexpr static bool kUseMontgomery = false;
 
-  using StdConfig = Mersenne31StdConfig;
+  using StdConfig = Mersenne31Config;
 
   constexpr static uint32_t kOne = 1;
 
   constexpr static uint32_t kTwoAdicRootOfUnity = 2147483646;
 };
 
-struct Mersenne31Config : public Mersenne31BaseConfig {
-  constexpr static bool kUseMontgomery = true;
-
-  using StdConfig = Mersenne31StdConfig;
-
-  constexpr static uint32_t kRSquared = 4;
-  constexpr static uint32_t kNPrime = 2147483647;
-
-  constexpr static uint32_t kOne = 2;
-
-  constexpr static uint32_t kTwoAdicRootOfUnity = 2147483645;
-};
-
 using Mersenne31 = PrimeField<Mersenne31Config>;
-using Mersenne31Std = PrimeField<Mersenne31StdConfig>;
 
 }  // namespace zk_dtypes
 

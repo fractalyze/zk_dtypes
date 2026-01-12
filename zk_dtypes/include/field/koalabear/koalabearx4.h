@@ -23,7 +23,7 @@ namespace zk_dtypes {
 
 // Quartic extension field over Koalabear: Koalabear⁴ = Koalabear[u] / (u⁴ - 3)
 // W = 3 is a quartic non-residue in Koalabear field.
-REGISTER_EXTENSION_FIELD(KoalabearX4, Koalabear, 4, 3);
+REGISTER_EXTENSION_FIELD_WITH_MONT(KoalabearX4, Koalabear, 4, 3);
 
 }  // namespace zk_dtypes
 
