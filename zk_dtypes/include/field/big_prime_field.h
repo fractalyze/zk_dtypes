@@ -296,8 +296,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
             std::enable_if_t<Config2::kUseMontgomery>* = nullptr>
   StdType MontReduce() const {
     StdType ret;
-    zk_dtypes::MontReduce(value_, ret.value_, Config::kModulus,
-                          Config::kNPrime);
+    zk_dtypes::MontReduce<Config>(value_, ret.value_);
     return ret;
   }
 

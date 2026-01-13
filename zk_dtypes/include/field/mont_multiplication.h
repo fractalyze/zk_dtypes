@@ -60,6 +60,11 @@ constexpr void MontReduce(T a, T& b, T modulus, T n_prime) {
   }
 }
 
+template <typename Config, typename T>
+constexpr void MontReduce(T a, T& b) {
+  MontReduce(a, b, Config::kModulus, Config::kNPrime);
+}
+
 template <size_t N>
 constexpr void MontReduce(const BigInt<N>& a, BigInt<N>& b,
                           const BigInt<N>& modulus, uint64_t n_prime) {
@@ -75,6 +80,11 @@ constexpr void MontReduce(const BigInt<N>& a, BigInt<N>& b,
     }
     b[i] = result.hi;
   }
+}
+
+template <typename Config, size_t N>
+constexpr void MontReduce(const BigInt<N>& a, BigInt<N>& b) {
+  MontReduce(a, b, Config::kModulus, Config::kNPrime);
 }
 
 template <size_t N>
@@ -116,6 +126,11 @@ constexpr void MontMul(T a, T b, T& c, T modulus, T n_prime) {
   } else {
     c = t_high + modulus - mn_high;
   }
+}
+
+template <typename Config, typename T>
+constexpr void MontMul(T a, T b, T& c) {
+  MontMul(a, b, c, Config::kModulus, Config::kNPrime);
 }
 
 template <size_t N>

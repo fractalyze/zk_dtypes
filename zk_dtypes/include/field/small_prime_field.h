@@ -196,13 +196,11 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   constexpr PrimeField operator*(PrimeField other) const {
     PrimeField ret;
     if constexpr (kUseMontgomery) {
-      zk_dtypes::MontMul(value_, other.value_, ret.value_, Config::kModulus,
-                         Config::kNPrime);
+      zk_dtypes::MontMul<Config>(value_, other.value_, ret.value_);
     } else if constexpr (IsPowerOf2<UnderlyingType>(Config::kModulus + 1)) {
       zk_dtypes::MersenneMul<Config>(value_, other.value_, ret.value_);
     } else if constexpr (Config::kUseBarrett) {
-      zk_dtypes::BarrettMul(value_, other.value_, ret.value_, Config::kModulus,
-                            Config::kMu);
+      zk_dtypes::BarrettMul<Config>(value_, other.value_, ret.value_);
     } else {
       VerySlowMul(*this, other, ret);
     }
@@ -296,8 +294,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
             std::enable_if_t<Config2::kUseMontgomery>* = nullptr>
   StdType MontReduce() const {
     StdType ret;
-    zk_dtypes::MontReduce(value_, ret.value_, Config::kModulus,
-                          Config::kNPrime);
+    zk_dtypes::MontReduce<Config>(value_, ret.value_);
     return ret;
   }
 
