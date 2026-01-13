@@ -23,7 +23,7 @@ namespace zk_dtypes {
 
 // Quartic extension field over Babybear: Babybear⁴ = Babybear[u] / (u⁴ - 11)
 // W = 11 is a quartic non-residue in Babybear field.
-REGISTER_EXTENSION_FIELD(Babybear4, Babybear, 4, 11);
+REGISTER_EXTENSION_FIELD_WITH_MONT(Babybear4, Babybear, 4, 11);
 
 }  // namespace zk_dtypes
 

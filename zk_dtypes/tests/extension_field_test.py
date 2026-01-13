@@ -31,7 +31,6 @@ babybear4_std = zk_dtypes.babybear4_std
 koalabear4 = zk_dtypes.koalabear4
 koalabear4_std = zk_dtypes.koalabear4_std
 mersenne312 = zk_dtypes.mersenne312
-mersenne312_std = zk_dtypes.mersenne312_std
 goldilocks3 = zk_dtypes.goldilocks3
 goldilocks3_std = zk_dtypes.goldilocks3_std
 
@@ -41,7 +40,6 @@ EXT_FIELD_TYPES = [
     koalabear4,
     koalabear4_std,
     mersenne312,
-    mersenne312_std,
     goldilocks3,
     goldilocks3_std,
 ]
@@ -60,7 +58,6 @@ VALUES = {
     goldilocks3: make_values(3),
     goldilocks3_std: make_values(3),
     mersenne312: make_values(2),
-    mersenne312_std: make_values(2),
 }
 
 
