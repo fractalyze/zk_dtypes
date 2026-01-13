@@ -68,7 +68,7 @@ using FqStd = PrimeField<PrimeFieldStdConfig>;
 using Fr = PrimeField<PrimeFieldConfig>;
 using FrStd = PrimeField<PrimeFieldStdConfig>;
 
-REGISTER_EXTENSION_FIELD(Fq2, Fq, 2, -1);
+REGISTER_EXTENSION_FIELD(FqX2, Fq, 2, -1);
 
 template <typename _BaseField, typename _ScalarField>
 class SwCurveBaseConfig {

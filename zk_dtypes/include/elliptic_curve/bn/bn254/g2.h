@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_BN254_G2_H_
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_BN254_G2_H_
 
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/fq2.h"
+#include "zk_dtypes/include/elliptic_curve/bn/bn254/fqx2.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/affine_point.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/jacobian_point.h"
@@ -67,23 +67,23 @@ class G2SwCurveBaseConfig {
                                    }};
 };
 
-class G2SwCurveStdConfig : public G2SwCurveBaseConfig<Fq2Std> {
+class G2SwCurveStdConfig : public G2SwCurveBaseConfig<FqX2Std> {
  public:
   constexpr static bool kUseMontgomery = false;
 
   using StdConfig = G2SwCurveStdConfig;
 
-  using BaseField = Fq2Std;
+  using BaseField = FqX2Std;
   using ScalarField = FrStd;
 };
 
-class G2SwCurveConfig : public G2SwCurveBaseConfig<Fq2> {
+class G2SwCurveConfig : public G2SwCurveBaseConfig<FqX2> {
  public:
   constexpr static bool kUseMontgomery = true;
 
   using StdConfig = G2SwCurveStdConfig;
 
-  using BaseField = Fq2;
+  using BaseField = FqX2;
   using ScalarField = Fr;
 };
 

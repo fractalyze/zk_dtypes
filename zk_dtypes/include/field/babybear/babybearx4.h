@@ -13,18 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef ZK_DTYPES_INCLUDE_FIELD_KOALABEAR_KOALABEAR4_H_
-#define ZK_DTYPES_INCLUDE_FIELD_KOALABEAR_KOALABEAR4_H_
+#ifndef ZK_DTYPES_INCLUDE_FIELD_BABYBEAR_BABYBEARX4_H_
+#define ZK_DTYPES_INCLUDE_FIELD_BABYBEAR_BABYBEARX4_H_
 
+#include "zk_dtypes/include/field/babybear/babybear.h"
 #include "zk_dtypes/include/field/extension_field.h"
-#include "zk_dtypes/include/field/koalabear/koalabear.h"
 
 namespace zk_dtypes {
 
-// Quartic extension field over Koalabear: Koalabear⁴ = Koalabear[u] / (u⁴ - 3)
-// W = 3 is a quartic non-residue in Koalabear field.
-REGISTER_EXTENSION_FIELD(Koalabear4, Koalabear, 4, 3);
+// Quartic extension field over Babybear: Babybear⁴ = Babybear[u] / (u⁴ - 11)
+// W = 11 is a quartic non-residue in Babybear field.
+REGISTER_EXTENSION_FIELD(BabybearX4, Babybear, 4, 11);
 
 }  // namespace zk_dtypes
 
-#endif  // ZK_DTYPES_INCLUDE_FIELD_KOALABEAR_KOALABEAR4_H_
+#endif  // ZK_DTYPES_INCLUDE_FIELD_BABYBEAR_BABYBEARX4_H_

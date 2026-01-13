@@ -21,7 +21,7 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/test/sw_curve_config.h"
 // TODO(chokobole33): Remove this header after we include this field to
 // ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST.
-#include "zk_dtypes/include/field/mersenne31/mersenne314.h"
+#include "zk_dtypes/include/field/mersenne31/mersenne31x2x2.h"
 
 namespace zk_dtypes {
 namespace {
@@ -45,8 +45,8 @@ using ExtensionFieldTypes = testing::Types<
 #define EXTENSION_FIELD_TYPE(ActualType, ...) ActualType,
     ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(EXTENSION_FIELD_TYPE)
 #undef EXTENSION_FIELD_TYPE
-        Mersenne314,
-    Mersenne314Std, test::Fq2, test::Fq2Std>;
+        Mersenne31X2X2,
+    Mersenne31X2X2Std, test::FqX2, test::FqX2Std>;
 
 TYPED_TEST_SUITE(ExtensionFieldTypedTest, ExtensionFieldTypes);
 
@@ -261,17 +261,17 @@ TYPED_TEST(ExtensionFieldTypedTest, Mul) {
 TYPED_TEST(ExtensionFieldTypedTest, SquareRoot) {
   using ExtF = TypeParam;
   // clang-format off
-  if constexpr (std::is_same_v<ExtF, Babybear4> ||
-                std::is_same_v<ExtF, Babybear4Std> ||
-                std::is_same_v<ExtF, Koalabear4> ||
-                std::is_same_v<ExtF, Koalabear4Std> ||
-                std::is_same_v<ExtF, Mersenne314> ||
-                std::is_same_v<ExtF, Mersenne314Std>) {
+  if constexpr (std::is_same_v<ExtF, BabybearX4> ||
+                std::is_same_v<ExtF, BabybearX4Std> ||
+                std::is_same_v<ExtF, KoalabearX4> ||
+                std::is_same_v<ExtF, KoalabearX4Std> ||
+                std::is_same_v<ExtF, Mersenne31X2X2> ||
+                std::is_same_v<ExtF, Mersenne31X2X2Std>) {
     GTEST_SKIP() << "SquareRoot is not implemented for quartic extension "
                     "fields.";
-  } else if constexpr (std::is_same_v<ExtF, Goldilocks3> ||  // NOLINT(readability/braces)
-                       std::is_same_v<ExtF, Goldilocks3Std>) {
-    GTEST_SKIP() << "Skipping because Goldilocks3 has large trace value.";
+  } else if constexpr (std::is_same_v<ExtF, GoldilocksX3> ||  // NOLINT(readability/braces)
+                       std::is_same_v<ExtF, GoldilocksX3Std>) {
+    GTEST_SKIP() << "Skipping because GoldilocksX3 has large trace value.";
   } else {  // NOLINT(readability/braces)
     // clang-format on
     ExtF a = ExtF::Random();
@@ -351,23 +351,23 @@ TYPED_TEST(ExtensionFieldTypedTest, AsBasePrimeFields) {
   EXPECT_TRUE(std::equal(const_a.begin(), const_a.end(), const_span.begin()));
 }
 
-// Define Fq4 as a quadratic extension over Fq2.
-// u² - (2 + 1i) = 0, where (2 + 1i) is in Fq2.
-REGISTER_EXTENSION_FIELD_WITH_TOWER(Fq4, test::Fq2, test::Fq, 2, {2, 1});
+// Define FqX2X2 as a quadratic extension over FqX2.
+// u² - (2 + 1i) = 0, where (2 + 1i) is in FqX2.
+REGISTER_EXTENSION_FIELD_WITH_TOWER(FqX2X2, test::FqX2, test::Fq, 2, {2, 1});
 
 TEST(ExtensionFieldTest, BasePrimeFieldIteratorWithTower) {
   using Fq = test::Fq;
 
-  Fq4 val = Fq4::Random();
+  FqX2X2 val = FqX2X2::Random();
   std::vector<Fq> elements;
   for (const auto& prime_field_element : val) {
     elements.push_back(prime_field_element);
   }
 
-  ASSERT_EQ(elements.size(), Fq4::ExtensionDegree());
+  ASSERT_EQ(elements.size(), FqX2X2::ExtensionDegree());
 
   // Check that elements are correct
-  auto values = val.values();              // std::array<Fq2, 2>
+  auto values = val.values();              // std::array<FqX2, 2>
   auto values0_vals = values[0].values();  // std::array<Fq, 2>
   auto values1_vals = values[1].values();  // std::array<Fq, 2>
   EXPECT_EQ(elements[0], values0_vals[0]);

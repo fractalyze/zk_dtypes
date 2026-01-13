@@ -13,18 +13,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef ZK_DTYPES_INCLUDE_FIELD_BABYBEAR_BABYBEAR4_H_
-#define ZK_DTYPES_INCLUDE_FIELD_BABYBEAR_BABYBEAR4_H_
+#ifndef ZK_DTYPES_INCLUDE_FIELD_MERSENNE31_MERSENNE31X2X2_H_
+#define ZK_DTYPES_INCLUDE_FIELD_MERSENNE31_MERSENNE31X2X2_H_
 
-#include "zk_dtypes/include/field/babybear/babybear.h"
 #include "zk_dtypes/include/field/extension_field.h"
+#include "zk_dtypes/include/field/mersenne31/mersenne31x2.h"
 
 namespace zk_dtypes {
 
-// Quartic extension field over Babybear: Babybear⁴ = Babybear[u] / (u⁴ - 11)
-// W = 11 is a quartic non-residue in Babybear field.
-REGISTER_EXTENSION_FIELD(Babybear4, Babybear, 4, 11);
+// Quartic extension field over Mersenne31 as tower:
+// (Mersenne31X2)² = Mersenne31X2[u] / (u² - (2 + 1i))
+// W = (2 + 1i) is a quadratic non-residue in Mersenne31X2 field.
+REGISTER_EXTENSION_FIELD_WITH_TOWER(Mersenne31X2X2, Mersenne31X2, Mersenne31, 2,
+                                    {2, 1});
 
 }  // namespace zk_dtypes
 
-#endif  // ZK_DTYPES_INCLUDE_FIELD_BABYBEAR_BABYBEAR4_H_
+#endif  // ZK_DTYPES_INCLUDE_FIELD_MERSENNE31_MERSENNE31X2X2_H_

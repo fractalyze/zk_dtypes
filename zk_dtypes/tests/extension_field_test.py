@@ -26,24 +26,24 @@ import zk_dtypes
 from multi_thread_utils import multi_threaded
 import numpy as np
 
-babybear4 = zk_dtypes.babybear4
-babybear4_std = zk_dtypes.babybear4_std
-koalabear4 = zk_dtypes.koalabear4
-koalabear4_std = zk_dtypes.koalabear4_std
-mersenne312 = zk_dtypes.mersenne312
-mersenne312_std = zk_dtypes.mersenne312_std
-goldilocks3 = zk_dtypes.goldilocks3
-goldilocks3_std = zk_dtypes.goldilocks3_std
+babybearx4 = zk_dtypes.babybearx4
+babybearx4_std = zk_dtypes.babybearx4_std
+koalabearx4 = zk_dtypes.koalabearx4
+koalabearx4_std = zk_dtypes.koalabearx4_std
+mersenne31x2 = zk_dtypes.mersenne31x2
+mersenne31x2_std = zk_dtypes.mersenne31x2_std
+goldilocksx3 = zk_dtypes.goldilocksx3
+goldilocksx3_std = zk_dtypes.goldilocksx3_std
 
 EXT_FIELD_TYPES = [
-    babybear4,
-    babybear4_std,
-    koalabear4,
-    koalabear4_std,
-    mersenne312,
-    mersenne312_std,
-    goldilocks3,
-    goldilocks3_std,
+    babybearx4,
+    babybearx4_std,
+    koalabearx4,
+    koalabearx4_std,
+    mersenne31x2,
+    mersenne31x2_std,
+    goldilocksx3,
+    goldilocksx3_std,
 ]
 
 
@@ -53,14 +53,14 @@ def make_values(degree):
 
 
 VALUES = {
-    babybear4: make_values(4),
-    babybear4_std: make_values(4),
-    koalabear4: make_values(4),
-    koalabear4_std: make_values(4),
-    goldilocks3: make_values(3),
-    goldilocks3_std: make_values(3),
-    mersenne312: make_values(2),
-    mersenne312_std: make_values(2),
+    babybearx4: make_values(4),
+    babybearx4_std: make_values(4),
+    koalabearx4: make_values(4),
+    koalabearx4_std: make_values(4),
+    goldilocksx3: make_values(3),
+    goldilocksx3_std: make_values(3),
+    mersenne31x2: make_values(2),
+    mersenne31x2_std: make_values(2),
 }
 
 

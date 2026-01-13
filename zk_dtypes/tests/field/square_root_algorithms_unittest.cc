@@ -51,8 +51,8 @@ TEST(SquareRootAlgorithms, ComputeTonelliShanksSquareRoot) {
 
 TEST(SquareRootAlgorithms, ComputeAlgorithm9SquareRoot) {
   for (size_t i = 0; i < 49; ++i) {
-    Fq2 a({i % 7, i / 7});
-    absl::StatusOr<Fq2> sqrt = ComputeAlgorithm9SquareRoot(a);
+    FqX2 a({i % 7, i / 7});
+    absl::StatusOr<FqX2> sqrt = ComputeAlgorithm9SquareRoot(a);
     if (i == 0 || i == 1 || i == 2 || i == 3 || i == 4 || i == 5 || i == 6 ||
         i == 7 || i == 8 || i == 13 || i == 14 || i == 16 || i == 19 ||
         i == 21 || i == 24 || i == 25 || i == 28 || i == 31 || i == 32 ||

@@ -13,16 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_BN254_FQ2_H_
-#define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_BN254_FQ2_H_
+#ifndef ZK_DTYPES_INCLUDE_FIELD_KOALABEAR_KOALABEARX4_H_
+#define ZK_DTYPES_INCLUDE_FIELD_KOALABEAR_KOALABEARX4_H_
 
-#include "zk_dtypes/include/elliptic_curve/bn/bn254/fq.h"
 #include "zk_dtypes/include/field/extension_field.h"
+#include "zk_dtypes/include/field/koalabear/koalabear.h"
 
-namespace zk_dtypes::bn254 {
+namespace zk_dtypes {
 
-REGISTER_EXTENSION_FIELD(Fq2, Fq, 2, -1);
+// Quartic extension field over Koalabear: Koalabear⁴ = Koalabear[u] / (u⁴ - 3)
+// W = 3 is a quartic non-residue in Koalabear field.
+REGISTER_EXTENSION_FIELD(KoalabearX4, Koalabear, 4, 3);
 
-}  // namespace zk_dtypes::bn254
+}  // namespace zk_dtypes
 
-#endif  // ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_BN254_FQ2_H_
+#endif  // ZK_DTYPES_INCLUDE_FIELD_KOALABEAR_KOALABEARX4_H_
