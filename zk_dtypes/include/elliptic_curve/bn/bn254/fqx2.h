@@ -13,18 +13,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS_GOLDILOCKS3_H_
-#define ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS_GOLDILOCKS3_H_
+#ifndef ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_BN254_FQX2_H_
+#define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_BN254_FQX2_H_
 
+#include "zk_dtypes/include/elliptic_curve/bn/bn254/fq.h"
 #include "zk_dtypes/include/field/extension_field.h"
-#include "zk_dtypes/include/field/goldilocks/goldilocks.h"
 
-namespace zk_dtypes {
+namespace zk_dtypes::bn254 {
 
-// Cubic extension field over Goldilocks: Goldilocks³ = Goldilocks[u] / (u³ - 7)
-// W = 7 is a cubic non-residue in Goldilocks field.
-REGISTER_EXTENSION_FIELD(Goldilocks3, Goldilocks, 3, 7);
+REGISTER_EXTENSION_FIELD(FqX2, Fq, 2, -1);
 
-}  // namespace zk_dtypes
+}  // namespace zk_dtypes::bn254
 
-#endif  // ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS_GOLDILOCKS3_H_
+#endif  // ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_BN254_FQX2_H_

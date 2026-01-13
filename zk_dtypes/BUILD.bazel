@@ -29,18 +29,19 @@ cc_library(
     hdrs = ["include/all_types.h"],
     deps = [
         ":babybear",
-        ":babybear4",
+        ":babybearx4",
         ":bn254_fq",
-        ":bn254_fq2",
+        ":bn254_fqx2",
         ":bn254_fr",
         ":bn254_g1",
         ":bn254_g2",
         ":goldilocks",
-        ":goldilocks3",
+        ":goldilocksx3",
         ":koalabear",
-        ":koalabear4",
+        ":koalabearx4",
         ":mersenne31",
-        ":mersenne312",
+        ":mersenne31x2",
+        ":mersenne31x2x2",
     ],
 )
 
@@ -204,8 +205,8 @@ cc_library(
 )
 
 cc_library(
-    name = "babybear4",
-    hdrs = ["include/field/babybear/babybear4.h"],
+    name = "babybearx4",
+    hdrs = ["include/field/babybear/babybearx4.h"],
     deps = [
         ":babybear",
         ":extension_field",
@@ -328,8 +329,8 @@ cc_library(
 )
 
 cc_library(
-    name = "goldilocks3",
-    hdrs = ["include/field/goldilocks/goldilocks3.h"],
+    name = "goldilocksx3",
+    hdrs = ["include/field/goldilocks/goldilocksx3.h"],
     deps = [
         ":extension_field",
         ":goldilocks",
@@ -343,8 +344,8 @@ cc_library(
 )
 
 cc_library(
-    name = "mersenne312",
-    hdrs = ["include/field/mersenne31/mersenne312.h"],
+    name = "mersenne31x2",
+    hdrs = ["include/field/mersenne31/mersenne31x2.h"],
     deps = [
         ":extension_field",
         ":mersenne31",
@@ -352,11 +353,11 @@ cc_library(
 )
 
 cc_library(
-    name = "mersenne314",
-    hdrs = ["include/field/mersenne31/mersenne314.h"],
+    name = "mersenne31x2x2",
+    hdrs = ["include/field/mersenne31/mersenne31x2x2.h"],
     deps = [
         ":extension_field",
-        ":mersenne312",
+        ":mersenne31x2",
     ],
 )
 
@@ -392,8 +393,8 @@ cc_library(
 )
 
 cc_library(
-    name = "koalabear4",
-    hdrs = ["include/field/koalabear/koalabear4.h"],
+    name = "koalabearx4",
+    hdrs = ["include/field/koalabear/koalabearx4.h"],
     deps = [
         ":extension_field",
         ":koalabear",
@@ -481,7 +482,7 @@ cc_test(
     deps = [
         ":all_types",
         # TODO(chokobole33): Remove this.
-        ":mersenne314",
+        ":mersenne31x2x2",
         ":random",
         ":root_of_unity",
         ":sw_test_curve_config",
@@ -537,8 +538,8 @@ cc_library(
 )
 
 cc_library(
-    name = "bn254_fq2",
-    hdrs = ["include/elliptic_curve/bn/bn254/fq2.h"],
+    name = "bn254_fqx2",
+    hdrs = ["include/elliptic_curve/bn/bn254/fqx2.h"],
     deps = [
         ":bn254_fq",
         ":extension_field",
@@ -577,7 +578,7 @@ cc_library(
     name = "bn254_g2",
     hdrs = ["include/elliptic_curve/bn/bn254/g2.h"],
     deps = [
-        ":bn254_fq2",
+        ":bn254_fqx2",
         ":bn254_fr",
         ":sw_affine_point",
         ":sw_curve",

@@ -26,14 +26,14 @@ used in Zero Knowledge libraries inspired by
 
 - Extension Field:
 
-  - `babybear4`
-  - `babybear4_std`
-  - `goldilocks3`
-  - `goldilocks3_std`
-  - `mersenne312`
-  - `mersenne312_std`
-  - `koalabear4`
-  - `koalabear4_std`
+  - `babybearx4`
+  - `babybearx4_std`
+  - `goldilocksx3`
+  - `goldilocksx3_std`
+  - `koalabearx4`
+  - `koalabearx4_std`
+  - `mersenne31x2`
+  - `mersenne31x2_std`
 
 - Elliptic curve:
 

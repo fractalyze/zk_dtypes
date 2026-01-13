@@ -5,13 +5,13 @@
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
 #include "zk_dtypes/include/field/babybear/babybear.h"
-#include "zk_dtypes/include/field/babybear/babybear4.h"
+#include "zk_dtypes/include/field/babybear/babybearx4.h"
 #include "zk_dtypes/include/field/goldilocks/goldilocks.h"
-#include "zk_dtypes/include/field/goldilocks/goldilocks3.h"
+#include "zk_dtypes/include/field/goldilocks/goldilocksx3.h"
 #include "zk_dtypes/include/field/koalabear/koalabear.h"
-#include "zk_dtypes/include/field/koalabear/koalabear4.h"
+#include "zk_dtypes/include/field/koalabear/koalabearx4.h"
 #include "zk_dtypes/include/field/mersenne31/mersenne31.h"
-#include "zk_dtypes/include/field/mersenne31/mersenne312.h"
+#include "zk_dtypes/include/field/mersenne31/mersenne31x2.h"
 
 // clang-format off
 #define WITH_STD(V, ActualType, UpperCamelCaseName, UpperSnakeCaseName, LowerSnakeCaseName) \
@@ -37,16 +37,16 @@ WITH_STD(V, ::zk_dtypes::bn254::Fq, Bn254Bf, BN254_BF, bn254_bf)
 // ExtendedField Types
 //===----------------------------------------------------------------------===//
 
-// TODO(chokobole): Add Mersenne314.
-#define ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)                              \
-WITH_STD(V, ::zk_dtypes::Babybear4, Babybear4, BABYBEAR4, babybear4)         \
-WITH_STD(V, ::zk_dtypes::Koalabear4, Koalabear4, KOALABEAR4, koalabear4)     \
-WITH_STD(V, ::zk_dtypes::Mersenne312, Mersenne312, MERSENNE312, mersenne312) \
-WITH_STD(V, ::zk_dtypes::Goldilocks3, Goldilocks3, GOLDILOCKS3, goldilocks3)
+// TODO(chokobole): Add Mersenne31X2X2.
+#define ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)                                    \
+WITH_STD(V, ::zk_dtypes::BabybearX4, BabybearX4, BABYBEARX4, babybearx4)           \
+WITH_STD(V, ::zk_dtypes::KoalabearX4, KoalabearX4, KOALABEARX4, koalabearx4)       \
+WITH_STD(V, ::zk_dtypes::Mersenne31X2, Mersenne31X2, MERSENNE31X2, mersenne31x2)   \
+WITH_STD(V, ::zk_dtypes::GoldilocksX3, GoldilocksX3, GOLDILOCKSX3, goldilocksx3)
 
 #define ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)      \
-WITH_STD(V, ::zk_dtypes::bn254::Fq2, Bn254Bf2, BN254_BF2, bn254_bf2)
+WITH_STD(V, ::zk_dtypes::bn254::FqX2, Bn254BfX2, BN254_BFX2, bn254_bfx2)
 
 //===----------------------------------------------------------------------===//
 // Field Types

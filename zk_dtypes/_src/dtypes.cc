@@ -169,58 +169,59 @@ struct TypeDescriptorBase<bn254::FrStd> : FieldTypeDescriptor<bn254::FrStd> {
 };
 
 template <>
-struct TypeDescriptorBase<Babybear4> : FieldTypeDescriptor<Babybear4> {
+struct TypeDescriptorBase<BabybearX4> : FieldTypeDescriptor<BabybearX4> {
   static constexpr const char* kTpDoc =
       "babybear quartic extension field values on montgomery domain";
   static constexpr char kNpyDescrType = 'd';
 };
 
 template <>
-struct TypeDescriptorBase<Babybear4Std> : FieldTypeDescriptor<Babybear4Std> {
+struct TypeDescriptorBase<BabybearX4Std> : FieldTypeDescriptor<BabybearX4Std> {
   static constexpr const char* kTpDoc =
       "babybear quartic extension field values on standard domain";
   static constexpr char kNpyDescrType = 'D';
 };
 
 template <>
-struct TypeDescriptorBase<Koalabear4> : FieldTypeDescriptor<Koalabear4> {
+struct TypeDescriptorBase<KoalabearX4> : FieldTypeDescriptor<KoalabearX4> {
   static constexpr const char* kTpDoc =
       "koalabear quartic extension field values on montgomery domain";
   static constexpr char kNpyDescrType = 'e';
 };
 
 template <>
-struct TypeDescriptorBase<Koalabear4Std> : FieldTypeDescriptor<Koalabear4Std> {
+struct TypeDescriptorBase<KoalabearX4Std>
+    : FieldTypeDescriptor<KoalabearX4Std> {
   static constexpr const char* kTpDoc =
       "koalabear quartic extension field values on standard domain";
   static constexpr char kNpyDescrType = 'E';
 };
 
 template <>
-struct TypeDescriptorBase<Mersenne312> : FieldTypeDescriptor<Mersenne312> {
+struct TypeDescriptorBase<Mersenne31X2> : FieldTypeDescriptor<Mersenne31X2> {
   static constexpr const char* kTpDoc =
-      "mersenne312 quadratic extension field values on montgomery domain";
+      "mersenne31x2 quadratic extension field values on montgomery domain";
   static constexpr char kNpyDescrType = 'q';
 };
 
 template <>
-struct TypeDescriptorBase<Mersenne312Std>
-    : FieldTypeDescriptor<Mersenne312Std> {
+struct TypeDescriptorBase<Mersenne31X2Std>
+    : FieldTypeDescriptor<Mersenne31X2Std> {
   static constexpr const char* kTpDoc =
-      "mersenne312 quadratic extension field values on standard domain";
+      "mersenne31x2 quadratic extension field values on standard domain";
   static constexpr char kNpyDescrType = 'Q';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks3> : FieldTypeDescriptor<Goldilocks3> {
+struct TypeDescriptorBase<GoldilocksX3> : FieldTypeDescriptor<GoldilocksX3> {
   static constexpr const char* kTpDoc =
       "goldilocks cubic extension field values on montgomery domain";
   static constexpr char kNpyDescrType = 't';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks3Std>
-    : FieldTypeDescriptor<Goldilocks3Std> {
+struct TypeDescriptorBase<GoldilocksX3Std>
+    : FieldTypeDescriptor<GoldilocksX3Std> {
   static constexpr const char* kTpDoc =
       "goldilocks cubic extension field values on standard domain";
   static constexpr char kNpyDescrType = 'T';
