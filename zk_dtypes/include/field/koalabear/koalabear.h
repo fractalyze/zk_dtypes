@@ -37,8 +37,12 @@ struct KoalabearBaseConfig {
 
 struct KoalabearStdConfig : public KoalabearBaseConfig {
   constexpr static bool kUseMontgomery = false;
+  constexpr static bool kUseBarrett = true;
 
   using StdConfig = KoalabearStdConfig;
+
+  // Barrett Precomputed Constant: floor(2⁶⁴ / P)
+  constexpr static uint64_t kMu = UINT64_C(8657571868);
 
   constexpr static uint32_t kOne = 1;
 

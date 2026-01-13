@@ -37,8 +37,12 @@ struct BabybearBaseConfig {
 
 struct BabybearStdConfig : public BabybearBaseConfig {
   constexpr static bool kUseMontgomery = false;
+  constexpr static bool kUseBarrett = true;
 
   using StdConfig = BabybearStdConfig;
+
+  // Barrett Precomputed Constant: floor(2⁶⁴ / P)
+  constexpr static uint64_t kMu = UINT64_C(9162596893);
 
   constexpr static uint32_t kOne = 1;
 

@@ -1,4 +1,5 @@
 build:ci --remote_cache=grpc://127.0.0.1:9092
 build:ci --action_env=CC=/usr/bin/clang
 build:ci --action_env=CXX=/usr/bin/clang++
+build:ci --test_tag_filters=
 test:ci --test_output=errors

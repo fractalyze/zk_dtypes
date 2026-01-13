@@ -41,6 +41,7 @@ struct PrimeFieldBaseConfig {
 
 struct PrimeFieldStdConfig : public PrimeFieldBaseConfig {
   constexpr static bool kUseMontgomery = false;
+  constexpr static bool kUseBarrett = false;
 
   using StdConfig = PrimeFieldStdConfig;
 
