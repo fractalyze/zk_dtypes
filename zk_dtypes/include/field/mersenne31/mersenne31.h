@@ -43,20 +43,6 @@ struct Mersenne31StdConfig : public Mersenne31BaseConfig {
   constexpr static uint32_t kOne = 1;
 
   constexpr static uint32_t kTwoAdicRootOfUnity = 2147483646;
-
-  constexpr static uint32_t SpecialMul(uint32_t a, uint32_t b) {
-    uint64_t x = uint64_t{a} * b;
-
-    // x = hi * 2³¹ + lo
-    //   = hi * (p + 1) + lo
-    //   = hi + lo (mod p)
-    uint32_t hi = static_cast<uint32_t>(x >> 31);
-    uint32_t lo = static_cast<uint32_t>(x & kModulus);
-
-    uint32_t res = lo + hi;
-    if (res >= kModulus) res -= kModulus;
-    return res;
-  }
 };
 
 struct Mersenne31Config : public Mersenne31BaseConfig {

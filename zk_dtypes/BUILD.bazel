@@ -338,6 +338,16 @@ cc_library(
 )
 
 cc_library(
+    name = "mersenne_multiplication",
+    hdrs = ["include/field/mersenne_multiplication.h"],
+    deps = [
+        ":arithmetics",
+        ":bits",
+        ":modular_operations",
+    ],
+)
+
+cc_library(
     name = "mersenne31",
     hdrs = ["include/field/mersenne31/mersenne31.h"],
     deps = [":small_prime_field"],
@@ -429,6 +439,7 @@ cc_library(
         ":byinverter",
         ":finite_field",
         ":intn",
+        ":mersenne_multiplication",
         ":modular_operations",
         ":mont_multiplication",
         ":pow",

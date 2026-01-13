@@ -32,6 +32,7 @@ limitations under the License.
 #include "zk_dtypes/include/byinverter.h"
 #include "zk_dtypes/include/field/barrett_multiplication.h"
 #include "zk_dtypes/include/field/finite_field.h"
+#include "zk_dtypes/include/field/mersenne_multiplication.h"
 #include "zk_dtypes/include/field/modular_operations.h"
 #include "zk_dtypes/include/field/mont_multiplication.h"
 #include "zk_dtypes/include/field/prime_field.h"
@@ -47,7 +48,13 @@ template <typename _Config>
 class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
     : public FiniteField<PrimeField<_Config>> {
  public:
-  using UnderlyingType = zk_dtypes::UnderlyingType<_Config>;
+  using UnderlyingType = std::conditional_t<
+      _Config::kStorageBits <= 32,
+      std::conditional_t<
+          _Config::kStorageBits <= 16,
+          std::conditional_t<_Config::kStorageBits <= 8, uint8_t, uint16_t>,
+          uint32_t>,
+      uint64_t>;
 
   constexpr static bool kUseMontgomery = _Config::kUseMontgomery;
   constexpr static size_t kStorageBits = _Config::kStorageBits;
@@ -191,8 +198,8 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
     if constexpr (kUseMontgomery) {
       zk_dtypes::MontMul(value_, other.value_, ret.value_, Config::kModulus,
                          Config::kNPrime);
-    } else if constexpr (HasSpecialMul<Config>) {
-      ret.value_ = Config::SpecialMul(value_, other.value_);
+    } else if constexpr (IsPowerOf2<UnderlyingType>(Config::kModulus + 1)) {
+      zk_dtypes::MersenneMul<Config>(value_, other.value_, ret.value_);
     } else if constexpr (Config::kUseBarrett) {
       zk_dtypes::BarrettMul(value_, other.value_, ret.value_, Config::kModulus,
                             Config::kMu);
