@@ -22,6 +22,14 @@ limitations under the License.
 
 namespace zk_dtypes {
 
+// Returns true if x is a power of 2 (and not 0), false otherwise.
+template <typename T>
+constexpr inline bool IsPowerOf2(T x) {
+  static_assert(std::is_unsigned<T>::value,
+                "T should be an unsigned integer type");
+  return x != 0 && (x & (x - 1)) == 0;
+}
+
 // Return floor(log2(n)) for positive integer n.  Returns -1 iff n == 0.
 template <typename T>
 constexpr inline int Log2Floor(T x) {

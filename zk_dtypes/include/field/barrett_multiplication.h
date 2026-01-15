@@ -39,6 +39,11 @@ constexpr void BarrettMul(T a, T b, T& c, T n, ExtT m) {
   c = r;
 }
 
+template <typename Config, typename T>
+constexpr void BarrettMul(T a, T b, T& c) {
+  BarrettMul(a, b, c, Config::kModulus, Config::kMu);
+}
+
 }  // namespace zk_dtypes
 
 #endif  // ZK_DTYPES_INCLUDE_FIELD_BARRETT_MULTIPLICATION_H_
