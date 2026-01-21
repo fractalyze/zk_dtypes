@@ -56,6 +56,20 @@ FIELD_TYPES = [
     bn254_sf_std,
 ]
 
+# Expected 2-adicity for each field type
+TWO_ADICITY = {
+    babybear: 27,
+    babybear_std: 27,
+    goldilocks: 32,
+    goldilocks_std: 32,
+    koalabear: 24,
+    koalabear_std: 24,
+    mersenne31: 1,
+    mersenne31_std: 1,
+    bn254_sf: 28,
+    bn254_sf_std: 28,
+}
+
 BABYBEAR_MODULUS = 2**31 - 2**27 + 1
 GOLDILOCKS_MODULUS = 2**64 - 2**32 + 1
 KOALABEAR_MODULUS = 2**31 - 2**24 + 1
@@ -97,6 +111,14 @@ class ScalarTest(parameterized.TestCase):
   @parameterized.product(scalar_type=FIELD_TYPES)
   def testModuleName(self, scalar_type):
     self.assertEqual(scalar_type.__module__, "zk_dtypes")
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testTwoAdicityKnownValues(self, scalar_type):
+    """two_adicity from pfinfo matches known values for supported fields."""
+    self.assertEqual(
+        pfinfo(scalar_type).two_adicity,
+        TWO_ADICITY[scalar_type],
+    )
 
   @parameterized.product(scalar_type=FIELD_TYPES)
   def testPickleable(self, scalar_type):
