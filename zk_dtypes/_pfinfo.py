@@ -53,6 +53,7 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
   modulus: int
   is_montgomery: bool
   dtype: np.dtype
+  two_adicity: int
 
   def __init__(self, pf_type):
     if pf_type == _babybear_dtype or pf_type == _babybear_std_dtype:
@@ -87,6 +88,10 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.is_montgomery = pf_type == _bn254_sf_dtype
     else:
       raise ValueError(f"Unknown prime field type: {pf_type}")
+    # Calculate the 2-adicity of `modulus - 1`, which is the number of
+    # trailing zeros in its binary representation.
+    m1 = self.modulus - 1
+    self.two_adicity = (m1 & -m1).bit_length() - 1
 
   def __repr__(self):
     return f"pfinfo(modulus_bits={self.modulus_bits}, dtype={self.dtype})"
