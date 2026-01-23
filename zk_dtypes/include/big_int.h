@@ -324,6 +324,39 @@ class BigInt {
     return *this;
   }
 
+  constexpr BigInt operator^(const BigInt& other) const {
+    BigInt ret;
+    Xor(*this, other, ret);
+    return ret;
+  }
+
+  constexpr BigInt& operator^=(const BigInt& other) {
+    Xor(*this, other, *this);
+    return *this;
+  }
+
+  constexpr BigInt operator&(const BigInt& other) const {
+    BigInt ret;
+    And(*this, other, ret);
+    return ret;
+  }
+
+  constexpr BigInt& operator&=(const BigInt& other) {
+    And(*this, other, *this);
+    return *this;
+  }
+
+  constexpr BigInt operator|(const BigInt& other) const {
+    BigInt ret;
+    Or(*this, other, ret);
+    return ret;
+  }
+
+  constexpr BigInt& operator|=(const BigInt& other) {
+    Or(*this, other, *this);
+    return *this;
+  }
+
   constexpr BigInt operator/(const BigInt& other) const {
     return Div(*this, other).quotient;
   }
@@ -568,6 +601,24 @@ class BigInt {
       }
     }
     return borrow;
+  }
+
+  constexpr static void Xor(const BigInt& a, const BigInt& b, BigInt& c) {
+    for (size_t i = 0; i < N; ++i) {
+      c[i] = a[i] ^ b[i];
+    }
+  }
+
+  constexpr static void And(const BigInt& a, const BigInt& b, BigInt& c) {
+    for (size_t i = 0; i < N; ++i) {
+      c[i] = a[i] & b[i];
+    }
+  }
+
+  constexpr static void Or(const BigInt& a, const BigInt& b, BigInt& c) {
+    for (size_t i = 0; i < N; ++i) {
+      c[i] = a[i] | b[i];
+    }
   }
 
   constexpr static internal::DivResult<BigInt> Div(const BigInt<N>& a,
