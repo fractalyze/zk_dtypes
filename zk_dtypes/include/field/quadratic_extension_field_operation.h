@@ -18,8 +18,6 @@ limitations under the License.
 
 #include <array>
 
-#include "absl/status/statusor.h"
-
 #include "zk_dtypes/include/field/extension_field_operation.h"
 #include "zk_dtypes/include/field/karatsuba_operation.h"
 

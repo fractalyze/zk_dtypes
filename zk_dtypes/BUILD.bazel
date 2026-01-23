@@ -280,7 +280,6 @@ cc_library(
         ":karatsuba_operation",
         ":toom_cook_operation",
         ":vandermonde_matrix",
-        "@com_google_absl//absl/status:statusor",
     ],
 )
 

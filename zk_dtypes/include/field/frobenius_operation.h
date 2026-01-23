@@ -20,8 +20,6 @@ limitations under the License.
 #include <cstddef>
 #include <utility>
 
-#include "absl/status/statusor.h"
-
 #include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
 
 namespace zk_dtypes {
