@@ -89,7 +89,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   constexpr PrimeField(T value) : value_(value) {
     DCHECK_LT(value_, Config::kModulus);
     if constexpr (kUseMontgomery) {
-      operator*=(PrimeField::FromUnchecked(Config::kRSquared));
+      operator*=(FromUnchecked(Config::kRSquared));
     }
   }
 
@@ -99,17 +99,14 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
 
   constexpr static PrimeField Zero() { return PrimeField(); }
 
-  constexpr static PrimeField One() {
-    return PrimeField::FromUnchecked(Config::kOne);
-  }
+  constexpr static PrimeField One() { return FromUnchecked(Config::kOne); }
 
   constexpr static PrimeField Min() { return Zero(); }
 
   constexpr static PrimeField Max() { return PrimeField(-1); }
 
   constexpr static PrimeField Random() {
-    return PrimeField::FromUnchecked(
-        Uniform<UnderlyingType>(0, Config::kModulus));
+    return FromUnchecked(Uniform<UnderlyingType>(0, Config::kModulus));
   }
 
   template <int N, typename UnderlyingTy>
@@ -117,7 +114,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
     if constexpr (std::is_signed_v<UnderlyingTy>) {
       DCHECK_GE(value, 0);
     }
-    return PrimeField::FromUnchecked(static_cast<UnderlyingType>(value));
+    return FromUnchecked(static_cast<UnderlyingType>(value));
   }
 
   constexpr static PrimeField FromUnchecked(UnderlyingType value) {
@@ -191,7 +188,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
 
   constexpr PrimeField operator-() const {
     if (value_ == 0) return Zero();
-    return PrimeField::FromUnchecked(Config::kModulus - value_);
+    return FromUnchecked(Config::kModulus - value_);
   }
 
   constexpr PrimeField operator*(PrimeField other) const {
@@ -252,7 +249,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
         return Zero();
       }
     }
-    return PrimeField::FromUnchecked(ret[0]);
+    return FromUnchecked(ret[0]);
   }
 
   constexpr bool operator==(PrimeField other) const {
@@ -343,7 +340,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
     using PromotedUnderlyingType = internal::make_promoted_t<UnderlyingType>;
 
     auto mul = PromotedUnderlyingType{a.value_} * b.value_ % Config::kModulus;
-    c = PrimeField::FromUnchecked(static_cast<UnderlyingType>(mul));
+    c = FromUnchecked(static_cast<UnderlyingType>(mul));
   }
 
   UnderlyingType value_ = {};
