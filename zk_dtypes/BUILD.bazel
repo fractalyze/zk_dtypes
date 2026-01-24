@@ -599,6 +599,11 @@ cc_library(
 )
 
 cc_library(
+    name = "twist_type",
+    hdrs = ["include/elliptic_curve/pairing/twist_type.h"],
+)
+
+cc_library(
     name = "sw_affine_point",
     hdrs = ["include/elliptic_curve/short_weierstrass/affine_point.h"],
     deps = [
