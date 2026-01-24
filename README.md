@@ -13,7 +13,7 @@ used in Zero Knowledge libraries inspired by
   - `uint2`
   - `uint4`
 
-- Field:
+- Prime Field:
 
   - `babybear`
   - `babybear_std`
@@ -32,6 +32,17 @@ used in Zero Knowledge libraries inspired by
   - `koalabearx4`
   - `koalabearx4_std`
   - `mersenne31x2`
+
+- Binary field:
+
+  - `binary_field_t0`
+  - `binary_field_t1`
+  - `binary_field_t2`
+  - `binary_field_t3`
+  - `binary_field_t4`
+  - `binary_field_t5`
+  - `binary_field_t6`
+  - `binary_field_t7`
 
 - Elliptic curve:
 
