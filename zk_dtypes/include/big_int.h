@@ -492,26 +492,80 @@ class BigInt {
 
   constexpr static uint64_t ShiftLeft(const BigInt& a, BigInt& b,
                                       uint64_t shift) {
-    CHECK_LT(shift, 64);
+    if (shift == 0) {
+      b = a;
+      return 0;
+    }
+    if (shift >= kBitWidth) {
+      b = Zero();
+      return 0;
+    }
+
+    const size_t limb_shift = shift / kLimbBitWidth;
+    const size_t bit_shift = shift % kLimbBitWidth;
+
+    if (bit_shift == 0) {
+      // Whole limb shift only
+      for (size_t i = N - 1; i >= limb_shift; --i) {
+        b[i] = a[i - limb_shift];
+      }
+      for (size_t i = 0; i < limb_shift; ++i) {
+        b[i] = 0;
+      }
+      return 0;
+    }
+
+    // Combined limb and bit shift
     uint64_t carry = 0;
     for (size_t i = 0; i < N; ++i) {
-      uint64_t temp = a[i] >> (64 - shift);
-      b[i] = a[i] << shift;
-      b[i] |= carry;
-      carry = temp;
+      if (i < limb_shift) {
+        b[i] = 0;
+      } else {
+        size_t src_idx = i - limb_shift;
+        uint64_t src = a[src_idx];
+        b[i] = (src << bit_shift) | carry;
+        carry = src >> (kLimbBitWidth - bit_shift);
+      }
     }
     return carry;
   }
 
   constexpr static uint64_t ShiftRight(const BigInt& a, BigInt& b,
                                        uint64_t shift) {
-    CHECK_LT(shift, 64);
+    if (shift == 0) {
+      b = a;
+      return 0;
+    }
+    if (shift >= kBitWidth) {
+      b = Zero();
+      return 0;
+    }
+
+    const size_t limb_shift = shift / kLimbBitWidth;
+    const size_t bit_shift = shift % kLimbBitWidth;
+
+    if (bit_shift == 0) {
+      // Whole limb shift only
+      for (size_t i = 0; i < N - limb_shift; ++i) {
+        b[i] = a[i + limb_shift];
+      }
+      for (size_t i = N - limb_shift; i < N; ++i) {
+        b[i] = 0;
+      }
+      return 0;
+    }
+
+    // Combined limb and bit shift
     uint64_t borrow = 0;
     for (size_t i = N - 1; i != SIZE_MAX; --i) {
-      uint64_t temp = a[i] << (64 - shift);
-      b[i] = a[i] >> shift;
-      b[i] |= borrow;
-      borrow = temp;
+      if (i + limb_shift >= N) {
+        b[i] = 0;
+      } else {
+        size_t src_idx = i + limb_shift;
+        uint64_t src = a[src_idx];
+        b[i] = (src >> bit_shift) | borrow;
+        borrow = src << (kLimbBitWidth - bit_shift);
+      }
     }
     return borrow;
   }
