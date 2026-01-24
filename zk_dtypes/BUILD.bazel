@@ -838,9 +838,9 @@ py_library(
 )
 
 py_test(
-    name = "field_test",
-    srcs = ["tests/field_test.py"],
-    main = "tests/field_test.py",
+    name = "ec_point_test",
+    srcs = ["tests/ec_point_test.py"],
+    main = "tests/ec_point_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",
@@ -850,9 +850,21 @@ py_test(
 )
 
 py_test(
-    name = "ec_point_test",
-    srcs = ["tests/ec_point_test.py"],
-    main = "tests/ec_point_test.py",
+    name = "extension_field_test",
+    srcs = ["tests/extension_field_test.py"],
+    main = "tests/extension_field_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "field_test",
+    srcs = ["tests/field_test.py"],
+    main = "tests/field_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",
@@ -877,18 +889,6 @@ py_test(
     name = "intn_test",
     srcs = ["tests/intn_test.py"],
     main = "tests/intn_test.py",
-    deps = [
-        ":test_utils",
-        ":zk_dtypes_py",
-        "@pypi//absl_py",
-        "@pypi//numpy",
-    ],
-)
-
-py_test(
-    name = "extension_field_test",
-    srcs = ["tests/extension_field_test.py"],
-    main = "tests/extension_field_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",
