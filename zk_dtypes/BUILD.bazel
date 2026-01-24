@@ -604,6 +604,14 @@ cc_library(
 )
 
 cc_library(
+    name = "ell_coeff",
+    hdrs = ["include/elliptic_curve/pairing/ell_coeff.h"],
+    deps = [
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
     name = "sw_affine_point",
     hdrs = ["include/elliptic_curve/short_weierstrass/affine_point.h"],
     deps = [
