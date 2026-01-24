@@ -16,6 +16,7 @@ limitations under the License.
 #include "benchmark/benchmark.h"
 
 #include "zk_dtypes/include/field/babybear/babybear.h"
+#include "zk_dtypes/include/field/goldilocks/goldilocks.h"
 #include "zk_dtypes/include/field/mersenne31/mersenne31.h"
 
 namespace zk_dtypes {
@@ -49,33 +50,45 @@ BENCHMARK_TEMPLATE(BM_Mul, Babybear, 1000);
 BENCHMARK_TEMPLATE(BM_Mul, BabybearStd, 10);
 BENCHMARK_TEMPLATE(BM_Mul, BabybearStd, 100);
 BENCHMARK_TEMPLATE(BM_Mul, BabybearStd, 1000);
+BENCHMARK_TEMPLATE(BM_Mul, Goldilocks, 10);
+BENCHMARK_TEMPLATE(BM_Mul, Goldilocks, 100);
+BENCHMARK_TEMPLATE(BM_Mul, Goldilocks, 1000);
+BENCHMARK_TEMPLATE(BM_Mul, GoldilocksStd, 10);
+BENCHMARK_TEMPLATE(BM_Mul, GoldilocksStd, 100);
+BENCHMARK_TEMPLATE(BM_Mul, GoldilocksStd, 1000);
 
 }  // namespace
 }  // namespace zk_dtypes
 
 // clang-format off
 // -----------------------------------------------------------------------------
-// 2026-01-11T10:37:24+00:00
-// Run on (32 X 5564.26 MHz CPU s)
+// 2026-01-24T09:27:54+00:00
+// Run on (32 X 5570.73 MHz CPU s)
 // CPU Caches:
-//   L1 Data 48 KiB (x16)
-//   L1 Instruction 32 KiB (x16)
-//   L2 Unified 1024 KiB (x16)
-//   L3 Unified 98304 KiB (x2)
-// Load Average: 0.09, 0.19, 0.17
+  // L1 Data 48 KiB (x16)
+  // L1 Instruction 32 KiB (x16)
+  // L2 Unified 1024 KiB (x16)
+  // L3 Unified 98304 KiB (x2)
+// Load Average: 0.18, 0.38, 1.22
 // ----------------------------------------------------------------------
 // Benchmark                            Time             CPU   Iterations
 // ----------------------------------------------------------------------
-// BM_Mul<Mersenne31, 10>            10.6 ns         10.6 ns     65667785
-// BM_Mul<Mersenne31, 100>            168 ns          168 ns      4174377
-// BM_Mul<Mersenne31, 1000>          1742 ns         1741 ns       401768
-// BM_Mul<Mersenne31Std, 10>         6.64 ns         6.64 ns    105335115
-// BM_Mul<Mersenne31Std, 100>         131 ns          131 ns      5261470
-// BM_Mul<Mersenne31Std, 1000>       1389 ns         1389 ns       503874
-// BM_Mul<Babybear, 10>              11.0 ns         11.0 ns     63461560
-// BM_Mul<Babybear, 100>              197 ns          197 ns      3548845
-// BM_Mul<Babybear, 1000>            2088 ns         2087 ns       335691
-// BM_Mul<BabybearStd, 10>           10.7 ns         10.7 ns     65468757
-// BM_Mul<BabybearStd, 100>           224 ns          224 ns      3123421
-// BM_Mul<BabybearStd, 1000>         2431 ns         2431 ns       287980
+// BM_Mul<Mersenne31, 10>            10.7 ns         10.7 ns     65491568
+// BM_Mul<Mersenne31, 100>            168 ns          168 ns      4168746
+// BM_Mul<Mersenne31, 1000>          1743 ns         1742 ns       402034
+// BM_Mul<Mersenne31Std, 10>         6.65 ns         6.65 ns    105071208
+// BM_Mul<Mersenne31Std, 100>         131 ns          130 ns      5347122
+// BM_Mul<Mersenne31Std, 1000>       1394 ns         1393 ns       503957
+// BM_Mul<Babybear, 10>              11.0 ns         11.0 ns     63561717
+// BM_Mul<Babybear, 100>              197 ns          197 ns      3552128
+// BM_Mul<Babybear, 1000>            2085 ns         2085 ns       335703
+// BM_Mul<BabybearStd, 10>           10.7 ns         10.7 ns     65445989
+// BM_Mul<BabybearStd, 100>           224 ns          224 ns      3122550
+// BM_Mul<BabybearStd, 1000>         2430 ns         2430 ns       288461
+// BM_Mul<Goldilocks, 10>            9.88 ns         9.88 ns     70806018
+// BM_Mul<Goldilocks, 100>            180 ns          180 ns      3893941
+// BM_Mul<Goldilocks, 1000>          1910 ns         1910 ns       366742
+// BM_Mul<GoldilocksStd, 10>         10.3 ns         10.3 ns     68124030
+// BM_Mul<GoldilocksStd, 100>         172 ns          172 ns      4057025
+// BM_Mul<GoldilocksStd, 1000>       1815 ns         1815 ns       382557
 // clang-format on

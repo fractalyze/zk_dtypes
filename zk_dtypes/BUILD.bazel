@@ -338,6 +338,12 @@ cc_library(
 )
 
 cc_library(
+    name = "goldilocks_multiplication",
+    hdrs = ["include/field/goldilocks_multiplication.h"],
+    deps = [":arithmetics"],
+)
+
+cc_library(
     name = "mersenne_multiplication",
     hdrs = ["include/field/mersenne_multiplication.h"],
     deps = [
@@ -438,6 +444,7 @@ cc_library(
         ":big_int",
         ":byinverter",
         ":finite_field",
+        ":goldilocks_multiplication",
         ":intn",
         ":mersenne_multiplication",
         ":modular_operations",
@@ -477,6 +484,7 @@ cc_test(
     tags = ["benchmark"],
     deps = [
         ":babybear",
+        ":goldilocks",
         ":mersenne31",
         "@com_google_benchmark//:benchmark_main",
     ],
