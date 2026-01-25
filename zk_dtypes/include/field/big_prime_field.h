@@ -103,6 +103,13 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     return PrimeField::FromUnchecked(BigInt<N>::Random(Config::kModulus));
   }
 
+  // Returns 2^(-1) mod p.
+  // For odd prime p, 2^(-1) = (p + 1) / 2.
+  static PrimeField TwoInv() {
+    static const PrimeField two_inv = PrimeField(2).Inverse();
+    return two_inv;
+  }
+
   template <int N, typename UnderlyingTy>
   constexpr static PrimeField FromUnchecked(intN<N, UnderlyingTy> value) {
     if constexpr (std::is_signed_v<UnderlyingTy>) {

@@ -18,8 +18,7 @@ limitations under the License.
 
 #include <array>
 
-#include "absl/status/statusor.h"
-
+#include "zk_dtypes/include/field/cyclotomic_operation.h"
 #include "zk_dtypes/include/field/extension_field_operation.h"
 #include "zk_dtypes/include/field/karatsuba_operation.h"
 
@@ -28,7 +27,8 @@ namespace zk_dtypes {
 template <typename Derived>
 class QuadraticExtensionFieldOperation
     : public ExtensionFieldOperation<Derived>,
-      public KaratsubaOperation<Derived> {
+      public KaratsubaOperation<Derived>,
+      public CyclotomicOperation<Derived> {
  public:
   using BaseField = typename ExtensionFieldOperationTraits<Derived>::BaseField;
 
@@ -89,6 +89,54 @@ class QuadraticExtensionFieldOperation
     } else {
       return this->KaratsubaSquare();
     }
+  }
+
+  // Sparse multiplication for Fp12 pairing operations:
+  // (α₀ + α₁y) * (β₀ + β₃y + β₄xy)
+  // where BaseField is Fp6 (cubic extension over Fp2) and y² = non-residue.
+  // This method requires BaseField to have MulBy01 method.
+  template <typename Fp2>
+  Derived MulBy034(const Fp2& beta0, const Fp2& beta3, const Fp2& beta4) const {
+    const std::array<BaseField, 2>& c =
+        static_cast<const Derived&>(*this).ToCoeffs();
+    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+
+    // a = α₀ * β₀
+    BaseField a = c[0] * beta0;
+    // b = α₁ * (β₃ + β₄x) using MulBy01
+    BaseField b = c[1].MulBy01(beta3, beta4);
+
+    // c1 = (α₀ + α₁) * (β₀ + β₃ + β₄x) - a - b
+    BaseField c1 = (c[0] + c[1]).MulBy01(beta0 + beta3, beta4) - a - b;
+
+    // c0 = a + b * non_residue
+    BaseField c0 = a + non_residue * b;
+
+    return static_cast<const Derived&>(*this).FromCoeffs({c0, c1});
+  }
+
+  // Sparse multiplication for Fp12 pairing operations:
+  // (α₀ + α₁y) * (β₀ + β₁x + β₄xy)
+  // where BaseField is Fp6 (cubic extension over Fp2) and y² = non-residue.
+  // This method requires BaseField to have MulBy01 and MulBy1.
+  template <typename Fp2>
+  Derived MulBy014(const Fp2& beta0, const Fp2& beta1, const Fp2& beta4) const {
+    const std::array<BaseField, 2>& c =
+        static_cast<const Derived&>(*this).ToCoeffs();
+    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+
+    // a = α₀ * (β₀ + β₁x) using MulBy01
+    BaseField a = c[0].MulBy01(beta0, beta1);
+    // b = α₁ * β₄x using MulBy1
+    BaseField b = c[1].MulBy1(beta4);
+
+    // c1 = (α₀ + α₁) * (β₀ + (β₁ + β₄)x) - a - b
+    BaseField c1 = (c[0] + c[1]).MulBy01(beta0, beta1 + beta4) - a - b;
+
+    // c0 = a + b * non_residue
+    BaseField c0 = a + non_residue * b;
+
+    return static_cast<const Derived&>(*this).FromCoeffs({c0, c1});
   }
 
   // Returns the multiplicative inverse. Returns Zero() if not invertible.
