@@ -24,9 +24,22 @@ limitations under the License.
 
 namespace zk_dtypes {
 
-// Coefficients for line function evaluation in Miller loop.
-// Stores three field elements (c0, c1, c2) representing the line
-// passing through points during pairing computation.
+// clang-format off
+// Line function coefficients for Miller loop evaluation.
+//
+// In pairing computation, we evaluate line functions ℓ(P) at G1 points P.
+// A line in the embedding field Fp12 can be represented sparsely using
+// three Fp2 coefficients (c0, c1, c2), since most positions are zero.
+//
+// The interpretation depends on the twist type:
+//   M-twist: ℓ(P) = c0 + c1·w·P.x + c2·w²·P.y  (sparse in positions 0, 1, 4)
+//   D-twist: ℓ(P) = c0·P.y + c1·w²·P.x + c2     (sparse in positions 0, 3, 4)
+//
+// where w is the generator of Fp12 over Fp6 (i.e., Fp12 = Fp6[w]/(w² - v)).
+//
+// This sparse representation enables efficient multiplication using
+// MulBy014 or MulBy034 instead of full Fp12 multiplication.
+// clang-format on
 template <typename F>
 class EllCoeff {
  public:

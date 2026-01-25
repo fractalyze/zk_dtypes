@@ -23,9 +23,19 @@ limitations under the License.
 
 namespace zk_dtypes {
 
-// G2 curve point in homogeneous projective coordinates for Miller loop.
-// This class provides efficient point operations that also compute
+// clang-format off
+// G2 curve point in homogeneous projective coordinates (X : Y : Z).
+//
+// Represents a point (x, y) on G2 as (X : Y : Z) where x = X/Z and y = Y/Z.
+// This class provides efficient point operations that simultaneously compute
 // line function coefficients needed for pairing computation.
+//
+// The line function ℓ_{R,Q}(P) represents the line passing through points R
+// and Q (or tangent at R for doubling), evaluated at the G1 point P.
+// These coefficients are used in the Miller loop to accumulate the pairing.
+//
+// Reference: https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html
+// clang-format on
 template <typename PairingFriendlyCurveConfig>
 class G2Projective {
  public:
@@ -45,11 +55,24 @@ class G2Projective {
   const Fp2& y() const { return y_; }
   const Fp2& z() const { return z_; }
 
-  // Point addition in projective coordinates.
-  // Returns (new_point, line_coefficients) for Miller loop.
+  // clang-format off
+  // Mixed addition: R + Q where R is projective, Q is affine.
+  // Returns (R + Q, line coefficients ℓ_{R,Q}).
+  //
+  // The line through R = (X₁ : Y₁ : Z₁) and Q = (x₂, y₂) has slope:
+  //   λ = (Y₁ - y₂·Z₁) / (X₁ - x₂·Z₁)
+  //
+  // Let θ = Y₁ - y₂·Z₁ (numerator of slope)
+  //     Λ = X₁ - x₂·Z₁ (denominator of slope)
+  //
+  // New point R' = R + Q:
+  //   X' = Λ · H  where H = Λ² · Z₁ + θ² - 2·Λ²·X₁
+  //   Y' = θ · (Λ²·X₁ - H) - Λ³·Y₁
+  //   Z' = Λ³ · Z₁
+  //
+  // Line coefficients encode: ℓ(P) = θ·x₂ - Λ·y₂ + Λ·y_P - θ·x_P
+  // clang-format on
   std::pair<G2Projective, EllCoeff<Fp2>> Add(const G2AffinePoint& q) const {
-    // Formula for line function when working with
-    // homogeneous projective coordinates.
     Fp2 theta = y_ - (q.y() * z_);
     Fp2 lambda = x_ - (q.x() * z_);
     Fp2 c = theta.Square();
@@ -72,11 +95,32 @@ class G2Projective {
     }
   }
 
-  // Point doubling in projective coordinates.
-  // Returns (new_point, line_coefficients) for Miller loop.
+  // clang-format off
+  // Point doubling: 2R where R is projective.
+  // Returns (2R, line coefficients ℓ_{R,R} for the tangent line).
+  //
+  // For curve y² = x³ + b, the tangent at R = (X : Y : Z) has slope:
+  //   λ = 3X² / 2Y  (derivative: dy/dx = 3x²/2y)
+  //
+  // Using projective coordinates with optimizations:
+  //   A = X·Y/2
+  //   B = Y²
+  //   C = Z²
+  //   E = b·(C + C + C)  (curve coefficient b times 3C)
+  //   F = 3E
+  //   G = (B + F)/2
+  //   H = (Y + Z)² - B - C  (= 2YZ by binomial expansion)
+  //   I = E - B
+  //   J = X²
+  //
+  // New point R' = 2R:
+  //   X' = A·(B - F)
+  //   Y' = G² - 3E²
+  //   Z' = B·H
+  //
+  // Line coefficients encode the tangent: ℓ(P) = I + 3J·x_P - H·y_P
+  // clang-format on
   std::pair<G2Projective, EllCoeff<Fp2>> Double(const Fp& two_inv) const {
-    // Formula for line function when working with
-    // homogeneous projective coordinates.
     Fp2 a = (x_ * y_) * two_inv;
     Fp2 b = y_.Square();
     Fp2 c = z_.Square();
@@ -101,6 +145,8 @@ class G2Projective {
     }
   }
 
+  // Point negation: -R = (X : -Y : Z).
+  // For elliptic curves, -P reflects the point across the x-axis.
   G2Projective Negate() const { return {x_, -y_, z_}; }
 
  private:

@@ -23,8 +23,20 @@ limitations under the License.
 
 namespace zk_dtypes::bn {
 
-// G2Prepared for BN curves.
-// Precomputes line function coefficients for efficient Miller loop evaluation.
+// clang-format off
+// Precomputed G2 point for efficient BN curve pairing computation.
+//
+// During the Miller loop, we evaluate line functions at a G1 point for lines
+// passing through G2 points. When the same G2 point is used multiple times,
+// we can precompute all the line coefficients once and reuse them.
+//
+// The precomputation follows the same path as the Miller loop:
+//   1. For each bit of the ate loop count, compute doubling coefficients
+//   2. For each non-zero NAF bit, compute addition coefficients
+//   3. For BN curves, add two Frobenius-related corrections at the end
+//
+// Reference: https://eprint.iacr.org/2013/722.pdf
+// clang-format on
 template <typename BNCurveConfig>
 class G2Prepared : public G2PreparedBase<BNCurveConfig> {
  public:
@@ -40,35 +52,44 @@ class G2Prepared : public G2PreparedBase<BNCurveConfig> {
   explicit G2Prepared(EllCoeffs<Fp2>&& ell_coeffs)
       : G2PreparedBase<BNCurveConfig>(std::move(ell_coeffs)) {}
 
-  // Precompute line function coefficients from an affine G2 point.
+  // Precomputes line function coefficients from an affine G2 point Q.
+  // The coefficients are computed in the same order they will be consumed
+  // during the Miller loop.
   static G2Prepared From(const G2AffinePoint& q) {
     if (q.IsZero()) {
       return {};
     }
 
+    // Start with R = Q in projective coordinates
     G2Projective<Config> r(q.x(), q.y(), Fp2::One());
 
     EllCoeffs<Fp2> ell_coeffs;
     size_t size = std::size(Config::kAteLoopCount);
+    // Reserve space: approximately size doublings + 2/3 * size additions
     ell_coeffs.reserve(size + size * 2 / 3);
 
     G2AffinePoint neg_q = -q;
     Fp two_inv = Fp::TwoInv();
 
-    // Skip the first bit (most significant)
+    // Main loop: iterate through NAF bits of ate loop count (MSB to LSB)
+    // Skip the leading 1 bit (index size-1)
     for (size_t i = size - 2; i != SIZE_MAX; --i) {
+      // Doubling step: R ← 2R, collect line coefficients
       auto [new_r, coeff] = r.Double(two_inv);
       r = std::move(new_r);
       ell_coeffs.push_back(std::move(coeff));
 
+      // Addition step (only for non-zero NAF bits)
       switch (Config::kAteLoopCount[i]) {
         case 1: {
+          // R ← R + Q
           auto [add_r, add_coeff] = r.Add(q);
           r = std::move(add_r);
           ell_coeffs.push_back(std::move(add_coeff));
           break;
         }
         case -1: {
+          // R ← R - Q
           auto [add_r, add_coeff] = r.Add(neg_q);
           r = std::move(add_r);
           ell_coeffs.push_back(std::move(add_coeff));
@@ -79,13 +100,18 @@ class G2Prepared : public G2PreparedBase<BNCurveConfig> {
       }
     }
 
+    // BN-specific Frobenius corrections:
+    // Q1 = π(Q) = Frobenius(Q) scaled by twist constants
+    // Q2 = -π²(Q) = -Frobenius(Frobenius(Q)) scaled
     G2AffinePoint q1 = MulByCharacteristic(q);
     G2AffinePoint q2 = -MulByCharacteristic(q1);
 
+    // Negate R if BN parameter x is negative
     if constexpr (Config::kXIsNegative) {
       r = r.Negate();
     }
 
+    // Add Q1 and Q2 to complete the precomputation
     auto [r1, coeff1] = r.Add(q1);
     r = std::move(r1);
     ell_coeffs.push_back(std::move(coeff1));
@@ -97,7 +123,9 @@ class G2Prepared : public G2PreparedBase<BNCurveConfig> {
   }
 
  private:
-  // Multiply point by the Frobenius characteristic.
+  // Applies the Frobenius endomorphism and scales by twist constants.
+  // This computes π(P) where π is the q-power Frobenius map, adjusted for
+  // the twist isomorphism between E'(Fp2) and E(Fp12).
   static G2AffinePoint MulByCharacteristic(const G2AffinePoint& r) {
     Fp2 x = r.x().template Frobenius<1>() * Config::kTwistMulByQX;
     Fp2 y = r.y().template Frobenius<1>() * Config::kTwistMulByQY;

@@ -23,8 +23,20 @@ limitations under the License.
 
 namespace zk_dtypes {
 
-// Base class for pairing-friendly curves.
-// Provides common infrastructure for Miller loop and final exponentiation.
+// clang-format off
+// Base class for pairing-friendly elliptic curves.
+//
+// Provides common infrastructure for computing bilinear pairings:
+//   e: G1 × G2 → GT
+//
+// The pairing is computed using the Miller loop algorithm, which evaluates
+// rational functions (line functions) along a path in the group. The result
+// is then raised to a large power (final exponentiation) to ensure the
+// pairing maps into the correct subgroup of GT.
+//
+// Derived classes (e.g., BNCurve) implement curve-specific optimizations
+// for the Miller loop and final exponentiation.
+// clang-format on
 template <typename _Config>
 class PairingFriendlyCurve {
  public:
@@ -36,7 +48,17 @@ class PairingFriendlyCurve {
   using G1AffinePoint = typename G1Curve::AffinePoint;
 
  protected:
-  // Pair holds a G1 point and its corresponding precomputed G2 coefficients.
+  // clang-format off
+  // Pairs a G1 point with precomputed G2 line coefficients for Miller loop.
+  //
+  // During the Miller loop, we need to evaluate line functions passing through
+  // points on G2 at the G1 point. These line coefficients are precomputed in
+  // G2Prepared to avoid redundant computation when the same G2 point is used
+  // in multiple pairings.
+  //
+  // The idx_ member tracks which coefficient to use next, allowing sequential
+  // access during the Miller loop iteration.
+  // clang-format on
   class Pair {
    public:
     Pair() = default;
@@ -44,6 +66,8 @@ class PairingFriendlyCurve {
         : g1_(g1), ell_coeffs_(ell_coeffs) {}
 
     const G1AffinePoint& g1() const { return *g1_; }
+
+    // Returns the next line coefficient and advances the index.
     const EllCoeff<Fp2>& NextEllCoeff() const { return (*ell_coeffs_)[idx_++]; }
 
    private:
@@ -52,7 +76,9 @@ class PairingFriendlyCurve {
     mutable size_t idx_ = 0;
   };
 
-  // f^x where x is the BN parameter.
+  // Computes f^x where x is the curve parameter (e.g., BN parameter).
+  // Uses cyclotomic exponentiation for efficiency since f is in the
+  // cyclotomic subgroup after the easy part of final exponentiation.
   static Fp12 PowByX(const Fp12& f_in) {
     Fp12 f = f_in.CyclotomicPow(Config::kX);
     if constexpr (Config::kXIsNegative) {
@@ -61,7 +87,7 @@ class PairingFriendlyCurve {
     return f;
   }
 
-  // f^(-x) where x is the BN parameter.
+  // Computes f^(-x) where x is the curve parameter.
   static Fp12 PowByNegX(const Fp12& f_in) {
     Fp12 f = f_in.CyclotomicPow(Config::kX);
     if constexpr (!Config::kXIsNegative) {
@@ -70,7 +96,18 @@ class PairingFriendlyCurve {
     return f;
   }
 
-  // Evaluates the line function at point |p|.
+  // clang-format off
+  // Evaluates the line function and multiplies into the accumulator f.
+  //
+  // The line function ℓ(P) represents the line passing through points on G2
+  // (from doubling or addition), evaluated at the G1 point P. The coefficients
+  // (c0, c1, c2) encode this line in a sparse form.
+  //
+  // For M-type twist: ℓ = c0 + c1·x·P.x + c2·y·P.y  (sparse in positions 0,1,4)
+  // For D-type twist: ℓ = c0·P.y + c1·x·P.x + c2    (sparse in positions 0,3,4)
+  //
+  // The sparse structure allows using optimized multiplication (MulBy014/034).
+  // clang-format on
   static void Ell(Fp12& f, const EllCoeff<Fp2>& coeffs,
                   const G1AffinePoint& p) {
     if constexpr (Config::kTwistType == TwistType::kM) {
@@ -80,7 +117,8 @@ class PairingFriendlyCurve {
     }
   }
 
-  // Creates pairs of (G1 point, precomputed G2 coefficients).
+  // Creates (G1 point, G2 coefficients) pairs, filtering out identity points.
+  // Identity points contribute 1 to the pairing and can be skipped.
   template <typename G1AffinePointContainer, typename G2PreparedContainer>
   static std::vector<Pair> CreatePairs(const G1AffinePointContainer& a,
                                        const G2PreparedContainer& b) {

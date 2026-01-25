@@ -18,9 +18,23 @@ limitations under the License.
 
 namespace zk_dtypes {
 
+// clang-format off
 // Twist type for pairing-friendly curves.
-// - M-twist: y² = x³ + b/ξ (where ξ is a non-residue)
-// - D-twist: y² = x³ + b·ξ
+//
+// A twist is an isomorphic curve E'(Fp²) that allows G2 points to be
+// represented over a smaller field (Fp² instead of Fp¹²). The isomorphism
+// ψ: E'(Fp²) → E(Fp¹²) maps points from the twist to the full curve.
+//
+// For BN/BLS curves with equation y² = x³ + b, the sextic twist is:
+//   M-twist: y² = x³ + b/ξ   where ξ is a non-residue in Fp²
+//   D-twist: y² = x³ + b·ξ
+//
+// The twist type affects:
+//   1. How line coefficients are positioned in Fp12 (sparse structure)
+//   2. Whether we use MulBy014 (M-twist) or MulBy034 (D-twist)
+//
+// BN254 typically uses D-twist, while BLS12-381 uses M-twist.
+// clang-format on
 enum class TwistType {
   kM,  // M-twist (multiplicative)
   kD,  // D-twist (divisive)
