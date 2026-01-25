@@ -97,6 +97,43 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     }
   }
 
+  // Sparse multiplication: (α₀ + α₁x + α₂x²) * β₁x
+  // Used in Fp12 pairing operations (MulBy014).
+  // Returns α₂β₁q + α₀β₁x + α₁β₁x², where q is the cubic non-residue.
+  Derived MulBy1(const BaseField& beta1) const {
+    const std::array<BaseField, 3>& x =
+        static_cast<const Derived&>(*this).ToCoeffs();
+    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+
+    // c0 = α₂β₁q
+    BaseField c0 = non_residue * (x[2] * beta1);
+    // c1 = α₀β₁
+    BaseField c1 = x[0] * beta1;
+    // c2 = α₁β₁
+    BaseField c2 = x[1] * beta1;
+
+    return static_cast<const Derived&>(*this).FromCoeffs({c0, c1, c2});
+  }
+
+  // Sparse multiplication: (α₀ + α₁x + α₂x²) * (β₀ + β₁x)
+  // Used in Fp12 pairing operations (MulBy014, MulBy034).
+  // Returns (α₀β₀ + α₂β₁q) + (α₀β₁ + α₁β₀)x + (α₁β₁ + α₂β₀)x²,
+  // where q is the cubic non-residue.
+  Derived MulBy01(const BaseField& beta0, const BaseField& beta1) const {
+    const std::array<BaseField, 3>& x =
+        static_cast<const Derived&>(*this).ToCoeffs();
+    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+
+    // c0 = α₀β₀ + α₂β₁q
+    BaseField c0 = x[0] * beta0 + non_residue * (x[2] * beta1);
+    // c1 = α₀β₁ + α₁β₀
+    BaseField c1 = x[0] * beta1 + x[1] * beta0;
+    // c2 = α₁β₁ + α₂β₀
+    BaseField c2 = x[1] * beta1 + x[2] * beta0;
+
+    return static_cast<const Derived&>(*this).FromCoeffs({c0, c1, c2});
+  }
+
   // Returns the multiplicative inverse. Returns Zero() if not invertible.
   Derived Inverse() const {
     // [Comparison]
