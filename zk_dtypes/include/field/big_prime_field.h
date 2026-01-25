@@ -101,6 +101,9 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     return FromUnchecked(BigInt<N>::Random(Config::kModulus));
   }
 
+  // Returns 2⁻¹ mod p.
+  constexpr static PrimeField TwoInv() { return PrimeField(2).Inverse(); }
+
   template <int N, typename UnderlyingTy>
   constexpr static PrimeField FromUnchecked(intN<N, UnderlyingTy> value) {
     if constexpr (std::is_signed_v<UnderlyingTy>) {
