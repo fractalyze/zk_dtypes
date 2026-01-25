@@ -56,6 +56,9 @@ struct FieldTypeDescriptor {
   static PyArray_ArrFuncs arr_funcs;
   static PyArray_DescrProto npy_descr_proto;
   static PyArray_Descr* npy_descr;
+
+  static PyGetSetDef getset[];
+  static PyMethodDef methods[];
 };
 
 template <typename T>
@@ -198,18 +201,20 @@ bool CastToField(PyObject* arg, T* output) {
     return CastToPrimeField<T>(arg, output);
   } else {
     using BaseField = typename T::BaseField;
+    // Use F::N (degree over immediate base field) for tower extension support
+    constexpr size_t kDegree = T::N;
 
     if (PyTuple_Check(arg)) {
       Py_ssize_t size = PyTuple_Size(arg);
-      if (size != static_cast<Py_ssize_t>(T::ExtensionDegree())) {
+      if (size != static_cast<Py_ssize_t>(kDegree)) {
         PyErr_Format(PyExc_TypeError,
                      "expected %zu elements for extension field, got %zd",
-                     T::ExtensionDegree(), size);
+                     kDegree, size);
         return false;
       }
 
-      std::array<BaseField, T::ExtensionDegree()> values;
-      for (size_t i = 0; i < T::ExtensionDegree(); ++i) {
+      std::array<BaseField, kDegree> values;
+      for (size_t i = 0; i < kDegree; ++i) {
         PyObject* arg_i = PyTuple_GetItem(arg, i);  // borrowed ref
         if (!arg_i) {
           return false;
@@ -589,6 +594,164 @@ PyObject* PyField_RichCompare(PyObject* a, PyObject* b, int op) {
   PyArrayScalar_RETURN_BOOL_FROM_LONG(result);
 }
 
+// Helper to convert a field element to its raw Python representation.
+// Works for any field type (prime or extension) without requiring
+// TypeDescriptor.
+template <typename F>
+PyObject* FieldToRawPyObject(const F& f) {
+  if constexpr (F::ExtensionDegree() > 1) {
+    // Extension field: return tuple of raw values
+    // Use F::N (degree over immediate base field) for tower extension support
+    constexpr size_t kDegree = F::N;
+    PyObject* tuple = PyTuple_New(kDegree);
+    if (!tuple) return nullptr;
+    for (size_t i = 0; i < kDegree; ++i) {
+      PyObject* item = FieldToRawPyObject(f[i]);
+      if (!item) {
+        Py_DECREF(tuple);
+        return nullptr;
+      }
+      PyTuple_SET_ITEM(tuple, i, item);
+    }
+    return tuple;
+  } else {
+    // Prime field: return raw value as int
+    if constexpr (F::Config::kStorageBits <= 64) {
+      return PyLong_FromUnsignedLongLong(
+          static_cast<unsigned long long>(f.value()));
+    } else {
+      std::array<uint8_t, F::kByteWidth> bytes = f.value().ToBytesLE();
+      return _PyLong_FromByteArray(bytes.data(), bytes.size(),
+                                   /*little_endian=*/true,
+                                   /*is_signed=*/false);
+    }
+  }
+}
+
+// Implementation of 'raw' property getter for PyField.
+// Returns the raw internal representation without Montgomery reduction.
+template <typename T>
+PyObject* PyField_GetRaw(PyObject* self, void* closure) {
+  T x = PyField_Value_Unchecked<T>(self);
+  return FieldToRawPyObject(x);
+}
+
+// Helper to parse a raw field value from Python object.
+// Works for any field type (prime or extension) without requiring
+// TypeDescriptor.
+template <typename F>
+bool ParseRawFieldFromPyObject(PyObject* arg, F* output) {
+  if constexpr (F::ExtensionDegree() > 1) {
+    // Extension field: expect a tuple
+    // Use F::N (degree over immediate base field) for tower extension support
+    constexpr size_t kDegree = F::N;
+    using BaseField = typename F::BaseField;
+
+    if (PyTuple_Check(arg)) {
+      Py_ssize_t size = PyTuple_Size(arg);
+      if (size != static_cast<Py_ssize_t>(kDegree)) {
+        PyErr_Format(PyExc_TypeError,
+                     "expected %zu elements for extension field, got %zd",
+                     kDegree, size);
+        return false;
+      }
+
+      std::array<BaseField, kDegree> values;
+      for (size_t i = 0; i < kDegree; ++i) {
+        if (!ParseRawFieldFromPyObject(PyTuple_GetItem(arg, i), &values[i])) {
+          return false;
+        }
+      }
+      *output = F(values);
+      return true;
+    } else {
+      // Single value: treat as first coefficient (for field types only)
+      BaseField base_field;
+      if (!ParseRawFieldFromPyObject(arg, &base_field)) {
+        return false;
+      }
+      std::array<BaseField, kDegree> values = {};
+      values[0] = base_field;
+      *output = F(values);
+      return true;
+    }
+  } else {
+    // Prime field: parse as integer and use FromUnchecked
+    if (!PyLong_Check(arg)) {
+      PyErr_Format(PyExc_TypeError, "expected int, got %s",
+                   Py_TYPE(arg)->tp_name);
+      return false;
+    }
+
+    if (_PyLong_Sign(arg) < 0) {
+      PyErr_SetString(PyExc_ValueError,
+                      "raw value for field construction cannot be negative");
+      return false;
+    }
+
+    if constexpr (F::Config::kStorageBits <= 64) {
+      unsigned long long val = PyLong_AsUnsignedLongLong(arg);
+      if (PyErr_Occurred()) {
+        // Error is set by PyLong_AsUnsignedLongLong on overflow.
+        return false;
+      }
+      *output = F::FromUnchecked(static_cast<typename F::UnderlyingType>(val));
+      return true;
+    } else {
+      constexpr size_t N = F::N;
+      if (_PyLong_NumBits(arg) > F::Config::kStorageBits) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "value too large for raw field construction");
+        return false;
+      }
+      std::array<uint8_t, N * 8> bytes = {};
+      if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(arg),
+                              bytes.data(), bytes.size(),
+                              /*little_endian=*/true,
+                              /*is_signed=*/false) < 0) {
+        return false;
+      }
+      BigInt<N> value = BigInt<N>::FromBytesLE(bytes);
+      *output = F::FromUnchecked(value);
+      return true;
+    }
+  }
+}
+
+// Implementation of 'from_raw' classmethod for PyField.
+// Constructs a field element from raw internal representation.
+template <typename T>
+PyObject* PyField_FromRaw(PyObject* cls, PyObject* args) {
+  Py_ssize_t size = PyTuple_Size(args);
+  if (size != 1) {
+    PyErr_Format(PyExc_TypeError,
+                 "from_raw() takes exactly one argument, got %d", size);
+    return nullptr;
+  }
+  PyObject* arg = PyTuple_GetItem(args, 0);
+
+  T value;
+  if (!ParseRawFieldFromPyObject(arg, &value)) {
+    if (!PyErr_Occurred()) {
+      PyErr_Format(PyExc_TypeError, "expected number or tuple, got %s",
+                   Py_TYPE(arg)->tp_name);
+    }
+    return nullptr;
+  }
+  return PyField_FromValue(value).release();
+}
+
+template <typename T>
+PyGetSetDef FieldTypeDescriptor<T>::getset[] = {
+    {"raw", PyField_GetRaw<T>, nullptr, "Raw internal representation", nullptr},
+    {nullptr, nullptr, nullptr, nullptr, nullptr}};
+
+template <typename T>
+PyMethodDef FieldTypeDescriptor<T>::methods[] = {
+    {"from_raw", PyField_FromRaw<T>, METH_VARARGS | METH_CLASS,
+     "Construct from raw internal representation"},
+    {nullptr, nullptr, 0, nullptr}};
+
 template <typename T>
 PyType_Slot FieldTypeDescriptor<T>::type_slots[] = {
     {Py_tp_new, reinterpret_cast<void*>(PyField_tp_new<T>)},
@@ -598,6 +761,8 @@ PyType_Slot FieldTypeDescriptor<T>::type_slots[] = {
     {Py_tp_doc,
      reinterpret_cast<void*>(const_cast<char*>(TypeDescriptor<T>::kTpDoc))},
     {Py_tp_richcompare, reinterpret_cast<void*>(PyField_RichCompare<T>)},
+    {Py_tp_getset, reinterpret_cast<void*>(FieldTypeDescriptor<T>::getset)},
+    {Py_tp_methods, reinterpret_cast<void*>(FieldTypeDescriptor<T>::methods)},
     {Py_nb_add, reinterpret_cast<void*>(PyField_nb_add<T>)},
     {Py_nb_subtract, reinterpret_cast<void*>(PyField_nb_subtract<T>)},
     {Py_nb_multiply, reinterpret_cast<void*>(PyField_nb_multiply<T>)},

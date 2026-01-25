@@ -290,5 +290,155 @@ class ExtensionFieldArrayTest(parameterized.TestCase):
     self.assertEqual(scalar_type, z.dtype)
 
 
+# Tests for raw/from_raw Montgomery conversion helpers for extension fields
+@multi_threaded(num_workers=3)
+class ExtensionFieldRawConversionTest(parameterized.TestCase):
+
+  # Montgomery extension field types
+  MONT_EXT_FIELD_TYPES = [
+      babybearx4,
+      koalabearx4,
+      goldilocksx3,
+      mersenne31x2,
+  ]
+
+  # Standard extension field types (non-Montgomery)
+  STD_EXT_FIELD_TYPES = [
+      babybearx4_std,
+      koalabearx4_std,
+      goldilocksx3_std,
+      mersenne31x2_std,
+  ]
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testRawPropertyExists(self, scalar_type):
+    """Test that raw property is accessible and returns a tuple."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      raw = x.raw
+      self.assertIsInstance(raw, tuple)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testRawPropertyLength(self, scalar_type):
+    """Test that raw property returns tuple of correct length."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      raw = x.raw
+      expected_len = len(v)  # Extension degree
+      self.assertEqual(len(raw), expected_len)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawExists(self, scalar_type):
+    """Test that from_raw classmethod is accessible."""
+    self.assertTrue(hasattr(scalar_type, "from_raw"))
+    self.assertTrue(callable(scalar_type.from_raw))
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testRawFromRawRoundTrip(self, scalar_type):
+    """Test that from_raw(x.raw) == x for extension fields."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      raw = x.raw
+      y = scalar_type.from_raw(raw)
+      self.assertEqual(x, y, msg=f"Round trip failed for {v}")
+
+  @parameterized.product(scalar_type=STD_EXT_FIELD_TYPES)
+  def testRawTupleContainsIntsForStandardTypes(self, scalar_type):
+    """For standard types, raw tuple should contain integer values."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      raw = x.raw
+      for r in raw:
+        self.assertIsInstance(r, int)
+
+  @parameterized.product(scalar_type=MONT_EXT_FIELD_TYPES)
+  def testRawTupleContainsIntsForMontgomeryTypes(self, scalar_type):
+    """For Montgomery types, raw tuple should contain integer values."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      raw = x.raw
+      for r in raw:
+        self.assertIsInstance(r, int)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawPreservesValue(self, scalar_type):
+    """Test that from_raw stores the value directly."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      raw = x.raw
+      y = scalar_type.from_raw(raw)
+      self.assertEqual(x, y)
+      self.assertEqual(x.raw, y.raw)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawWithZeroTuple(self, scalar_type):
+    """Test from_raw with zero tuple."""
+    # Get the degree from VALUES
+    degree = len(VALUES[scalar_type][0])
+    zero_tuple = tuple(0 for _ in range(degree))
+    x = scalar_type.from_raw(zero_tuple)
+    self.assertEqual(x, scalar_type(0))
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawWrongTupleLengthRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong tuple length."""
+    degree = len(VALUES[scalar_type][0])
+    # Use wrong length (degree + 1)
+    wrong_tuple = tuple(0 for _ in range(degree + 1))
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw(wrong_tuple)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawNegativeValueRaisesError(self, scalar_type):
+    """Test that from_raw raises error with negative raw value."""
+    degree = len(VALUES[scalar_type][0])
+    # Tuple with one negative value
+    negative_tuple = tuple(-1 if i == 0 else 0 for i in range(degree))
+    with self.assertRaises(ValueError):
+      scalar_type.from_raw(negative_tuple)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawWrongTypeRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong element type."""
+    # String instead of int/tuple
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw("invalid")
+    # List instead of tuple (should still work - converted to tuple internally)
+    # Float instead of int
+    degree = len(VALUES[scalar_type][0])
+    float_tuple = tuple(1.5 if i == 0 else 0 for i in range(degree))
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw(float_tuple)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawSingleValueTreatedAsFirstCoefficient(self, scalar_type):
+    """Test that from_raw with single value sets first coefficient only."""
+    # When passing a single int, it should be treated as the first coefficient
+    x = scalar_type.from_raw(42)
+    # Create the expected value: (42, 0, 0, ...) tuple
+    degree = len(VALUES[scalar_type][0])
+    expected_tuple = tuple(42 if i == 0 else 0 for i in range(degree))
+    y = scalar_type.from_raw(expected_tuple)
+    self.assertEqual(x, y)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawSingleValueZero(self, scalar_type):
+    """Test that from_raw(0) creates zero element."""
+    x = scalar_type.from_raw(0)
+    self.assertEqual(x, scalar_type(0))
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawNoArgumentsRaisesError(self, scalar_type):
+    """Test that from_raw() with no arguments raises error."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw()
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testFromRawTooManyArgumentsRaisesError(self, scalar_type):
+    """Test that from_raw() with multiple arguments raises error."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw((0, 0), (1, 1))
+
+
 if __name__ == "__main__":
   absltest.main()
