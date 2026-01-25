@@ -779,6 +779,45 @@ cc_library(
 )
 
 cc_library(
+    name = "pairing_friendly_curve",
+    hdrs = ["include/elliptic_curve/pairing/pairing_friendly_curve.h"],
+    deps = [
+        ":ell_coeff",
+        ":twist_type",
+    ],
+)
+
+cc_library(
+    name = "bn_g2_prepared",
+    hdrs = ["include/elliptic_curve/bn/g2_prepared.h"],
+    deps = [
+        ":g2_prepared_base",
+        ":g2_projective",
+    ],
+)
+
+cc_library(
+    name = "bn_curve",
+    hdrs = ["include/elliptic_curve/bn/bn_curve.h"],
+    deps = [
+        ":bn_g2_prepared",
+        ":pairing_friendly_curve",
+    ],
+)
+
+cc_library(
+    name = "bn254_pairing",
+    hdrs = ["include/elliptic_curve/bn/bn254/bn254_curve.h"],
+    deps = [
+        ":bn254_fqx12",
+        ":bn254_g1",
+        ":bn254_g2",
+        ":bn_curve",
+        ":twist_type",
+    ],
+)
+
+cc_library(
     name = "sw_affine_point",
     hdrs = ["include/elliptic_curve/short_weierstrass/affine_point.h"],
     deps = [
