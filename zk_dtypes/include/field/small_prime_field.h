@@ -32,6 +32,7 @@ limitations under the License.
 #include "zk_dtypes/include/byinverter.h"
 #include "zk_dtypes/include/field/barrett_multiplication.h"
 #include "zk_dtypes/include/field/finite_field.h"
+#include "zk_dtypes/include/field/goldilocks_multiplication.h"
 #include "zk_dtypes/include/field/mersenne_multiplication.h"
 #include "zk_dtypes/include/field/modular_operations.h"
 #include "zk_dtypes/include/field/mont_multiplication.h"
@@ -197,6 +198,10 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
     PrimeField ret;
     if constexpr (kUseMontgomery) {
       zk_dtypes::MontMul<Config>(value_, other.value_, ret.value_);
+      // NOLINTNEXTLINE(readability/braces)
+    } else if constexpr (IsGoldilocksModulus<UnderlyingType>(
+                             Config::kModulus)) {
+      zk_dtypes::GoldilocksMul<Config>(value_, other.value_, ret.value_);
     } else if constexpr (IsPowerOf2<UnderlyingType>(Config::kModulus + 1)) {
       zk_dtypes::MersenneMul<Config>(value_, other.value_, ret.value_);
     } else if constexpr (Config::kUseBarrett) {

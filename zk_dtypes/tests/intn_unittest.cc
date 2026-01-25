@@ -336,7 +336,6 @@ TYPED_TEST(IntNTest, ToString) {
 struct CustomInt {
   constexpr CustomInt() : x(0) {}
   constexpr CustomInt(int x) : x(x) {}
-  // NOLINTNEXTLINE(google-explicit-constructor)
   constexpr operator int() const { return x; }
   constexpr bool operator==(const CustomInt& other) const {
     return x == other.x;
