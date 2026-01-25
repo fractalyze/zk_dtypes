@@ -46,8 +46,8 @@ class G2Projective {
   const Fp2& z() const { return z_; }
 
   // Point addition in projective coordinates.
-  // Returns line function coefficients for Miller loop.
-  EllCoeff<Fp2> AddInPlace(const G2AffinePoint& q) {
+  // Returns (new_point, line_coefficients) for Miller loop.
+  std::pair<G2Projective, EllCoeff<Fp2>> Add(const G2AffinePoint& q) const {
     // Formula for line function when working with
     // homogeneous projective coordinates.
     Fp2 theta = y_ - (q.y() * z_);
@@ -58,51 +58,50 @@ class G2Projective {
     Fp2 f = z_ * c;
     Fp2 g = x_ * d;
     Fp2 h = e + f - g.Double();
-    x_ = lambda * h;
-    y_ = theta * (g - h) - (e * y_);
-    z_ *= e;
+    Fp2 new_x = lambda * h;
+    Fp2 new_y = theta * (g - h) - (e * y_);
+    Fp2 new_z = z_ * e;
     Fp2 j = theta * q.x() - (lambda * q.y());
 
     if constexpr (Config::kTwistType == TwistType::kM) {
-      return {j, -theta, lambda};
+      return {{std::move(new_x), std::move(new_y), std::move(new_z)},
+              {j, -theta, lambda}};
     } else {
-      return {lambda, -theta, j};
+      return {{std::move(new_x), std::move(new_y), std::move(new_z)},
+              {lambda, -theta, j}};
     }
   }
 
   // Point doubling in projective coordinates.
-  // Returns line function coefficients for Miller loop.
-  EllCoeff<Fp2> DoubleInPlace(const Fp& two_inv) {
+  // Returns (new_point, line_coefficients) for Miller loop.
+  std::pair<G2Projective, EllCoeff<Fp2>> Double(const Fp& two_inv) const {
     // Formula for line function when working with
     // homogeneous projective coordinates.
-    Fp2 a = x_ * y_;
-    a *= two_inv;
+    Fp2 a = (x_ * y_) * two_inv;
     Fp2 b = y_.Square();
     Fp2 c = z_.Square();
     Fp2 e = G2Curve::Config::kB * (c.Double() + c);
     Fp2 f = e.Double() + e;
-    Fp2 g = b + f;
-    g *= two_inv;
+    Fp2 g = (b + f) * two_inv;
     Fp2 h = (y_ + z_).Square() - (b + c);
     Fp2 i = e - b;
     Fp2 j = x_.Square();
     Fp2 e_square = e.Square();
 
-    x_ = a * (b - f);
-    y_ = g.Square() - (e_square.Double() + e_square);
-    z_ = b * h;
+    Fp2 new_x = a * (b - f);
+    Fp2 new_y = g.Square() - (e_square.Double() + e_square);
+    Fp2 new_z = b * h;
 
     if constexpr (Config::kTwistType == TwistType::kM) {
-      return {i, j.Double() + j, -h};
+      return {{std::move(new_x), std::move(new_y), std::move(new_z)},
+              {i, j.Double() + j, -h}};
     } else {
-      return {-h, j.Double() + j, i};
+      return {{std::move(new_x), std::move(new_y), std::move(new_z)},
+              {-h, j.Double() + j, i}};
     }
   }
 
-  G2Projective& NegateInPlace() {
-    y_ = -y_;
-    return *this;
-  }
+  G2Projective Negate() const { return {x_, -y_, z_}; }
 
  private:
   Fp2 x_;
