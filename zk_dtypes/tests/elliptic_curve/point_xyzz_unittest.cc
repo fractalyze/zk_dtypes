@@ -158,13 +158,13 @@ TEST(PointXyzzTest, BatchToAffine) {
 }
 
 TEST(PointXyzzTest, MontReduce) {
-  PointXyzz p(3, 2, 1, 1);
-  PointXyzz::StdType reduced = p.MontReduce();
+  PointXyzzMont p(3, 2, 1, 1);
+  PointXyzzMont::StdType reduced = p.MontReduce();
 
-  EXPECT_EQ(reduced.x(), Fq(3).MontReduce());
-  EXPECT_EQ(reduced.y(), Fq(2).MontReduce());
-  EXPECT_EQ(reduced.zz(), Fq(1).MontReduce());
-  EXPECT_EQ(reduced.zzz(), Fq(1).MontReduce());
+  EXPECT_EQ(reduced.x(), FqMont(3).MontReduce());
+  EXPECT_EQ(reduced.y(), FqMont(2).MontReduce());
+  EXPECT_EQ(reduced.zz(), FqMont(1).MontReduce());
+  EXPECT_EQ(reduced.zzz(), FqMont(1).MontReduce());
 }
 
 }  // namespace

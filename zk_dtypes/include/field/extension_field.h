@@ -41,33 +41,33 @@ limitations under the License.
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/str_join.h"
 
-#define REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT(                   \
-    Name, BaseFieldIn, BasePrimeFieldIn, Degree, ...)                 \
-  template <typename BaseField>                                       \
-  class Name##BaseConfig {                                            \
-   public:                                                            \
-    constexpr static uint32_t kDegreeOverBaseField = Degree;          \
-    constexpr static BaseField kNonResidue = __VA_ARGS__;             \
-  };                                                                  \
-                                                                      \
-  class Name##StdConfig : public Name##BaseConfig<BaseFieldIn##Std> { \
-   public:                                                            \
-    constexpr static bool kUseMontgomery = false;                     \
-    using StdConfig = Name##StdConfig;                                \
-    using BaseField = BaseFieldIn##Std;                               \
-    using BasePrimeField = BasePrimeFieldIn##Std;                     \
-  };                                                                  \
-                                                                      \
-  class Name##Config : public Name##BaseConfig<BaseFieldIn> {         \
-   public:                                                            \
-    constexpr static bool kUseMontgomery = true;                      \
-    using StdConfig = Name##StdConfig;                                \
-    using BaseField = BaseFieldIn;                                    \
-    using BasePrimeField = BasePrimeFieldIn;                          \
-  };                                                                  \
-                                                                      \
-  using Name = ExtensionField<Name##Config>;                          \
-  using Name##Std = ExtensionField<Name##StdConfig>
+#define REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT(                     \
+    Name, BaseFieldIn, BasePrimeFieldIn, Degree, ...)                   \
+  template <typename BaseField>                                         \
+  class Name##BaseConfig {                                              \
+   public:                                                              \
+    constexpr static uint32_t kDegreeOverBaseField = Degree;            \
+    constexpr static BaseField kNonResidue = __VA_ARGS__;               \
+  };                                                                    \
+                                                                        \
+  class Name##Config : public Name##BaseConfig<BaseFieldIn> {           \
+   public:                                                              \
+    constexpr static bool kUseMontgomery = false;                       \
+    using StdConfig = Name##Config;                                     \
+    using BaseField = BaseFieldIn;                                      \
+    using BasePrimeField = BasePrimeFieldIn;                            \
+  };                                                                    \
+                                                                        \
+  class Name##MontConfig : public Name##BaseConfig<BaseFieldIn##Mont> { \
+   public:                                                              \
+    constexpr static bool kUseMontgomery = true;                        \
+    using StdConfig = Name##Config;                                     \
+    using BaseField = BaseFieldIn##Mont;                                \
+    using BasePrimeField = BasePrimeFieldIn##Mont;                      \
+  };                                                                    \
+                                                                        \
+  using Name = ExtensionField<Name##Config>;                            \
+  using Name##Mont = ExtensionField<Name##MontConfig>
 
 #define REGISTER_EXTENSION_FIELD_WITH_MONT(Name, BaseFieldIn, Degree,        \
                                            NonResidue)                       \

@@ -57,18 +57,18 @@ BENCHMARK_TEMPLATE(BM_Mul, Mersenne31Mont, 1000);
 BENCHMARK_TEMPLATE(BM_Mul, Mersenne31, 10);
 BENCHMARK_TEMPLATE(BM_Mul, Mersenne31, 100);
 BENCHMARK_TEMPLATE(BM_Mul, Mersenne31, 1000);
+BENCHMARK_TEMPLATE(BM_Mul, BabybearMont, 10);
+BENCHMARK_TEMPLATE(BM_Mul, BabybearMont, 100);
+BENCHMARK_TEMPLATE(BM_Mul, BabybearMont, 1000);
 BENCHMARK_TEMPLATE(BM_Mul, Babybear, 10);
 BENCHMARK_TEMPLATE(BM_Mul, Babybear, 100);
 BENCHMARK_TEMPLATE(BM_Mul, Babybear, 1000);
-BENCHMARK_TEMPLATE(BM_Mul, BabybearStd, 10);
-BENCHMARK_TEMPLATE(BM_Mul, BabybearStd, 100);
-BENCHMARK_TEMPLATE(BM_Mul, BabybearStd, 1000);
+BENCHMARK_TEMPLATE(BM_Mul, GoldilocksMont, 10);
+BENCHMARK_TEMPLATE(BM_Mul, GoldilocksMont, 100);
+BENCHMARK_TEMPLATE(BM_Mul, GoldilocksMont, 1000);
 BENCHMARK_TEMPLATE(BM_Mul, Goldilocks, 10);
 BENCHMARK_TEMPLATE(BM_Mul, Goldilocks, 100);
 BENCHMARK_TEMPLATE(BM_Mul, Goldilocks, 1000);
-BENCHMARK_TEMPLATE(BM_Mul, GoldilocksStd, 10);
-BENCHMARK_TEMPLATE(BM_Mul, GoldilocksStd, 100);
-BENCHMARK_TEMPLATE(BM_Mul, GoldilocksStd, 1000);
 
 }  // namespace
 }  // namespace zk_dtypes
@@ -92,16 +92,16 @@ BENCHMARK_TEMPLATE(BM_Mul, GoldilocksStd, 1000);
 // BM_Mul<Mersenne31, 10>            6.65 ns         6.65 ns    105071208
 // BM_Mul<Mersenne31, 100>            131 ns          130 ns      5347122
 // BM_Mul<Mersenne31, 1000>          1394 ns         1393 ns       503957
-// BM_Mul<Babybear, 10>              11.0 ns         11.0 ns     63561717
-// BM_Mul<Babybear, 100>              197 ns          197 ns      3552128
-// BM_Mul<Babybear, 1000>            2085 ns         2085 ns       335703
-// BM_Mul<BabybearStd, 10>           10.7 ns         10.7 ns     65445989
-// BM_Mul<BabybearStd, 100>           224 ns          224 ns      3122550
-// BM_Mul<BabybearStd, 1000>         2430 ns         2430 ns       288461
-// BM_Mul<Goldilocks, 10>            9.88 ns         9.88 ns     70806018
-// BM_Mul<Goldilocks, 100>            180 ns          180 ns      3893941
-// BM_Mul<Goldilocks, 1000>          1910 ns         1910 ns       366742
-// BM_Mul<GoldilocksStd, 10>         10.3 ns         10.3 ns     68124030
-// BM_Mul<GoldilocksStd, 100>         172 ns          172 ns      4057025
-// BM_Mul<GoldilocksStd, 1000>       1815 ns         1815 ns       382557
+// BM_Mul<BabybearMont, 10>          11.0 ns         11.0 ns     63561717
+// BM_Mul<BabybearMont, 100>          197 ns          197 ns      3552128
+// BM_Mul<BabybearMont, 1000>        2085 ns         2085 ns       335703
+// BM_Mul<Babybear, 10>              10.7 ns         10.7 ns     65445989
+// BM_Mul<Babybear, 100>              224 ns          224 ns      3122550
+// BM_Mul<Babybear, 1000>            2430 ns         2430 ns       288461
+// BM_Mul<GoldilocksMont, 10>        9.88 ns         9.88 ns     70806018
+// BM_Mul<GoldilocksMont, 100>        180 ns          180 ns      3893941
+// BM_Mul<GoldilocksMont, 1000>      1910 ns         1910 ns       366742
+// BM_Mul<Goldilocks, 10>            10.3 ns         10.3 ns     68124030
+// BM_Mul<Goldilocks, 100>            172 ns          172 ns      4057025
+// BM_Mul<Goldilocks, 1000>          1815 ns         1815 ns       382557
 // clang-format on

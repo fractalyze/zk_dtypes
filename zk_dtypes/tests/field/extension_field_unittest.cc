@@ -46,7 +46,7 @@ using ExtensionFieldTypes = testing::Types<
     ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(EXTENSION_FIELD_TYPE)
 #undef EXTENSION_FIELD_TYPE
         Mersenne31X2X2,
-    test::FqX2, test::FqX2Std>;
+    test::FqX2, test::FqX2Mont>;
 
 TYPED_TEST_SUITE(ExtensionFieldTypedTest, ExtensionFieldTypes);
 
@@ -262,14 +262,14 @@ TYPED_TEST(ExtensionFieldTypedTest, SquareRoot) {
   using ExtF = TypeParam;
   // clang-format off
   if constexpr (std::is_same_v<ExtF, BabybearX4> ||
-                std::is_same_v<ExtF, BabybearX4Std> ||
+                std::is_same_v<ExtF, BabybearX4Mont> ||
                 std::is_same_v<ExtF, KoalabearX4> ||
-                std::is_same_v<ExtF, KoalabearX4Std> ||
+                std::is_same_v<ExtF, KoalabearX4Mont> ||
                 std::is_same_v<ExtF, Mersenne31X2X2>) {
     GTEST_SKIP() << "SquareRoot is not implemented for quartic extension "
                     "fields.";
   } else if constexpr (std::is_same_v<ExtF, GoldilocksX3> ||  // NOLINT(readability/braces)
-                       std::is_same_v<ExtF, GoldilocksX3Std>) {
+                       std::is_same_v<ExtF, GoldilocksX3Mont>) {
     GTEST_SKIP() << "Skipping because GoldilocksX3 has large trace value.";
   } else {  // NOLINT(readability/braces)
     // clang-format on
