@@ -24,8 +24,8 @@ namespace zk_dtypes {
 // Quartic extension field over Mersenne31 as tower:
 // (Mersenne31X2)² = Mersenne31X2[u] / (u² - (2 + 1i))
 // W = (2 + 1i) is a quadratic non-residue in Mersenne31X2 field.
-REGISTER_EXTENSION_FIELD_WITH_TOWER(Mersenne31X2X2, Mersenne31X2, Mersenne31, 2,
-                                    {2, 1});
+REGISTER_EXTENSION_FIELD_TOWER(Mersenne31X2X2, Mersenne31X2, Mersenne31, 2,
+                               {2, 1});
 
 }  // namespace zk_dtypes
 

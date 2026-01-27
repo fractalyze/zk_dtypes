@@ -22,6 +22,19 @@ limitations under the License.
 namespace zk_dtypes {
 namespace {
 
+struct Mersenne31MontConfig : public Mersenne31BaseConfig {
+  constexpr static bool kUseMontgomery = true;
+
+  using StdConfig = Mersenne31Config;
+
+  constexpr static uint32_t kRSquared = 4;
+  constexpr static uint32_t kNPrime = 2147483647;
+
+  constexpr static uint32_t kOne = 2;
+};
+
+using Mersenne31Mont = PrimeField<Mersenne31MontConfig>;
+
 template <typename T, size_t N>
 void BM_Mul(benchmark::State& state) {
   for (auto _ : state) {
@@ -38,12 +51,12 @@ void BM_Mul(benchmark::State& state) {
   }
 }
 
+BENCHMARK_TEMPLATE(BM_Mul, Mersenne31Mont, 10);
+BENCHMARK_TEMPLATE(BM_Mul, Mersenne31Mont, 100);
+BENCHMARK_TEMPLATE(BM_Mul, Mersenne31Mont, 1000);
 BENCHMARK_TEMPLATE(BM_Mul, Mersenne31, 10);
 BENCHMARK_TEMPLATE(BM_Mul, Mersenne31, 100);
 BENCHMARK_TEMPLATE(BM_Mul, Mersenne31, 1000);
-BENCHMARK_TEMPLATE(BM_Mul, Mersenne31Std, 10);
-BENCHMARK_TEMPLATE(BM_Mul, Mersenne31Std, 100);
-BENCHMARK_TEMPLATE(BM_Mul, Mersenne31Std, 1000);
 BENCHMARK_TEMPLATE(BM_Mul, Babybear, 10);
 BENCHMARK_TEMPLATE(BM_Mul, Babybear, 100);
 BENCHMARK_TEMPLATE(BM_Mul, Babybear, 1000);
@@ -73,12 +86,12 @@ BENCHMARK_TEMPLATE(BM_Mul, GoldilocksStd, 1000);
 // ----------------------------------------------------------------------
 // Benchmark                            Time             CPU   Iterations
 // ----------------------------------------------------------------------
-// BM_Mul<Mersenne31, 10>            10.7 ns         10.7 ns     65491568
-// BM_Mul<Mersenne31, 100>            168 ns          168 ns      4168746
-// BM_Mul<Mersenne31, 1000>          1743 ns         1742 ns       402034
-// BM_Mul<Mersenne31Std, 10>         6.65 ns         6.65 ns    105071208
-// BM_Mul<Mersenne31Std, 100>         131 ns          130 ns      5347122
-// BM_Mul<Mersenne31Std, 1000>       1394 ns         1393 ns       503957
+// BM_Mul<Mersenne31Mont, 10>        10.7 ns         10.7 ns     65491568
+// BM_Mul<Mersenne31Mont, 100>        168 ns          168 ns      4168746
+// BM_Mul<Mersenne31Mont, 1000>      1743 ns         1742 ns       402034
+// BM_Mul<Mersenne31, 10>            6.65 ns         6.65 ns    105071208
+// BM_Mul<Mersenne31, 100>            131 ns          130 ns      5347122
+// BM_Mul<Mersenne31, 1000>          1394 ns         1393 ns       503957
 // BM_Mul<Babybear, 10>              11.0 ns         11.0 ns     63561717
 // BM_Mul<Babybear, 100>              197 ns          197 ns      3552128
 // BM_Mul<Babybear, 1000>            2085 ns         2085 ns       335703

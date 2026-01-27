@@ -143,15 +143,8 @@ struct TypeDescriptorBase<KoalabearStd> : FieldTypeDescriptor<KoalabearStd> {
 template <>
 struct TypeDescriptorBase<Mersenne31> : FieldTypeDescriptor<Mersenne31> {
   static constexpr const char* kTpDoc =
-      "mersenne31 field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'm';
-};
-
-template <>
-struct TypeDescriptorBase<Mersenne31Std> : FieldTypeDescriptor<Mersenne31Std> {
-  static constexpr const char* kTpDoc =
       "mersenne31 field values on standard domain";
-  static constexpr char kNpyDescrType = 'M';
+  static constexpr char kNpyDescrType = 'm';
 };
 
 template <>
@@ -202,14 +195,6 @@ struct TypeDescriptorBase<Mersenne31X2> : FieldTypeDescriptor<Mersenne31X2> {
   static constexpr const char* kTpDoc =
       "mersenne31x2 quadratic extension field values on montgomery domain";
   static constexpr char kNpyDescrType = 'q';
-};
-
-template <>
-struct TypeDescriptorBase<Mersenne31X2Std>
-    : FieldTypeDescriptor<Mersenne31X2Std> {
-  static constexpr const char* kTpDoc =
-      "mersenne31x2 quadratic extension field values on standard domain";
-  static constexpr char kNpyDescrType = 'Q';
 };
 
 template <>

@@ -31,7 +31,6 @@ __all__ = [
     "koalabear",
     "koalabear_std",
     "mersenne31",
-    "mersenne31_std",
     # Big prime field types
     "bn254_sf",
     "bn254_sf_std",
@@ -41,7 +40,6 @@ __all__ = [
     "koalabearx4",
     "koalabearx4_std",
     "mersenne31x2",
-    "mersenne31x2_std",
     "goldilocksx3",
     "goldilocksx3_std",
     # Elliptic curve types
@@ -74,7 +72,6 @@ from zk_dtypes._zk_dtypes_ext import goldilocks_std
 from zk_dtypes._zk_dtypes_ext import koalabear
 from zk_dtypes._zk_dtypes_ext import koalabear_std
 from zk_dtypes._zk_dtypes_ext import mersenne31
-from zk_dtypes._zk_dtypes_ext import mersenne31_std
 from zk_dtypes._zk_dtypes_ext import bn254_sf
 from zk_dtypes._zk_dtypes_ext import bn254_sf_std
 from zk_dtypes._zk_dtypes_ext import babybearx4
@@ -82,7 +79,6 @@ from zk_dtypes._zk_dtypes_ext import babybearx4_std
 from zk_dtypes._zk_dtypes_ext import koalabearx4
 from zk_dtypes._zk_dtypes_ext import koalabearx4_std
 from zk_dtypes._zk_dtypes_ext import mersenne31x2
-from zk_dtypes._zk_dtypes_ext import mersenne31x2_std
 from zk_dtypes._zk_dtypes_ext import goldilocksx3
 from zk_dtypes._zk_dtypes_ext import goldilocksx3_std
 from zk_dtypes._zk_dtypes_ext import bn254_g1_affine
@@ -111,7 +107,6 @@ goldilocks_std: Type[np.generic]
 koalabear: Type[np.generic]
 koalabear_std: Type[np.generic]
 mersenne31: Type[np.generic]
-mersenne31_std: Type[np.generic]
 bn254_sf: Type[np.generic]
 bn254_sf_std: Type[np.generic]
 babybearx4: Type[np.generic]
@@ -119,7 +114,6 @@ babybearx4_std: Type[np.generic]
 koalabearx4: Type[np.generic]
 koalabearx4_std: Type[np.generic]
 mersenne31x2: Type[np.generic]
-mersenne31x2_std: Type[np.generic]
 goldilocksx3: Type[np.generic]
 goldilocksx3_std: Type[np.generic]
 bn254_g1_affine: Type[np.generic]

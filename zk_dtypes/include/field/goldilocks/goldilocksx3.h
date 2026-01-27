@@ -23,7 +23,7 @@ namespace zk_dtypes {
 
 // Cubic extension field over Goldilocks: Goldilocks³ = Goldilocks[u] / (u³ - 7)
 // W = 7 is a cubic non-residue in Goldilocks field.
-REGISTER_EXTENSION_FIELD(GoldilocksX3, Goldilocks, 3, 7);
+REGISTER_EXTENSION_FIELD_WITH_MONT(GoldilocksX3, Goldilocks, 3, 7);
 
 }  // namespace zk_dtypes
 

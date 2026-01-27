@@ -22,7 +22,6 @@ used in Zero Knowledge libraries inspired by
   - `koalabear`
   - `koalabear_std`
   - `mersenne31`
-  - `mersenne31_std`
 
 - Extension Field:
 
@@ -33,7 +32,6 @@ used in Zero Knowledge libraries inspired by
   - `koalabearx4`
   - `koalabearx4_std`
   - `mersenne31x2`
-  - `mersenne31x2_std`
 
 - Elliptic curve:
 

@@ -39,7 +39,6 @@ goldilocks_std = zk_dtypes.goldilocks_std
 koalabear = zk_dtypes.koalabear
 koalabear_std = zk_dtypes.koalabear_std
 mersenne31 = zk_dtypes.mersenne31
-mersenne31_std = zk_dtypes.mersenne31_std
 bn254_sf = zk_dtypes.bn254_sf
 bn254_sf_std = zk_dtypes.bn254_sf_std
 
@@ -51,7 +50,6 @@ FIELD_TYPES = [
     koalabear,
     koalabear_std,
     mersenne31,
-    mersenne31_std,
     bn254_sf,
     bn254_sf_std,
 ]
@@ -65,7 +63,6 @@ TWO_ADICITY = {
     koalabear: 24,
     koalabear_std: 24,
     mersenne31: 1,
-    mersenne31_std: 1,
     bn254_sf: 28,
     bn254_sf_std: 28,
 }
@@ -84,7 +81,6 @@ VALUES = {
     koalabear: random.sample(range(-100, 100), 4),
     koalabear_std: random.sample(range(-100, 100), 4),
     mersenne31: random.sample(range(-100, 100), 4),
-    mersenne31_std: random.sample(range(-100, 100), 4),
     bn254_sf: random.sample(range(-100, 100), 4),
     bn254_sf_std: random.sample(range(-100, 100), 4),
 }

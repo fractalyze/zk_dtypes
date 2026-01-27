@@ -22,7 +22,6 @@ from zk_dtypes._zk_dtypes_ext import goldilocks_std
 from zk_dtypes._zk_dtypes_ext import koalabear
 from zk_dtypes._zk_dtypes_ext import koalabear_std
 from zk_dtypes._zk_dtypes_ext import mersenne31
-from zk_dtypes._zk_dtypes_ext import mersenne31_std
 from zk_dtypes._zk_dtypes_ext import bn254_sf
 from zk_dtypes._zk_dtypes_ext import bn254_sf_std
 
@@ -35,7 +34,6 @@ _goldilocks_std_dtype = np.dtype(goldilocks_std)
 _koalabear_dtype = np.dtype(koalabear)
 _koalabear_std_dtype = np.dtype(koalabear_std)
 _mersenne31_dtype = np.dtype(mersenne31)
-_mersenne31_std_dtype = np.dtype(mersenne31_std)
 _bn254_sf_dtype = np.dtype(bn254_sf)
 _bn254_sf_std_dtype = np.dtype(bn254_sf_std)
 
@@ -74,12 +72,12 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.modulus_bits = 31
       self.modulus = 2**31 - 2**24 + 1
       self.is_montgomery = pf_type == _koalabear_dtype
-    elif pf_type == _mersenne31_dtype or pf_type == _mersenne31_std_dtype:
+    elif pf_type == _mersenne31_dtype:
       self.dtype = pf_type
       self.storage_bits = 32
       self.modulus_bits = 31
       self.modulus = 2**31 - 1
-      self.is_montgomery = pf_type == _mersenne31_dtype
+      self.is_montgomery = False
     elif pf_type == _bn254_sf_dtype or pf_type == _bn254_sf_std_dtype:
       self.dtype = pf_type
       self.storage_bits = 256
