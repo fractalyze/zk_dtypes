@@ -213,6 +213,54 @@ struct TypeDescriptorBase<GoldilocksX3Std>
 };
 
 template <>
+struct TypeDescriptorBase<BinaryFieldT0> : FieldTypeDescriptor<BinaryFieldT0> {
+  static constexpr const char* kTpDoc = "GF(2) binary field values";
+  static constexpr char kNpyDescrType = '1';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT1> : FieldTypeDescriptor<BinaryFieldT1> {
+  static constexpr const char* kTpDoc = "GF(2²) binary field values";
+  static constexpr char kNpyDescrType = '2';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT2> : FieldTypeDescriptor<BinaryFieldT2> {
+  static constexpr const char* kTpDoc = "GF(2⁴) binary field values";
+  static constexpr char kNpyDescrType = '4';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT3> : FieldTypeDescriptor<BinaryFieldT3> {
+  static constexpr const char* kTpDoc = "GF(2⁸) binary field values";
+  static constexpr char kNpyDescrType = '8';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT4> : FieldTypeDescriptor<BinaryFieldT4> {
+  static constexpr const char* kTpDoc = "GF(2¹⁶) binary field values";
+  static constexpr char kNpyDescrType = 's';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT5> : FieldTypeDescriptor<BinaryFieldT5> {
+  static constexpr const char* kTpDoc = "GF(2³²) binary field values";
+  static constexpr char kNpyDescrType = 'l';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT6> : FieldTypeDescriptor<BinaryFieldT6> {
+  static constexpr const char* kTpDoc = "GF(2⁶⁴) binary field values";
+  static constexpr char kNpyDescrType = 'L';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT7> : FieldTypeDescriptor<BinaryFieldT7> {
+  static constexpr const char* kTpDoc = "GF(2¹²⁸) binary field values";
+  static constexpr char kNpyDescrType = 'w';
+};
+
+template <>
 struct TypeDescriptorBase<bn254::G1AffinePoint>
     : EcPointTypeDescriptor<bn254::G1AffinePoint> {
   static constexpr const char* kTpDoc =

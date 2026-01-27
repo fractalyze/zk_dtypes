@@ -30,6 +30,7 @@ cc_library(
     deps = [
         ":babybear",
         ":babybearx4",
+        ":binary_field",
         ":bn254_fq",
         ":bn254_fqx2",
         ":bn254_fr",
@@ -838,6 +839,18 @@ py_library(
 )
 
 py_test(
+    name = "binary_field_test",
+    srcs = ["tests/binary_field_test.py"],
+    main = "tests/binary_field_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
     name = "ec_point_test",
     srcs = ["tests/ec_point_test.py"],
     main = "tests/ec_point_test.py",
@@ -862,18 +875,6 @@ py_test(
 )
 
 py_test(
-    name = "field_test",
-    srcs = ["tests/field_test.py"],
-    main = "tests/field_test.py",
-    deps = [
-        ":test_utils",
-        ":zk_dtypes_py",
-        "@pypi//absl_py",
-        "@pypi//numpy",
-    ],
-)
-
-py_test(
     name = "iinfo_test",
     srcs = ["tests/iinfo_test.py"],
     main = "tests/iinfo_test.py",
@@ -889,6 +890,18 @@ py_test(
     name = "intn_test",
     srcs = ["tests/intn_test.py"],
     main = "tests/intn_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "prime_field_test",
+    srcs = ["tests/prime_field_test.py"],
+    main = "tests/prime_field_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",

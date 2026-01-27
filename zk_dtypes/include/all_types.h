@@ -6,6 +6,7 @@
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
 #include "zk_dtypes/include/field/babybear/babybear.h"
 #include "zk_dtypes/include/field/babybear/babybearx4.h"
+#include "zk_dtypes/include/field/binary_field.h"
 #include "zk_dtypes/include/field/goldilocks/goldilocks.h"
 #include "zk_dtypes/include/field/goldilocks/goldilocksx3.h"
 #include "zk_dtypes/include/field/koalabear/koalabear.h"
@@ -17,6 +18,23 @@
 #define WITH_MONT(V, ActualType, UpperCamelCaseName, UpperSnakeCaseName, LowerSnakeCaseName) \
 V(ActualType, UpperCamelCaseName, UpperSnakeCaseName, LowerSnakeCaseName)                    \
 V(ActualType##Std, UpperCamelCaseName##Std, UpperSnakeCaseName##_STD, LowerSnakeCaseName##_std)
+
+//===----------------------------------------------------------------------===//
+// BinaryField Types
+//===----------------------------------------------------------------------===//
+
+#define ZK_DTYPES_PUBLIC_BINARY_FIELD_TYPE_LIST(V)                             \
+V(::zk_dtypes::BinaryFieldT0, BinaryFieldT0, BINARY_FIELD_T0, binary_field_t0) \
+V(::zk_dtypes::BinaryFieldT1, BinaryFieldT1, BINARY_FIELD_T1, binary_field_t1) \
+V(::zk_dtypes::BinaryFieldT2, BinaryFieldT2, BINARY_FIELD_T2, binary_field_t2) \
+V(::zk_dtypes::BinaryFieldT3, BinaryFieldT3, BINARY_FIELD_T3, binary_field_t3) \
+V(::zk_dtypes::BinaryFieldT4, BinaryFieldT4, BINARY_FIELD_T4, binary_field_t4) \
+V(::zk_dtypes::BinaryFieldT5, BinaryFieldT5, BINARY_FIELD_T5, binary_field_t5) \
+V(::zk_dtypes::BinaryFieldT6, BinaryFieldT6, BINARY_FIELD_T6, binary_field_t6) \
+V(::zk_dtypes::BinaryFieldT7, BinaryFieldT7, BINARY_FIELD_T7, binary_field_t7)
+
+#define ZK_DTYPES_ALL_BINARY_FIELD_TYPE_LIST(V) \
+ZK_DTYPES_PUBLIC_BINARY_FIELD_TYPE_LIST(V)      \
 
 //===----------------------------------------------------------------------===//
 // PrimeField Types
@@ -54,11 +72,13 @@ WITH_MONT(V, ::zk_dtypes::bn254::FqX2, Bn254BfX2, BN254_BFX2, bn254_bfx2)
 
 #define ZK_DTYPES_PUBLIC_FIELD_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)   \
-ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)
+ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)     \
+ZK_DTYPES_PUBLIC_BINARY_FIELD_TYPE_LIST(V)
 
 #define ZK_DTYPES_ALL_FIELD_TYPE_LIST(V) \
 ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V)   \
-ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(V)
+ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(V)     \
+ZK_DTYPES_ALL_BINARY_FIELD_TYPE_LIST(V)
 
 //===----------------------------------------------------------------------===//
 // ScalarField Types
