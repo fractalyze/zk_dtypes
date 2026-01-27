@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ZK_DTYPES__SRC_EC_POINT_NUMPY_H_
 #define ZK_DTYPES__SRC_EC_POINT_NUMPY_H_
 
+#include <array>
+
 // Must be included first
 // clang-format off
 #include "zk_dtypes/_src/numpy.h"
@@ -55,6 +57,9 @@ struct EcPointTypeDescriptor {
   static PyArray_ArrFuncs arr_funcs;
   static PyArray_DescrProto npy_descr_proto;
   static PyArray_Descr* npy_descr;
+
+  static PyGetSetDef getset[];
+  static PyMethodDef methods[];
 };
 
 template <typename T>
@@ -386,6 +391,139 @@ PyObject* PyEcPoint_RichCompare(PyObject* a, PyObject* b, int op) {
   PyArrayScalar_RETURN_BOOL_FROM_LONG(result);
 }
 
+template <typename... Args>
+PyObject* MakeRawTuple(Args&&... args) {
+  constexpr size_t N = sizeof...(Args);
+  PyObject* tuple = PyTuple_New(N);
+  if (!tuple) return nullptr;
+
+  std::array<PyObject*, N> items = {
+      FieldToRawPyObject(std::forward<Args>(args))...};
+
+  for (size_t i = 0; i < N; ++i) {
+    if (!items[i]) {
+      // Only decref items not yet set into tuple (j > i).
+      // Items 0..i-1 are already owned by tuple and will be cleaned up by
+      // Py_DECREF(tuple). Item i is null, so skip it.
+      // Use Py_XDECREF (not Py_DECREF) because items[j] may be null if
+      // FieldToRawPyObject failed during pack expansion.
+      for (size_t j = i + 1; j < N; ++j) {
+        Py_XDECREF(items[j]);
+      }
+      Py_DECREF(tuple);
+      return nullptr;
+    }
+    // PyTuple_SET_ITEM steals a reference
+    PyTuple_SET_ITEM(tuple, i, items[i]);
+  }
+  return tuple;
+}
+
+template <typename T>
+PyObject* PyEcPoint_GetRaw(PyObject* self, void* closure) {
+  T p = PyEcPoint_Value_Unchecked<T>(self);
+
+  if constexpr (IsAffinePoint<T>) {
+    return MakeRawTuple(p.x(), p.y());
+  } else if constexpr (IsJacobianPoint<T>) {
+    return MakeRawTuple(p.x(), p.y(), p.z());
+  } else if constexpr (IsPointXyzz<T>) {
+    return MakeRawTuple(p.x(), p.y(), p.zz(), p.zzz());
+  }
+  return nullptr;
+}
+
+// Helper to get point type name for error messages
+template <typename T>
+constexpr const char* EcPointTypeName() {
+  if constexpr (IsAffinePoint<T>)
+    return "affine";
+  else if constexpr (IsJacobianPoint<T>)
+    return "jacobian";
+  else if constexpr (IsPointXyzz<T>)
+    return "xyzz";
+  return "unknown";
+}
+
+// Helper to parse coordinates from tuple using fold expression
+template <typename BaseField, size_t... Is>
+bool ParseCoordinates(PyObject* tuple,
+                      std::array<BaseField, sizeof...(Is)>& coords,
+                      std::index_sequence<Is...>) {
+  return (... &&
+          ParseRawFieldFromPyObject(PyTuple_GetItem(tuple, Is), &coords[Is]));
+}
+
+// Helper to construct EC point from coordinates array
+template <typename T, typename BaseField, size_t N>
+T ConstructEcPoint(const std::array<BaseField, N>& c) {
+  if constexpr (IsAffinePoint<T>)
+    return T(c[0], c[1]);
+  else if constexpr (IsJacobianPoint<T>)
+    return T(c[0], c[1], c[2]);
+  else if constexpr (IsPointXyzz<T>)
+    return T(c[0], c[1], c[2], c[3]);
+}
+
+// Helper to construct EC point from raw coordinate values
+template <typename T>
+bool CastToEcPointFromRaw(PyObject* arg, T* output) {
+  using BaseField = typename T::BaseField;
+  constexpr size_t kNumCoords = PointTraits<T>::kNumCoords;
+
+  if (!PyTuple_Check(arg)) {
+    PyErr_Format(PyExc_TypeError, "expected tuple, got %s",
+                 Py_TYPE(arg)->tp_name);
+    return false;
+  }
+
+  Py_ssize_t size = PyTuple_Size(arg);
+  if (size != static_cast<Py_ssize_t>(kNumCoords)) {
+    PyErr_Format(PyExc_TypeError,
+                 "from_raw() for %s point takes %zu elements, got %zd",
+                 EcPointTypeName<T>(), kNumCoords, size);
+    return false;
+  }
+
+  std::array<BaseField, kNumCoords> coords;
+  if (!ParseCoordinates(arg, coords, std::make_index_sequence<kNumCoords>{})) {
+    return false;
+  }
+
+  *output = ConstructEcPoint<T>(coords);
+  return true;
+}
+
+// Implementation of 'from_raw' classmethod for PyEcPoint.
+template <typename T>
+PyObject* PyEcPoint_FromRaw(PyObject* cls, PyObject* args) {
+  Py_ssize_t size = PyTuple_Size(args);
+  if (size != 1) {
+    PyErr_Format(PyExc_TypeError,
+                 "from_raw() takes exactly one argument, got %d", size);
+    return nullptr;
+  }
+  PyObject* arg = PyTuple_GetItem(args, 0);
+
+  T value;
+  if (!CastToEcPointFromRaw(arg, &value)) {
+    return nullptr;
+  }
+  return PyEcPoint_FromValue(value).release();
+}
+
+template <typename T>
+PyGetSetDef EcPointTypeDescriptor<T>::getset[] = {
+    {"raw", PyEcPoint_GetRaw<T>, nullptr,
+     "Raw internal representation of coordinates", nullptr},
+    {nullptr, nullptr, nullptr, nullptr, nullptr}};
+
+template <typename T>
+PyMethodDef EcPointTypeDescriptor<T>::methods[] = {
+    {"from_raw", PyEcPoint_FromRaw<T>, METH_VARARGS | METH_CLASS,
+     "Construct from raw internal coordinate representation"},
+    {nullptr, nullptr, 0, nullptr}};
+
 template <typename T>
 PyType_Slot EcPointTypeDescriptor<T>::type_slots[] = {
     {Py_tp_new, reinterpret_cast<void*>(PyEcPoint_tp_new<T>)},
@@ -395,6 +533,8 @@ PyType_Slot EcPointTypeDescriptor<T>::type_slots[] = {
     {Py_tp_doc,
      reinterpret_cast<void*>(const_cast<char*>(TypeDescriptor<T>::kTpDoc))},
     {Py_tp_richcompare, reinterpret_cast<void*>(PyEcPoint_RichCompare<T>)},
+    {Py_tp_getset, reinterpret_cast<void*>(EcPointTypeDescriptor<T>::getset)},
+    {Py_tp_methods, reinterpret_cast<void*>(EcPointTypeDescriptor<T>::methods)},
     {Py_nb_add, reinterpret_cast<void*>(PyEcPoint_nb_add_or_sub<T, true>)},
     {Py_nb_subtract,
      reinterpret_cast<void*>(PyEcPoint_nb_add_or_sub<T, false>)},

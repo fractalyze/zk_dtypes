@@ -272,5 +272,116 @@ class ArrayTest(parameterized.TestCase):
       self.assertEqual(x[i] * SCALAR_FIELD_TYPES[scalar_type](4), y[i])
 
 
+# Expected tuple lengths for each point type
+AFFINE_TYPES = [
+    bn254_g1_affine,
+    bn254_g1_affine_std,
+    bn254_g2_affine,
+    bn254_g2_affine_std,
+]
+
+JACOBIAN_TYPES = [
+    bn254_g1_jacobian,
+    bn254_g1_jacobian_std,
+    bn254_g2_jacobian,
+    bn254_g2_jacobian_std,
+]
+
+XYZZ_TYPES = [
+    bn254_g1_xyzz,
+    bn254_g1_xyzz_std,
+    bn254_g2_xyzz,
+    bn254_g2_xyzz_std,
+]
+
+
+# Tests for raw/from_raw Montgomery conversion helpers for EC points
+@multi_threaded(num_workers=3)
+class EcPointRawConversionTest(parameterized.TestCase):
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testRawPropertyExists(self, scalar_type):
+    """Test that raw property is accessible and returns a tuple."""
+    x = scalar_type(3)
+    raw = x.raw
+    self.assertIsInstance(raw, tuple)
+
+  @parameterized.product(scalar_type=AFFINE_TYPES)
+  def testRawPropertyLengthAffine(self, scalar_type):
+    """Test that raw property returns tuple of length 2 for affine points."""
+    x = scalar_type(3)
+    raw = x.raw
+    self.assertEqual(len(raw), 2, msg="Affine point should have 2 coordinates")
+
+  @parameterized.product(scalar_type=JACOBIAN_TYPES)
+  def testRawPropertyLengthJacobian(self, scalar_type):
+    """Test that raw property returns tuple of length 3 for jacobian points."""
+    x = scalar_type(3)
+    raw = x.raw
+    self.assertEqual(
+        len(raw), 3, msg="Jacobian point should have 3 coordinates"
+    )
+
+  @parameterized.product(scalar_type=XYZZ_TYPES)
+  def testRawPropertyLengthXyzz(self, scalar_type):
+    """Test that raw property returns tuple of length 4 for xyzz points."""
+    x = scalar_type(3)
+    raw = x.raw
+    self.assertEqual(len(raw), 4, msg="XYZZ point should have 4 coordinates")
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testFromRawExists(self, scalar_type):
+    """Test that from_raw classmethod is accessible."""
+    self.assertTrue(hasattr(scalar_type, "from_raw"))
+    self.assertTrue(callable(scalar_type.from_raw))
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testRawFromRawRoundTrip(self, scalar_type):
+    """Test that from_raw(x.raw) == x for EC points."""
+    for v in VALUES[scalar_type]:
+      raw = v.raw
+      y = scalar_type.from_raw(raw)
+      self.assertEqual(v, y, msg=f"Round trip failed for {v}")
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testRawTupleContainsIntOrTuple(self, scalar_type):
+    """Test that raw tuple contains ints (prime base field) or tuples (ext)."""
+    x = scalar_type(3)
+    raw = x.raw
+    for coord in raw:
+      # Each coordinate is either an int (prime field) or tuple (extension)
+      self.assertTrue(
+          isinstance(coord, (int, tuple)),
+          msg=f"Raw coordinate should be int or tuple, got {type(coord)}",
+      )
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testFromRawPreservesValue(self, scalar_type):
+    """Test that from_raw stores the value directly."""
+    for v in VALUES[scalar_type]:
+      raw = v.raw
+      y = scalar_type.from_raw(raw)
+      self.assertEqual(v, y)
+      self.assertEqual(v.raw, y.raw)
+
+  @parameterized.product(scalar_type=AFFINE_TYPES)
+  def testFromRawWrongLengthAffineRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong tuple length."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw((0, 0, 0))  # 3 elements for affine (expects 2)
+
+  @parameterized.product(scalar_type=JACOBIAN_TYPES)
+  def testFromRawWrongLengthJacobianRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong tuple length."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw((0, 0))  # 2 elements for jacobian (expects 3)
+
+  @parameterized.product(scalar_type=XYZZ_TYPES)
+  def testFromRawWrongLengthXyzzRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong tuple length."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw((0, 0, 0))  # 3 elements for xyzz (expects 4)
+
+
 if __name__ == "__main__":
   absltest.main()

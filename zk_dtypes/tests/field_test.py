@@ -417,5 +417,121 @@ class ArrayTest(parameterized.TestCase):
       self.assertEqual(x**5, y_result[i])
 
 
+# Tests for raw/from_raw Montgomery conversion helpers
+@multi_threaded(num_workers=3)
+class RawConversionTest(parameterized.TestCase):
+
+  # Montgomery types (without _std suffix, uses Montgomery multiplication)
+  MONT_FIELD_TYPES = [
+      babybear,
+      goldilocks,
+      koalabear,
+      mersenne31,
+      bn254_sf,
+  ]
+
+  # Standard types (non-Montgomery, with _std suffix)
+  STD_FIELD_TYPES = [
+      babybear_std,
+      goldilocks_std,
+      koalabear_std,
+      mersenne31_std,
+      bn254_sf_std,
+  ]
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testRawPropertyExists(self, scalar_type):
+    """Test that raw property is accessible."""
+    x = scalar_type(42)
+    raw = x.raw
+    self.assertIsInstance(raw, int)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawExists(self, scalar_type):
+    """Test that from_raw classmethod is accessible."""
+    self.assertTrue(hasattr(scalar_type, "from_raw"))
+    self.assertTrue(callable(scalar_type.from_raw))
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testRawFromRawRoundTrip(self, scalar_type):
+    """Test that from_raw(x.raw) == x for all field types."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      raw = x.raw
+      y = scalar_type.from_raw(raw)
+      self.assertEqual(x, y, msg=f"Round trip failed for {v}")
+
+  @parameterized.product(scalar_type=STD_FIELD_TYPES)
+  def testRawEqualsIntForStandardTypes(self, scalar_type):
+    """For non-Montgomery types, raw should equal int()."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      self.assertEqual(x.raw, int(x))
+
+  @parameterized.product(scalar_type=MONT_FIELD_TYPES)
+  def testRawDiffersFromIntForMontgomeryTypes(self, scalar_type):
+    """For Montgomery types, raw should differ from int() (except 0)."""
+    # Use a non-trivial value that's definitely not 0 or a special case
+    x = scalar_type(42)
+    raw = x.raw
+    int_val = int(x)
+    # For Montgomery representation: raw = value * R, int = value
+    # They should differ unless R = 1 (which is not the case for Montgomery)
+    self.assertNotEqual(
+        raw, int_val, msg="raw should differ from int() for Montgomery types"
+    )
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawPreservesValue(self, scalar_type):
+    """Test that from_raw stores the value directly without transformation."""
+    # Create a field element
+    x = scalar_type(7)
+    raw = x.raw
+
+    # Create another field element from the same raw value
+    y = scalar_type.from_raw(raw)
+
+    # They should be equal
+    self.assertEqual(x, y)
+
+    # The raw values should also be identical
+    self.assertEqual(x.raw, y.raw)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawNegativeValueRaisesError(self, scalar_type):
+    """Test that from_raw raises error with negative raw value."""
+    with self.assertRaises(ValueError):
+      scalar_type.from_raw(-1)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawWrongTypeRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong type."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw("invalid")
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw(1.5)
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw([1, 2, 3])
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawZero(self, scalar_type):
+    """Test that from_raw(0) creates zero element."""
+    x = scalar_type.from_raw(0)
+    self.assertEqual(x, scalar_type(0))
+    self.assertEqual(x.raw, 0)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawNoArgumentsRaisesError(self, scalar_type):
+    """Test that from_raw() with no arguments raises error."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw()
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawTooManyArgumentsRaisesError(self, scalar_type):
+    """Test that from_raw() with multiple arguments raises error."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw(1, 2)
+
+
 if __name__ == "__main__":
   absltest.main()
