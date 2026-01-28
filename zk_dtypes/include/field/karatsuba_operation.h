@@ -20,6 +20,7 @@ limitations under the License.
 #include <cstddef>
 
 #include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
+#include "zk_dtypes/include/field/polynomial_reduction.h"
 
 namespace zk_dtypes {
 
@@ -57,7 +58,8 @@ class KaratsubaOperation {
     const std::array<BaseField, kDegree>& y =
         static_cast<const Derived&>(other).ToCoeffs();
 
-    return Reduce(AssembleMulPolynomial(ComputeMulTerms(x, y)));
+    return ReducePolynomial(static_cast<const Derived&>(*this),
+                            AssembleMulPolynomial(ComputeMulTerms(x, y)));
   }
 
   // Squares this element using the Karatsuba method.
@@ -65,7 +67,8 @@ class KaratsubaOperation {
     const std::array<BaseField, kDegree>& x =
         static_cast<const Derived&>(*this).ToCoeffs();
 
-    return Reduce(AssembleSqrPolynomial(ComputeSqrTerms(x)));
+    return ReducePolynomial(static_cast<const Derived&>(*this),
+                            AssembleSqrPolynomial(ComputeSqrTerms(x)));
   }
 
  private:
@@ -197,23 +200,6 @@ class KaratsubaOperation {
       }
     }
     return c;
-  }
-
-  // ----------------------------------------------------------------------
-  // 3. Reduction Step (Modulo uᴺ - ξ)
-  // ----------------------------------------------------------------------
-
-  // Reduces the product polynomial C(u) modulo (uⁿ - ξ).
-  // Since uⁿ ≡ ξ, we have uⁱ⁺ⁿ ≡ ξ·uⁱ.
-  // The resulting coefficients are zᵢ = cᵢ + ξ·cᵢ₊ₙ.
-  Derived Reduce(const std::array<BaseField, kNumEvaluation>& c) const {
-    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
-    std::array<BaseField, kDegree> ret;
-    for (size_t i = 0; i < kDegree - 1; ++i) {
-      ret[i] = c[i] + non_residue * c[i + kDegree];
-    }
-    ret[kDegree - 1] = c[kDegree - 1];
-    return static_cast<const Derived&>(*this).FromCoeffs(ret);
   }
 };
 

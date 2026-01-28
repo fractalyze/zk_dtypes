@@ -47,13 +47,18 @@ class FrobeniusCoeffs {
 
   static const std::array<std::array<BaseField, N - 1>, N - 1>&
   GetFrobeniusCoeffs() {
+    // Frobenius coefficients are only defined for simple form Xⁿ = ξ
+    static_assert(Config::kHasSimpleNonResidue,
+                  "Frobenius coefficients require simple non-residue form");
+
     static const auto coeffs = []() {
       // Use larger BigInt to avoid overflow when computing pᵉ, where p is order
       // of base field.
       constexpr size_t kLimbNums =
           BasePrimeField::kLimbNums * N * BaseField::ExtensionDegree();
       BigInt<kLimbNums> p = BaseField::Order();
-      BaseField nr = Config::kNonResidue;
+      // Non-residue ξ where Xⁿ = ξ
+      BaseField nr = Config::kIrreducibleCoeffs[0];
 
       std::array<std::array<BaseField, N - 1>, N - 1> result{};
       // p_e = pᵉ, computed iteratively

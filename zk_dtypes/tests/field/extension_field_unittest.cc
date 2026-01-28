@@ -185,7 +185,9 @@ TYPED_TEST(ExtensionFieldTypedTest, Square) {
         ExtensionFieldMulAlgorithm::kCustom2,
         ExtensionFieldMulAlgorithm::kKaratsuba,
     };
-    if (ExtF::Config::kNonResidue == BaseField(-1)) {
+    static_assert(ExtF::Config::kHasSimpleNonResidue,
+                  "SchoolbookMul requires simple non-residue form");
+    if (ExtF::Config::kIrreducibleCoeffs[0] == BaseField(-1)) {
       algorithms.push_back(ExtensionFieldMulAlgorithm::kCustom);
     }
   } else if constexpr (ExtF::Config::kDegreeOverBaseField == 3) {
@@ -208,15 +210,18 @@ TYPED_TEST(ExtensionFieldTypedTest, Square) {
   }
 }
 
+// Schoolbook multiplication for simple non-residue form only (Xⁿ = ξ)
 template <typename ExtF>
 ExtF SchoolbookMul(const ExtF& a, const ExtF& b) {
+  static_assert(ExtF::Config::kHasSimpleNonResidue,
+                "SchoolbookMul requires simple non-residue form");
   using F = typename ExtF::BaseField;
   constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
 
   // Schoolbook multiplication in Fp[u] / (uⁿ - ξ)
   // c = Σᵢ Σⱼ aᵢbⱼu^(i+j) mod (uⁿ - ξ)
   // When i + j >= n, u^(i+j) = u^(i+j-n) · ξ
-  F non_residue = ExtF::Config::kNonResidue;
+  F non_residue = ExtF::Config::kIrreducibleCoeffs[0];
   ExtF ret;
   for (size_t i = 0; i < kDegree; ++i) {
     for (size_t j = 0; j < kDegree; ++j) {
@@ -374,6 +379,128 @@ TEST(ExtensionFieldTest, BasePrimeFieldIteratorWithTower) {
   EXPECT_EQ(elements[1], values0_vals[1]);
   EXPECT_EQ(elements[2], values1_vals[0]);
   EXPECT_EQ(elements[3], values1_vals[1]);
+}
+
+// =============================================================================
+// Tests for general irreducible polynomials (not just Xⁿ = ξ)
+// =============================================================================
+
+// Define extension fields with general irreducible polynomials.
+// These test the EEA-based inverse and Karatsuba-based operations.
+//
+// Note: The test field is F₇ (modulus = 7). We must use polynomials
+// that are irreducible over F₇.
+
+// Quadratic extension: X² + X + 3 = 0 → X² = -X - 3 = 6X + 4 (in F₇)
+// Verified irreducible: has no roots in F₇.
+REGISTER_EXTENSION_FIELD_GENERAL_WITH_MONT(GeneralFqX2, test::Fq, 2, {4, 6});
+
+// Cubic extension: X³ + 2X + 1 = 0 → X³ = -2X - 1 = 5X + 6 (in F₇)
+// Verified irreducible: has no roots in F₇.
+REGISTER_EXTENSION_FIELD_GENERAL_WITH_MONT(GeneralFqX3, test::Fq, 3, {6, 5, 0});
+
+// Quartic extension: X⁴ + X + 4 = 0 → X⁴ = -X - 4 = 6X + 3 (in F₇)
+// Verified irreducible: has no roots in F₇.
+REGISTER_EXTENSION_FIELD_GENERAL_WITH_MONT(GeneralFqX4, test::Fq, 4,
+                                           {3, 6, 0, 0});
+
+template <typename T>
+class GeneralPolynomialExtensionFieldTest : public testing::Test {};
+
+using GeneralPolynomialTypes =
+    testing::Types<GeneralFqX2, GeneralFqX2Std, GeneralFqX3, GeneralFqX3Std,
+                   GeneralFqX4, GeneralFqX4Std>;
+
+TYPED_TEST_SUITE(GeneralPolynomialExtensionFieldTest, GeneralPolynomialTypes);
+
+// Schoolbook multiplication for general irreducible polynomial
+template <typename ExtF>
+ExtF SchoolbookMulGeneral(const ExtF& a, const ExtF& b) {
+  using F = typename ExtF::BaseField;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+
+  // First compute the product polynomial (degree up to 2n-2)
+  std::array<F, 2 * kDegree - 1> product;
+  for (size_t i = 0; i < 2 * kDegree - 1; ++i) {
+    product[i] = F::Zero();
+  }
+
+  for (size_t i = 0; i < kDegree; ++i) {
+    for (size_t j = 0; j < kDegree; ++j) {
+      product[i + j] += a[i] * b[j];
+    }
+  }
+
+  // Reduce modulo the irreducible polynomial
+  // Xⁿ = c₀ + c₁*X + ... + cₙ₋₁*Xⁿ⁻¹
+  std::array<F, kDegree> irreducible = ExtF::Config::kIrreducibleCoeffs;
+
+  for (int i = 2 * kDegree - 2; i >= static_cast<int>(kDegree); --i) {
+    if (!product[i].IsZero()) {
+      // Xⁱ = Xⁱ⁻ⁿ * (c₀ + c₁*X + ... + cₙ₋₁*Xⁿ⁻¹)
+      for (size_t j = 0; j < kDegree; ++j) {
+        product[i - kDegree + j] += product[i] * irreducible[j];
+      }
+      product[i] = F::Zero();
+    }
+  }
+
+  ExtF result;
+  for (size_t i = 0; i < kDegree; ++i) {
+    result[i] = product[i];
+  }
+  return result;
+}
+
+TYPED_TEST(GeneralPolynomialExtensionFieldTest, Mul) {
+  using ExtF = TypeParam;
+
+  ExtF a = ExtF::Random();
+  ExtF b = ExtF::Random();
+
+  ExtF c = a * b;
+  ExtF expected = SchoolbookMulGeneral(a, b);
+
+  EXPECT_EQ(c, expected);
+}
+
+TYPED_TEST(GeneralPolynomialExtensionFieldTest, Square) {
+  using ExtF = TypeParam;
+
+  ExtF a = ExtF::Random();
+
+  // Square should equal a * a
+  EXPECT_EQ(a.Square(), a * a);
+}
+
+TYPED_TEST(GeneralPolynomialExtensionFieldTest, Inverse) {
+  using ExtF = TypeParam;
+
+  ExtF a = ExtF::Random();
+  while (a.IsZero()) {
+    a = ExtF::Random();
+  }
+  ExtF a_inverse = a.Inverse();
+
+  // a * a⁻¹ = 1
+  EXPECT_TRUE((a * a_inverse).IsOne());
+
+  // Inverse of zero returns zero
+  EXPECT_TRUE(ExtF::Zero().Inverse().IsZero());
+}
+
+TYPED_TEST(GeneralPolynomialExtensionFieldTest, Division) {
+  using ExtF = TypeParam;
+
+  ExtF a = ExtF::Random();
+  ExtF b = ExtF::Random();
+  while (b.IsZero()) {
+    b = ExtF::Random();
+  }
+
+  // (a / b) * b = a
+  ExtF c = a / b;
+  EXPECT_EQ(c * b, a);
 }
 
 }  // namespace

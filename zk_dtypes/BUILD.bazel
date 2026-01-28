@@ -287,6 +287,7 @@ cc_library(
         ":pow",
         ":str_join",
         "@com_google_absl//absl/base",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/types:span",
     ],
@@ -313,6 +314,7 @@ cc_library(
         ":extension_field_operation_traits_forward",
         ":frobenius_operation",
         ":karatsuba_operation",
+        ":polynomial_eea_inverse",
         ":toom_cook_operation",
         ":vandermonde_matrix",
     ],
@@ -433,6 +435,24 @@ cc_library(
 cc_library(
     name = "karatsuba_operation",
     hdrs = ["include/field/karatsuba_operation.h"],
+    deps = [
+        ":extension_field_operation_traits_forward",
+        ":polynomial_reduction",
+    ],
+)
+
+cc_library(
+    name = "polynomial_eea_inverse",
+    hdrs = ["include/field/polynomial_eea_inverse.h"],
+    deps = [
+        ":extension_field_operation_traits_forward",
+        "@com_google_absl//absl/log:check",
+    ],
+)
+
+cc_library(
+    name = "polynomial_reduction",
+    hdrs = ["include/field/polynomial_reduction.h"],
     deps = [":extension_field_operation_traits_forward"],
 )
 
@@ -524,7 +544,10 @@ cc_library(
 cc_library(
     name = "toom_cook_operation",
     hdrs = ["include/field/toom_cook_operation.h"],
-    deps = [":extension_field_operation_traits_forward"],
+    deps = [
+        ":extension_field_operation_traits_forward",
+        ":polynomial_reduction",
+    ],
 )
 
 cc_test(

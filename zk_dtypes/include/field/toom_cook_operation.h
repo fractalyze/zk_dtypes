@@ -20,6 +20,7 @@ limitations under the License.
 #include <cstddef>
 
 #include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
+#include "zk_dtypes/include/field/polynomial_reduction.h"
 
 namespace zk_dtypes {
 
@@ -63,7 +64,8 @@ class ToomCookOperation {
     }
 
     // Step 3 & 4: Interpolation (Recovery) and Reduction (Modulo uⁿ - ξ)
-    return Reduce(Interpolate(evaluations_z));
+    return ReducePolynomial(static_cast<const Derived&>(*this),
+                            Interpolate(evaluations_z));
   }
 
   // Squares this element using the Toom-Cook method.
@@ -77,7 +79,8 @@ class ToomCookOperation {
       evaluations_y[i] = evaluations_x[i].Square();
     }
 
-    return Reduce(Interpolate(evaluations_y));
+    return ReducePolynomial(static_cast<const Derived&>(*this),
+                            Interpolate(evaluations_y));
   }
 
  private:
@@ -107,21 +110,6 @@ class ToomCookOperation {
       }
     }
     return c;
-  }
-
-  // Reduces polynomial C(u) of degree 2n-2 modulo (uⁿ - ξ) to a
-  // polynomial of degree n-1.
-  //
-  // For i < n-1, the coefficient zᵢ = cᵢ + ξ * cᵢ₊ₙ.
-  // The highest coefficient zₙ₋₁ = cₙ₋₁.
-  Derived Reduce(const std::array<BaseField, kNumEvaluations>& c) const {
-    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
-    std::array<BaseField, kDegree> ret;
-    for (size_t i = 0; i < kDegree - 1; ++i) {
-      ret[i] = c[i] + non_residue * c[i + kDegree];
-    }
-    ret[kDegree - 1] = c[kDegree - 1];
-    return static_cast<const Derived&>(*this).FromCoeffs(ret);
   }
 };
 

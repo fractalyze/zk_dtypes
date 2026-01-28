@@ -28,6 +28,7 @@ limitations under the License.
 
 #include "absl/base/call_once.h"
 #include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/types/span.h"
 
 #include "zk_dtypes/include/always_false.h"
@@ -41,67 +42,155 @@ limitations under the License.
 #include "zk_dtypes/include/pow.h"
 #include "zk_dtypes/include/str_join.h"
 
-#define REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT(                   \
-    Name, BaseFieldIn, BasePrimeFieldIn, Degree, ...)                 \
-  template <typename BaseField>                                       \
-  class Name##BaseConfig {                                            \
-   public:                                                            \
-    constexpr static uint32_t kDegreeOverBaseField = Degree;          \
-    constexpr static BaseField kNonResidue = __VA_ARGS__;             \
-  };                                                                  \
-                                                                      \
-  class Name##StdConfig : public Name##BaseConfig<BaseFieldIn##Std> { \
-   public:                                                            \
-    constexpr static bool kUseMontgomery = false;                     \
-    using StdConfig = Name##StdConfig;                                \
-    using BaseField = BaseFieldIn##Std;                               \
-    using BasePrimeField = BasePrimeFieldIn##Std;                     \
-  };                                                                  \
-                                                                      \
-  class Name##Config : public Name##BaseConfig<BaseFieldIn> {         \
-   public:                                                            \
-    constexpr static bool kUseMontgomery = true;                      \
-    using StdConfig = Name##StdConfig;                                \
-    using BaseField = BaseFieldIn;                                    \
-    using BasePrimeField = BasePrimeFieldIn;                          \
-  };                                                                  \
-                                                                      \
-  using Name = ExtensionField<Name##Config>;                          \
+// Helper to check if irreducible polynomial is of simple form Xⁿ = ξ
+// (i.e., all coefficients except c₀ are zero)
+template <typename BaseField, size_t Degree>
+constexpr bool CheckSimpleNonResidue(
+    const std::array<BaseField, Degree>& coeffs) {
+  for (size_t i = 1; i < Degree; ++i) {
+    if (!coeffs[i].IsZero()) return false;
+  }
+  return true;
+}
+
+// Helper to create irreducible coefficients array from a single non-residue
+// For Xⁿ = ξ, returns {ξ, 0, 0, ..., 0}
+template <typename BaseField, size_t Degree>
+constexpr std::array<BaseField, Degree> MakeSimpleIrreducibleCoeffs(
+    const BaseField& non_residue) {
+  std::array<BaseField, Degree> coeffs{};
+  coeffs[0] = non_residue;
+  return coeffs;
+}
+
+// clang-format off
+// =============================================================================
+// Extension Field Registration Macros
+// =============================================================================
+//
+// Two core implementation macros:
+//   - REGISTER_EXTENSION_FIELD_IMPL_MONT: Creates Name (Montgomery) and NameStd
+//   - REGISTER_EXTENSION_FIELD_IMPL: Creates Name only (non-Montgomery)
+//
+// User-facing convenience macros:
+//   Simple form (Xⁿ = ξ):
+//     - REGISTER_EXTENSION_FIELD_WITH_MONT(Name, BaseField, Degree, NonResidue)
+//     - REGISTER_EXTENSION_FIELD(Name, BaseField, Degree, NonResidue)
+//     - REGISTER_EXTENSION_FIELD_TOWER_WITH_MONT(Name, BaseField, BasePrime, D, NonResidue)
+//     - REGISTER_EXTENSION_FIELD_TOWER(Name, BaseField, BasePrime, Degree, NonResidue)
+//
+//   General form (Xⁿ = c₀ + c₁X + ... + cₙ₋₁Xⁿ⁻¹):
+//     - REGISTER_EXTENSION_FIELD_GENERAL_WITH_MONT(Name, BaseField, Degree, {...})
+// =============================================================================
+// clang-format on
+
+// Core implementation macro for Montgomery form (creates Name and NameStd).
+// IrreducibleCoeffsExpr must be a std::array<BaseField, Degree> expression.
+#define REGISTER_EXTENSION_FIELD_IMPL_MONT(                             \
+    Name, BaseFieldIn, BasePrimeFieldIn, Degree, IrreducibleCoeffsExpr) \
+  template <typename BaseField>                                         \
+  class Name##BaseConfig {                                              \
+   public:                                                              \
+    constexpr static uint32_t kDegreeOverBaseField = Degree;            \
+    constexpr static std::array<BaseField, Degree> kIrreducibleCoeffs = \
+        IrreducibleCoeffsExpr;                                          \
+    constexpr static bool kHasSimpleNonResidue =                        \
+        CheckSimpleNonResidue(kIrreducibleCoeffs);                      \
+  };                                                                    \
+                                                                        \
+  class Name##StdConfig : public Name##BaseConfig<BaseFieldIn##Std> {   \
+   public:                                                              \
+    constexpr static bool kUseMontgomery = false;                       \
+    using StdConfig = Name##StdConfig;                                  \
+    using BaseField = BaseFieldIn##Std;                                 \
+    using BasePrimeField = BasePrimeFieldIn##Std;                       \
+  };                                                                    \
+                                                                        \
+  class Name##Config : public Name##BaseConfig<BaseFieldIn> {           \
+   public:                                                              \
+    constexpr static bool kUseMontgomery = true;                        \
+    using StdConfig = Name##StdConfig;                                  \
+    using BaseField = BaseFieldIn;                                      \
+    using BasePrimeField = BasePrimeFieldIn;                            \
+  };                                                                    \
+                                                                        \
+  using Name = ExtensionField<Name##Config>;                            \
   using Name##Std = ExtensionField<Name##StdConfig>
 
-#define REGISTER_EXTENSION_FIELD_WITH_MONT(Name, BaseFieldIn, Degree,        \
-                                           NonResidue)                       \
-  REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT(Name, BaseFieldIn, BaseFieldIn, \
-                                             Degree, NonResidue)
-
-#define REGISTER_EXTENSION_FIELD_TOWER_WITH_MONT(     \
-    Name, BaseFieldIn, BasePrimeFieldIn, Degree, ...) \
-  REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT(         \
-      Name, BaseFieldIn, BasePrimeFieldIn, Degree, __VA_ARGS__)
-
-#define REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BasePrimeFieldIn, \
-                                         Degree, ...)                         \
-  class Name##Config {                                                        \
-   public:                                                                    \
-    constexpr static uint32_t kDegreeOverBaseField = Degree;                  \
-    constexpr static BaseFieldIn kNonResidue = __VA_ARGS__;                   \
-                                                                              \
-    constexpr static bool kUseMontgomery = false;                             \
-    using StdConfig = Name##Config;                                           \
-    using BaseField = BaseFieldIn;                                            \
-    using BasePrimeField = BasePrimeFieldIn;                                  \
-  };                                                                          \
-                                                                              \
+// Core implementation macro for non-Montgomery form (creates Name only).
+// IrreducibleCoeffsExpr must be a std::array<BaseFieldIn, Degree> expression.
+#define REGISTER_EXTENSION_FIELD_IMPL(Name, BaseFieldIn, BasePrimeFieldIn, \
+                                      Degree, IrreducibleCoeffsExpr)       \
+  class Name##Config {                                                     \
+   public:                                                                 \
+    using BaseField = BaseFieldIn;                                         \
+    using BasePrimeField = BasePrimeFieldIn;                               \
+    using StdConfig = Name##Config;                                        \
+    constexpr static bool kUseMontgomery = false;                          \
+    constexpr static uint32_t kDegreeOverBaseField = Degree;               \
+    constexpr static std::array<BaseField, Degree> kIrreducibleCoeffs =    \
+        IrreducibleCoeffsExpr;                                             \
+    constexpr static bool kHasSimpleNonResidue =                           \
+        CheckSimpleNonResidue(kIrreducibleCoeffs);                         \
+  };                                                                       \
+                                                                           \
   using Name = ExtensionField<Name##Config>
 
-#define REGISTER_EXTENSION_FIELD(Name, BaseFieldIn, Degree, NonResidue)    \
-  REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BaseFieldIn, Degree, \
-                                   NonResidue)
+// =============================================================================
+// User-facing macros for simple form: Xⁿ = ξ (non-residue)
+// =============================================================================
 
+// Simple extension with Montgomery form (creates Name and NameStd)
+// Note: Extra parentheses around template expressions protect commas in <> from
+// macro expansion
+#define REGISTER_EXTENSION_FIELD_WITH_MONT(Name, BaseFieldIn, Degree, \
+                                           NonResidue)                \
+  REGISTER_EXTENSION_FIELD_IMPL_MONT(                                 \
+      Name, BaseFieldIn, BaseFieldIn, Degree,                         \
+      (MakeSimpleIrreducibleCoeffs<BaseField, Degree>(NonResidue)))
+
+// Simple tower extension with Montgomery form
+// Note: Uses __VA_ARGS__ to handle brace-init non-residue like {2, 1} for
+// extension base fields
+#define REGISTER_EXTENSION_FIELD_TOWER_WITH_MONT(      \
+    Name, BaseFieldIn, BasePrimeFieldIn, Degree, ...)  \
+  REGISTER_EXTENSION_FIELD_IMPL_MONT(                  \
+      Name, BaseFieldIn, BasePrimeFieldIn, Degree,     \
+      (MakeSimpleIrreducibleCoeffs<BaseField, Degree>( \
+          BaseField(__VA_ARGS__))))
+
+// Simple extension without Montgomery form (creates Name only)
+#define REGISTER_EXTENSION_FIELD(Name, BaseFieldIn, Degree, NonResidue) \
+  REGISTER_EXTENSION_FIELD_IMPL(                                        \
+      Name, BaseFieldIn, BaseFieldIn, Degree,                           \
+      (MakeSimpleIrreducibleCoeffs<BaseFieldIn, Degree>(NonResidue)))
+
+// Simple tower extension without Montgomery form
 #define REGISTER_EXTENSION_FIELD_TOWER(Name, BaseFieldIn, BasePrimeFieldIn, \
                                        Degree, ...)                         \
-  REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BasePrimeFieldIn,     \
-                                   Degree, __VA_ARGS__)
+  REGISTER_EXTENSION_FIELD_IMPL(                                            \
+      Name, BaseFieldIn, BasePrimeFieldIn, Degree,                          \
+      (MakeSimpleIrreducibleCoeffs<BaseFieldIn, Degree>(                    \
+          BaseFieldIn(__VA_ARGS__))))
+
+// =============================================================================
+// User-facing macros for general form: Xⁿ = c₀ + c₁X + ... + cₙ₋₁Xⁿ⁻¹
+// Pass coefficients as {c₀, c₁, ..., cₙ₋₁}
+// =============================================================================
+
+// General polynomial with Montgomery form (creates Name and NameStd)
+#define REGISTER_EXTENSION_FIELD_GENERAL_WITH_MONT(Name, BaseFieldIn, Degree, \
+                                                   ...)                       \
+  REGISTER_EXTENSION_FIELD_IMPL_MONT(                                         \
+      Name, BaseFieldIn, BaseFieldIn, Degree,                                 \
+      (std::array<BaseField, Degree> __VA_ARGS__))
+
+// General polynomial tower with Montgomery form
+#define REGISTER_EXTENSION_FIELD_GENERAL_TOWER_WITH_MONT( \
+    Name, BaseFieldIn, BasePrimeFieldIn, Degree, ...)     \
+  REGISTER_EXTENSION_FIELD_IMPL_MONT(                     \
+      Name, BaseFieldIn, BasePrimeFieldIn, Degree,        \
+      (std::array<BaseField, Degree> __VA_ARGS__))
 
 namespace zk_dtypes {
 
@@ -518,7 +607,29 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
   constexpr BaseField CreateConstBaseField(int64_t value) const {
     return BaseField(value);
   }
-  constexpr const BaseField& NonResidue() const { return Config::kNonResidue; }
+
+  // Returns true if the irreducible polynomial is of the simple form Xⁿ = ξ.
+  // This is automatically computed at compile-time by checking if all
+  // coefficients except c₀ are zero.
+  constexpr bool HasSimpleNonResidue() const {
+    return Config::kHasSimpleNonResidue;
+  }
+
+  // Returns the non-residue ξ for simple polynomials Xⁿ = ξ.
+  // Only valid when HasSimpleNonResidue() is true.
+  constexpr const BaseField& NonResidue() const {
+    DCHECK(Config::kHasSimpleNonResidue)
+        << "NonResidue() should only be called when HasSimpleNonResidue() is "
+           "true";
+    return Config::kIrreducibleCoeffs[0];
+  }
+
+  // Returns the irreducible polynomial coefficients {c₀, c₁, ..., cₙ₋₁}
+  // for Xⁿ = cₙ₋₁*Xⁿ⁻¹ + ... + c₁*X + c₀.
+  constexpr const std::array<BaseField, N>& IrreducibleCoeffs() const {
+    return Config::kIrreducibleCoeffs;
+  }
+
   ExtensionFieldMulAlgorithm GetMulAlgorithm() const {
     if (mul_algorithm_.has_value()) {
       return mul_algorithm_.value();
@@ -534,11 +645,16 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
     if (square_algorithm_.has_value()) {
       return square_algorithm_.value();
     }
-    if constexpr (Config::kDegreeOverBaseField == 2) {
+    // For general irreducible polynomials (not Xⁿ = ξ), use Karatsuba.
+    // The optimized algorithms only work for simple non-residue form.
+    if constexpr (!Config::kHasSimpleNonResidue) {
+      return ExtensionFieldMulAlgorithm::kKaratsuba;
+    } else if constexpr (Config::kDegreeOverBaseField == 2) {
       static absl::once_flag once;
       static bool is_non_residue_minus_one = false;
       absl::call_once(once, [&]() {
-        is_non_residue_minus_one = Config::kNonResidue == BaseField(-1);
+        is_non_residue_minus_one =
+            Config::kIrreducibleCoeffs[0] == BaseField(-1);
       });
 
       if (is_non_residue_minus_one) {
