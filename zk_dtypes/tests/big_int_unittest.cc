@@ -120,6 +120,98 @@ TEST(BigIntTest, Operations) {
       -a, *BigInt<2>::FromDecString("340158910131926117784464730888556976144"));
 }
 
+TEST(BigIntTest, ShiftLeftExtended) {
+  // Test with BigInt<2> (128-bit)
+  BigInt<2> a = *BigInt<2>::FromHexString("123456789ABCDEF0FEDCBA9876543210");
+
+  // Shift by 0 - should be identity
+  EXPECT_EQ(a << 0, a);
+
+  // Shift by less than 64
+  EXPECT_EQ(a << 4,
+            *BigInt<2>::FromHexString("23456789ABCDEF0FEDCBA98765432100"));
+
+  // Shift by exactly 64 (whole limb shift)
+  BigInt<2> b({0x1234567890ABCDEFull, 0ull});
+  EXPECT_EQ(b << 64, BigInt<2>({0ull, 0x1234567890ABCDEFull}));
+
+  // Shift by 65 (one limb + 1 bit)
+  EXPECT_EQ(b << 65, BigInt<2>({0ull, 0x2468ACF121579BDEull}));
+
+  // Shift by 70 (one limb + 6 bits)
+  BigInt<2> c({0xFFFFFFFFFFFFFFFFull, 0ull});
+  EXPECT_EQ(c << 70, BigInt<2>({0ull, 0xFFFFFFFFFFFFFFC0ull}));
+
+  // Shift by >= kBitWidth (128) should result in zero
+  EXPECT_EQ(a << 128, BigInt<2>::Zero());
+
+  // Test with BigInt<4> (256-bit)
+  BigInt<4> d({0x1111111111111111ull, 0x2222222222222222ull,
+               0x3333333333333333ull, 0x4444444444444444ull});
+
+  // Shift by 128 (two whole limbs)
+  EXPECT_EQ(d << 128, BigInt<4>({0ull, 0ull, 0x1111111111111111ull,
+                                 0x2222222222222222ull}));
+
+  // Shift by 130 (two limbs + 2 bits)
+  EXPECT_EQ(d << 130, BigInt<4>({0ull, 0ull, 0x4444444444444444ull,
+                                 0x8888888888888888ull}));
+}
+
+TEST(BigIntTest, ShiftRightExtended) {
+  // Test with BigInt<2> (128-bit)
+  BigInt<2> a = *BigInt<2>::FromHexString("123456789ABCDEF0FEDCBA9876543210");
+
+  // Shift by 0 - should be identity
+  EXPECT_EQ(a >> 0, a);
+
+  // Shift by less than 64
+  EXPECT_EQ(a >> 4,
+            *BigInt<2>::FromHexString("0123456789ABCDEF0FEDCBA987654321"));
+
+  // Shift by exactly 64 (whole limb shift)
+  BigInt<2> b({0ull, 0x1234567890ABCDEFull});
+  EXPECT_EQ(b >> 64, BigInt<2>({0x1234567890ABCDEFull, 0ull}));
+
+  // Shift by 65 (one limb + 1 bit)
+  // 0x1234567890ABCDEF >> 1 = 0x091A2B3C4855E6F7
+  EXPECT_EQ(b >> 65, BigInt<2>({0x091A2B3C4855E6F7ull, 0ull}));
+
+  // Shift by 70 (one limb + 6 bits)
+  BigInt<2> c({0ull, 0xFFFFFFFFFFFFFFFFull});
+  EXPECT_EQ(c >> 70, BigInt<2>({0x03FFFFFFFFFFFFFFull, 0ull}));
+
+  // Shift by >= kBitWidth (128) should result in zero
+  EXPECT_EQ(a >> 128, BigInt<2>::Zero());
+
+  // Test with BigInt<4> (256-bit)
+  BigInt<4> d({0x1111111111111111ull, 0x2222222222222222ull,
+               0x3333333333333333ull, 0x4444444444444444ull});
+
+  // Shift by 128 (two whole limbs)
+  EXPECT_EQ(d >> 128, BigInt<4>({0x3333333333333333ull, 0x4444444444444444ull,
+                                 0ull, 0ull}));
+
+  // Shift by 130 (two limbs + 2 bits)
+  EXPECT_EQ(d >> 130, BigInt<4>({0x0CCCCCCCCCCCCCCCull, 0x1111111111111111ull,
+                                 0ull, 0ull}));
+}
+
+TEST(BigIntTest, ShiftRoundTrip) {
+  // Verify that shift left followed by shift right restores original
+  // Use a small value that won't overflow when shifted left by 70 on 128-bit
+  BigInt<2> a({0x0000000012345678ull, 0ull});
+
+  // Small shift round trip
+  EXPECT_EQ((a << 10) >> 10, a);
+
+  // Large shift round trip (shift by 64)
+  EXPECT_EQ((a << 64) >> 64, a);
+
+  // Shift by 70 - should preserve value since it fits in 128 bits
+  EXPECT_EQ((a << 70) >> 70, a);
+}
+
 TEST(BigIntTest, BitsLEConversion) {
   // clang-format off
   std::bitset<255> input("011101111110011110110101010100110010011011110111011101000111010111110011000100011000011100111011011100111101100101100111001101011010000011111110000010011110011110001011111101111001100001100000111010000101111101010010101011110101110101011101011001100110000");

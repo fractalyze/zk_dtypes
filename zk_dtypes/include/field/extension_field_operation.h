@@ -19,8 +19,6 @@ limitations under the License.
 #include <array>
 #include <cstddef>
 
-#include "absl/status/statusor.h"
-
 #include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
 #include "zk_dtypes/include/field/frobenius_operation.h"
 

@@ -42,6 +42,15 @@ __all__ = [
     "mersenne31x2",
     "goldilocksx3",
     "goldilocksx3_std",
+    # Binary field types (GF(2ⁿ) tower fields)
+    "binary_field_t0",
+    "binary_field_t1",
+    "binary_field_t2",
+    "binary_field_t3",
+    "binary_field_t4",
+    "binary_field_t5",
+    "binary_field_t6",
+    "binary_field_t7",
     # Elliptic curve types
     "bn254_g1_affine",
     "bn254_g1_affine_std",
@@ -81,6 +90,14 @@ from zk_dtypes._zk_dtypes_ext import koalabearx4_std
 from zk_dtypes._zk_dtypes_ext import mersenne31x2
 from zk_dtypes._zk_dtypes_ext import goldilocksx3
 from zk_dtypes._zk_dtypes_ext import goldilocksx3_std
+from zk_dtypes._zk_dtypes_ext import binary_field_t0
+from zk_dtypes._zk_dtypes_ext import binary_field_t1
+from zk_dtypes._zk_dtypes_ext import binary_field_t2
+from zk_dtypes._zk_dtypes_ext import binary_field_t3
+from zk_dtypes._zk_dtypes_ext import binary_field_t4
+from zk_dtypes._zk_dtypes_ext import binary_field_t5
+from zk_dtypes._zk_dtypes_ext import binary_field_t6
+from zk_dtypes._zk_dtypes_ext import binary_field_t7
 from zk_dtypes._zk_dtypes_ext import bn254_g1_affine
 from zk_dtypes._zk_dtypes_ext import bn254_g1_affine_std
 from zk_dtypes._zk_dtypes_ext import bn254_g1_jacobian
@@ -116,6 +133,14 @@ koalabearx4_std: Type[np.generic]
 mersenne31x2: Type[np.generic]
 goldilocksx3: Type[np.generic]
 goldilocksx3_std: Type[np.generic]
+binary_field_t0: Type[np.generic]
+binary_field_t1: Type[np.generic]
+binary_field_t2: Type[np.generic]
+binary_field_t3: Type[np.generic]
+binary_field_t4: Type[np.generic]
+binary_field_t5: Type[np.generic]
+binary_field_t6: Type[np.generic]
+binary_field_t7: Type[np.generic]
 bn254_g1_affine: Type[np.generic]
 bn254_g1_affine_std: Type[np.generic]
 bn254_g1_jacobian: Type[np.generic]

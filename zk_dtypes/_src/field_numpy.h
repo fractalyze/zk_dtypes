@@ -111,12 +111,75 @@ Safe_PyObjectPtr PyField_FromValue(T x) {
   return ref;
 }
 
+// Traits for FieldIntCaster - provides type-specific overflow checking logic.
+template <typename T, typename Enable = void>
+struct FieldIntCasterTraits;
+
 template <typename T>
-class PrimeFieldIntCaster
-    : public std::conditional_t<(T::Config::kStorageBits <= 64), IntCaster,
-                                BigIntCaster<PrimeFieldIntCaster<T>>> {
+struct FieldIntCasterTraits<T, std::enable_if_t<IsPrimeField<T>>> {
+  static constexpr size_t kStorageBits = T::Config::kStorageBits;
+  static constexpr size_t N = (kStorageBits + 63) / 64;
+  static constexpr const char* kOverflowError =
+      "out of range value cannot be converted to field";
+
+  static bool IsSmallOverflow(int64_t v) {
+    if (v < 0) {
+      return static_cast<uint64_t>(-v) >= T::Config::kModulus;
+    }
+    return static_cast<uint64_t>(v) >= T::Config::kModulus;
+  }
+
+  static bool IsSmallOverflow(uint64_t v) { return v >= T::Config::kModulus; }
+
+  static bool IsBigOverflow(const BigInt<N>& value) {
+    return value >= T::Config::kModulus;
+  }
+
+  static T CastBigInt(const BigInt<N>& value, int sign) {
+    if (sign == -1) {
+      return -T(value);
+    }
+    return T(value);
+  }
+};
+
+template <typename T>
+struct FieldIntCasterTraits<T, std::enable_if_t<IsBinaryField<T>>> {
+  static constexpr size_t kStorageBits = T::kStorageBits;
+  static constexpr size_t N = T::kLimbNums;
+  static constexpr const char* kOverflowError =
+      "out of range value cannot be converted to binary field";
+
+  static bool IsSmallOverflow(int64_t v) {
+    uint64_t mask = T::Config::kValueMask;
+    if (v < 0) {
+      return static_cast<uint64_t>(-v) > mask;
+    }
+    return static_cast<uint64_t>(v) > mask;
+  }
+
+  static bool IsSmallOverflow(uint64_t v) { return v > T::Config::kValueMask; }
+
+  static bool IsBigOverflow(const BigInt<N>& /*value*/) {
+    // 128-bit binary field uses all 128 bits, no overflow possible
+    return false;
+  }
+
+  static T CastBigInt(const BigInt<N>& value, int /*sign*/) {
+    // Binary fields ignore sign
+    return T(value);
+  }
+};
+
+// Unified int caster for prime fields and binary fields.
+template <typename T>
+class FieldIntCaster
+    : public std::conditional_t<(FieldIntCasterTraits<T>::kStorageBits <= 64),
+                                IntCaster, BigIntCaster<FieldIntCaster<T>>> {
+  using Traits = FieldIntCasterTraits<T>;
+
  public:
-  constexpr static size_t N = (T::Config::kStorageBits + 63) / 64;
+  static constexpr size_t N = Traits::N;
 
   T value() const { return value_; }
 
@@ -132,36 +195,27 @@ class PrimeFieldIntCaster
   }
 
   bool IsOverflow(int64_t v) const override {
-    if constexpr (T::Config::kStorageBits <= 64) {
-      if (v < 0) {
-        return static_cast<uint64_t>(-v) >= T::Config::kModulus;
-      } else {
-        return v >= T::Config::kModulus;
-      }
+    if constexpr (Traits::kStorageBits <= 64) {
+      return Traits::IsSmallOverflow(v);
     }
     return false;
   }
 
   bool IsOverflow(uint64_t v) const override {
-    if constexpr (T::Config::kStorageBits <= 64) {
-      return v >= T::Config::kModulus;
+    if constexpr (Traits::kStorageBits <= 64) {
+      return Traits::IsSmallOverflow(v);
     }
     return false;
   }
 
   void SetOverflowError() const override {
-    PyErr_SetString(PyExc_OverflowError,
-                    "out of range value cannot be converted to field");
+    PyErr_SetString(PyExc_OverflowError, Traits::kOverflowError);
   }
 
   // BigIntCaster methods.
   bool Cast(const BigInt<N>& value, int sign) {
-    if constexpr (T::Config::kStorageBits > 64) {
-      if (sign == -1) {
-        value_ = -T(value);
-      } else {
-        value_ = T(value);
-      }
+    if constexpr (Traits::kStorageBits > 64) {
+      value_ = Traits::CastBigInt(value, sign);
     } else {
       ABSL_UNREACHABLE();
     }
@@ -169,8 +223,8 @@ class PrimeFieldIntCaster
   }
 
   bool IsOverflow(const BigInt<N>& value) const {
-    if constexpr (T::Config::kStorageBits > 64) {
-      return value >= T::Config::kModulus;
+    if constexpr (Traits::kStorageBits > 64) {
+      return Traits::IsBigOverflow(value);
     } else {
       ABSL_UNREACHABLE();
     }
@@ -181,12 +235,12 @@ class PrimeFieldIntCaster
   T value_;
 };
 
-// Converts a Python object to a prime field value. Returns true on success,
-// returns false and reports a Python error on failure.
+// Converts a Python object to a field value (prime or binary).
+// Returns true on success, returns false and reports a Python error on failure.
 template <typename T>
-bool CastToPrimeField(PyObject* arg, T* output) {
-  PrimeFieldIntCaster<T> caster;
-  if constexpr (T::Config::kStorageBits <= 64) {
+bool CastToSmallField(PyObject* arg, T* output) {
+  FieldIntCaster<T> caster;
+  if constexpr (FieldIntCasterTraits<T>::kStorageBits <= 64) {
     if (!caster.CastInt(arg)) return false;
   } else {
     if (!caster.CastBigInt(arg)) return false;
@@ -197,8 +251,9 @@ bool CastToPrimeField(PyObject* arg, T* output) {
 
 template <typename T>
 bool CastToField(PyObject* arg, T* output) {
-  if constexpr (T::ExtensionDegree() == 1) {
-    return CastToPrimeField<T>(arg, output);
+  // Prime fields and binary fields use unified FieldIntCaster
+  if constexpr (IsBinaryField<T> || T::ExtensionDegree() == 1) {
+    return CastToSmallField<T>(arg, output);
   } else {
     using BaseField = typename T::BaseField;
     // Use F::N (degree over immediate base field) for tower extension support
@@ -375,7 +430,7 @@ PyObject* PyField_nb_true_divide(PyObject* a, PyObject* b) {
 
 template <typename T>
 PyObject* PyField_nb_int(PyObject* self) {
-  if constexpr (T::ExtensionDegree() > 1) {
+  if constexpr (T::ExtensionDegree() > 1 && !IsBinaryField<T>) {
     PyErr_SetString(PyExc_TypeError, "cannot convert extension field to int");
     return nullptr;
   } else {
@@ -506,7 +561,19 @@ PyObject* PyField_Str(PyObject* self) {
 
 template <typename T>
 uint64_t PyField_Hash_Impl(T x) {
-  if constexpr (T::ExtensionDegree() == 1) {
+  if constexpr (IsBinaryField<T>) {
+    // Binary fields: hash based on the underlying value
+    if constexpr (T::kStorageBits <= 64) {
+      return static_cast<uint64_t>(x.value());
+    } else {
+      // For 128-bit binary fields
+      uint64_t hash = x[0];
+      for (size_t i = 1; i < T::kLimbNums; ++i) {
+        hash ^= x[i];
+      }
+      return hash;
+    }
+  } else if constexpr (T::ExtensionDegree() == 1) {
     uint64_t hash = static_cast<uint64_t>(x.value());
     if constexpr (T::Config::kStorageBits > 64) {
       for (size_t i = 1; i < T::kLimbNums; ++i) {
@@ -542,23 +609,23 @@ PyObject* PyField_RichCompare(PyObject* a, PyObject* b, int op) {
   bool result;
   switch (op) {
     case Py_LT:
-      if constexpr (T::ExtensionDegree() > 1) {
+      if constexpr (IsComparable<T>) {
+        result = x < y;
+      } else {
         PyErr_SetString(
             PyExc_TypeError,
             "ordering comparison not supported for extension field");
         return nullptr;
-      } else {
-        result = x < y;
       }
       break;
     case Py_LE:
-      if constexpr (T::ExtensionDegree() > 1) {
+      if constexpr (IsComparable<T>) {
+        result = x <= y;
+      } else {
         PyErr_SetString(
             PyExc_TypeError,
             "ordering comparison not supported for extension field");
         return nullptr;
-      } else {
-        result = x <= y;
       }
       break;
     case Py_EQ:
@@ -568,23 +635,23 @@ PyObject* PyField_RichCompare(PyObject* a, PyObject* b, int op) {
       result = x != y;
       break;
     case Py_GT:
-      if constexpr (T::ExtensionDegree() > 1) {
+      if constexpr (IsComparable<T>) {
+        result = x > y;
+      } else {
         PyErr_SetString(
             PyExc_TypeError,
             "ordering comparison not supported for extension field");
         return nullptr;
-      } else {
-        result = x > y;
       }
       break;
     case Py_GE:
-      if constexpr (T::ExtensionDegree() > 1) {
+      if constexpr (IsComparable<T>) {
+        result = x >= y;
+      } else {
         PyErr_SetString(
             PyExc_TypeError,
             "ordering comparison not supported for extension field");
         return nullptr;
-      } else {
-        result = x >= y;
       }
       break;
     default:
@@ -599,7 +666,7 @@ PyObject* PyField_RichCompare(PyObject* a, PyObject* b, int op) {
 // TypeDescriptor.
 template <typename F>
 PyObject* FieldToRawPyObject(const F& f) {
-  if constexpr (F::ExtensionDegree() > 1) {
+  if constexpr (F::ExtensionDegree() > 1 && !IsBinaryField<F>) {
     // Extension field: return tuple of raw values
     // Use F::N (degree over immediate base field) for tower extension support
     constexpr size_t kDegree = F::N;
@@ -615,7 +682,7 @@ PyObject* FieldToRawPyObject(const F& f) {
     }
     return tuple;
   } else {
-    // Prime field: return raw value as int
+    // Prime or binary field: return raw value as int
     if constexpr (F::Config::kStorageBits <= 64) {
       return PyLong_FromUnsignedLongLong(
           static_cast<unsigned long long>(f.value()));
@@ -641,7 +708,7 @@ PyObject* PyField_GetRaw(PyObject* self, void* closure) {
 // TypeDescriptor.
 template <typename F>
 bool ParseRawFieldFromPyObject(PyObject* arg, F* output) {
-  if constexpr (F::ExtensionDegree() > 1) {
+  if constexpr (F::ExtensionDegree() > 1 && !IsBinaryField<F>) {
     // Extension field: expect a tuple
     // Use F::N (degree over immediate base field) for tower extension support
     constexpr size_t kDegree = F::N;
@@ -676,7 +743,7 @@ bool ParseRawFieldFromPyObject(PyObject* arg, F* output) {
       return true;
     }
   } else {
-    // Prime field: parse as integer and use FromUnchecked
+    // Prime or binary field: parse as integer and use FromUnchecked
     if (!PyLong_Check(arg)) {
       PyErr_Format(PyExc_TypeError, "expected int, got %s",
                    Py_TYPE(arg)->tp_name);
@@ -934,7 +1001,7 @@ int NPyField_ArgMinFunc(void* data, npy_intp n, npy_intp* min_ind, void* arr) {
 
 template <typename T>
 uint64_t NPyField_CastToInt(T value) {
-  if constexpr (IsPrimeField<T>) {
+  if constexpr (IsPrimeField<T> || IsBinaryField<T>) {
     if constexpr (T::Config::kStorageBits <= 64) {
       if constexpr (T::Config::kUseMontgomery) {
         return value.MontReduce().value();
@@ -1077,8 +1144,7 @@ bool RegisterFieldUFuncs(PyObject* numpy) {
       RegisterUFunc<UFunc<ufuncs::Eq<T>, bool, T, T>, T>(numpy, "equal") &&
       RegisterUFunc<UFunc<ufuncs::Ne<T>, bool, T, T>, T>(numpy, "not_equal");
 
-  // Ordering comparisons are only supported for prime fields
-  if constexpr (T::ExtensionDegree() == 1) {
+  if constexpr (IsComparable<T>) {
     ok = ok &&
          RegisterUFunc<UFunc<ufuncs::Lt<T>, bool, T, T>, T>(numpy, "less") &&
          RegisterUFunc<UFunc<ufuncs::Gt<T>, bool, T, T>, T>(numpy, "greater") &&
@@ -1130,8 +1196,8 @@ bool RegisterFieldDtype(PyObject* numpy) {
   arr_funcs.nonzero = NPyField_NonZero<T>;
   arr_funcs.fill = NPyField_Fill<T>;
   arr_funcs.dotfunc = NPyField_DotFunc<T>;
-  // Ordering functions are only supported for prime fields
-  if constexpr (T::ExtensionDegree() == 1) {
+  // Ordering functions are supported for prime fields and binary fields
+  if constexpr (IsComparable<T>) {
     arr_funcs.compare = NPyField_CompareFunc<T>;
     arr_funcs.argmax = NPyField_ArgMaxFunc<T>;
     arr_funcs.argmin = NPyField_ArgMinFunc<T>;
@@ -1173,8 +1239,8 @@ bool RegisterFieldDtype(PyObject* numpy) {
     return false;
   }
 
-  // Extension fields don't support integer casts
-  if constexpr (T::ExtensionDegree() == 1) {
+  // Extension fields don't support integer casts (but binary fields do)
+  if constexpr (T::ExtensionDegree() == 1 || IsBinaryField<T>) {
     return RegisterFieldCasts<T>() && RegisterFieldUFuncs<T>(numpy);
   } else {
     return RegisterFieldUFuncs<T>(numpy);

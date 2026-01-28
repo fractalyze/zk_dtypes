@@ -30,6 +30,7 @@ cc_library(
     deps = [
         ":babybear",
         ":babybearx4",
+        ":binary_field",
         ":bn254_fq",
         ":bn254_fqx2",
         ":bn254_fr",
@@ -223,6 +224,19 @@ cc_library(
 )
 
 cc_library(
+    name = "big_binary_field",
+    hdrs = ["include/field/big_binary_field.h"],
+    deps = [
+        ":big_int",
+        ":binary_field_config",
+        ":binary_field_multiplication",
+        ":finite_field",
+        ":pow",
+        ":random",
+    ],
+)
+
+cc_library(
     name = "big_prime_field",
     hdrs = ["include/field/big_prime_field.h"],
     deps = [
@@ -238,6 +252,27 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_prod",
     ],
+)
+
+cc_library(
+    name = "binary_field",
+    hdrs = ["include/field/binary_field.h"],
+    deps = [
+        ":big_binary_field",
+        ":comparable_traits",
+        ":small_binary_field",
+    ],
+)
+
+cc_library(
+    name = "binary_field_config",
+    hdrs = ["include/field/binary_field_config.h"],
+)
+
+cc_library(
+    name = "binary_field_multiplication",
+    hdrs = ["include/field/binary_field_multiplication.h"],
+    deps = [":big_int"],
 )
 
 cc_library(
@@ -280,7 +315,6 @@ cc_library(
         ":karatsuba_operation",
         ":toom_cook_operation",
         ":vandermonde_matrix",
-        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -437,6 +471,21 @@ cc_library(
 )
 
 cc_library(
+    name = "small_binary_field",
+    hdrs = ["include/field/small_binary_field.h"],
+    deps = [
+        ":big_int",
+        ":binary_field_config",
+        ":binary_field_multiplication",
+        ":finite_field",
+        ":pow",
+        ":random",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
     name = "small_prime_field",
     hdrs = ["include/field/small_prime_field.h"],
     deps = [
@@ -493,6 +542,7 @@ cc_test(
 cc_test(
     name = "field_unittests",
     srcs = [
+        "tests/field/binary_field_unittest.cc",
         "tests/field/extension_field_unittest.cc",
         "tests/field/prime_field_unittest.cc",
         "tests/field/root_of_unity_unittest.cc",
@@ -507,6 +557,10 @@ cc_test(
         ":sw_test_curve_config",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
+        ":big_binary_field",
+        ":binary_field",
+        ":prime_field",
+        ":small_binary_field",
     ],
 )
 
@@ -785,9 +839,9 @@ py_library(
 )
 
 py_test(
-    name = "field_test",
-    srcs = ["tests/field_test.py"],
-    main = "tests/field_test.py",
+    name = "binary_field_test",
+    srcs = ["tests/binary_field_test.py"],
+    main = "tests/binary_field_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",
@@ -800,6 +854,18 @@ py_test(
     name = "ec_point_test",
     srcs = ["tests/ec_point_test.py"],
     main = "tests/ec_point_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "extension_field_test",
+    srcs = ["tests/extension_field_test.py"],
+    main = "tests/extension_field_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",
@@ -833,9 +899,9 @@ py_test(
 )
 
 py_test(
-    name = "extension_field_test",
-    srcs = ["tests/extension_field_test.py"],
-    main = "tests/extension_field_test.py",
+    name = "prime_field_test",
+    srcs = ["tests/prime_field_test.py"],
+    main = "tests/prime_field_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",

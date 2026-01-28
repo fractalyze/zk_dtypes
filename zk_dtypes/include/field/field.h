@@ -40,6 +40,23 @@ struct IsMultiplicativeGroupImpl<T, std::enable_if_t<IsField<T>>> {
   constexpr static bool value = true;
 };
 
+// Forward declaration for BinaryField
+template <typename Config, typename SFINAE = void>
+class BinaryField;
+
+template <typename T>
+struct IsBinaryFieldImpl {
+  constexpr static bool value = false;
+};
+
+template <typename Config>
+struct IsBinaryFieldImpl<BinaryField<Config>> {
+  constexpr static bool value = true;
+};
+
+template <typename T>
+constexpr bool IsBinaryField = IsBinaryFieldImpl<T>::value;
+
 }  // namespace zk_dtypes
 
 #endif  // ZK_DTYPES_INCLUDE_FIELD_FIELD_H_

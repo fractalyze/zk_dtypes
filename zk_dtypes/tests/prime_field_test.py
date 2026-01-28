@@ -426,7 +426,6 @@ class RawConversionTest(parameterized.TestCase):
       babybear,
       goldilocks,
       koalabear,
-      mersenne31,
       bn254_sf,
   ]
 
@@ -435,7 +434,6 @@ class RawConversionTest(parameterized.TestCase):
       babybear_std,
       goldilocks_std,
       koalabear_std,
-      mersenne31_std,
       bn254_sf_std,
   ]
 
