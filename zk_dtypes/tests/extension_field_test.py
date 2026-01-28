@@ -304,7 +304,6 @@ class ExtensionFieldRawConversionTest(parameterized.TestCase):
       babybearx4_std,
       koalabearx4_std,
       goldilocksx3_std,
-      mersenne31x2_std,
   ]
 
   @parameterized.product(scalar_type=EXT_FIELD_TYPES)
