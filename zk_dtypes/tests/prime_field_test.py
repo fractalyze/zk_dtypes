@@ -33,38 +33,38 @@ from multi_thread_utils import multi_threaded
 import numpy as np
 
 babybear = zk_dtypes.babybear
-babybear_std = zk_dtypes.babybear_std
+babybear_mont = zk_dtypes.babybear_mont
 goldilocks = zk_dtypes.goldilocks
-goldilocks_std = zk_dtypes.goldilocks_std
+goldilocks_mont = zk_dtypes.goldilocks_mont
 koalabear = zk_dtypes.koalabear
-koalabear_std = zk_dtypes.koalabear_std
+koalabear_mont = zk_dtypes.koalabear_mont
 mersenne31 = zk_dtypes.mersenne31
 bn254_sf = zk_dtypes.bn254_sf
-bn254_sf_std = zk_dtypes.bn254_sf_std
+bn254_sf_mont = zk_dtypes.bn254_sf_mont
 
 FIELD_TYPES = [
     babybear,
-    babybear_std,
+    babybear_mont,
     goldilocks,
-    goldilocks_std,
+    goldilocks_mont,
     koalabear,
-    koalabear_std,
+    koalabear_mont,
     mersenne31,
     bn254_sf,
-    bn254_sf_std,
+    bn254_sf_mont,
 ]
 
 # Expected 2-adicity for each field type
 TWO_ADICITY = {
     babybear: 27,
-    babybear_std: 27,
+    babybear_mont: 27,
     goldilocks: 32,
-    goldilocks_std: 32,
+    goldilocks_mont: 32,
     koalabear: 24,
-    koalabear_std: 24,
+    koalabear_mont: 24,
     mersenne31: 1,
     bn254_sf: 28,
-    bn254_sf_std: 28,
+    bn254_sf_mont: 28,
 }
 
 BABYBEAR_MODULUS = 2**31 - 2**27 + 1
@@ -75,14 +75,14 @@ BN254_SF_MODULUS = 2188824287183927522224640574525727508854836440041603434369820
 
 VALUES = {
     babybear: random.sample(range(-100, 100), 4),
-    babybear_std: random.sample(range(-100, 100), 4),
+    babybear_mont: random.sample(range(-100, 100), 4),
     goldilocks: random.sample(range(-100, 100), 4),
-    goldilocks_std: random.sample(range(-100, 100), 4),
+    goldilocks_mont: random.sample(range(-100, 100), 4),
     koalabear: random.sample(range(-100, 100), 4),
-    koalabear_std: random.sample(range(-100, 100), 4),
+    koalabear_mont: random.sample(range(-100, 100), 4),
     mersenne31: random.sample(range(-100, 100), 4),
     bn254_sf: random.sample(range(-100, 100), 4),
-    bn254_sf_std: random.sample(range(-100, 100), 4),
+    bn254_sf_mont: random.sample(range(-100, 100), 4),
 }
 
 
@@ -139,7 +139,7 @@ class ScalarTest(parameterized.TestCase):
           scalar_type(v), scalar_type(python_scalar(scalar_type(v)))
       )
 
-  @parameterized.product(scalar_type=[babybear])
+  @parameterized.product(scalar_type=[babybear_mont])
   def testRoundTripNumpyTypes(self, scalar_type):
     for dtype in [np.uint64]:
       for f in VALUES[scalar_type]:
@@ -265,22 +265,22 @@ class ScalarTest(parameterized.TestCase):
       np.uint64,
   ]
 
-  @parameterized.product(a=[babybear], b=CAST_DTYPES + [babybear])
+  @parameterized.product(a=[babybear_mont], b=CAST_DTYPES + [babybear_mont])
   def test32BitCanCast(self, a, b):
     allowed_casts = [
-        (babybear, babybear),
-        (babybear, np.uint32),
-        (babybear, np.uint64),
+        (babybear_mont, babybear_mont),
+        (babybear_mont, np.uint32),
+        (babybear_mont, np.uint64),
     ]
     self.assertEqual(
         ((a, b) in allowed_casts), np.can_cast(a, b, casting="safe")
     )
 
-  @parameterized.product(a=[goldilocks], b=CAST_DTYPES + [goldilocks])
+  @parameterized.product(a=[goldilocks_mont], b=CAST_DTYPES + [goldilocks_mont])
   def test64BitCanCast(self, a, b):
     allowed_casts = [
-        (goldilocks, goldilocks),
-        (goldilocks, np.uint64),
+        (goldilocks_mont, goldilocks_mont),
+        (goldilocks_mont, np.uint64),
     ]
     self.assertEqual(
         ((a, b) in allowed_casts), np.can_cast(a, b, casting="safe")
@@ -421,20 +421,20 @@ class ArrayTest(parameterized.TestCase):
 @multi_threaded(num_workers=3)
 class RawConversionTest(parameterized.TestCase):
 
-  # Montgomery types (without _std suffix, uses Montgomery multiplication)
-  MONT_FIELD_TYPES = [
+  # Standard types (non-Montgomery)
+  STD_FIELD_TYPES = [
       babybear,
       goldilocks,
       koalabear,
       bn254_sf,
   ]
 
-  # Standard types (non-Montgomery, with _std suffix)
-  STD_FIELD_TYPES = [
-      babybear_std,
-      goldilocks_std,
-      koalabear_std,
-      bn254_sf_std,
+  # Montgomery types (with _mont suffix, uses Montgomery multiplication)
+  MONT_FIELD_TYPES = [
+      babybear_mont,
+      goldilocks_mont,
+      koalabear_mont,
+      bn254_sf_mont,
   ]
 
   @parameterized.product(scalar_type=FIELD_TYPES)

@@ -35,11 +35,11 @@ struct KoalabearBaseConfig {
   constexpr static bool kHasLargeSubgroupRootOfUnity = false;
 };
 
-struct KoalabearStdConfig : public KoalabearBaseConfig {
+struct KoalabearConfig : public KoalabearBaseConfig {
   constexpr static bool kUseMontgomery = false;
   constexpr static bool kUseBarrett = true;
 
-  using StdConfig = KoalabearStdConfig;
+  using StdConfig = KoalabearConfig;
 
   // Barrett Precomputed Constant: floor(2⁶⁴ / P)
   constexpr static uint64_t kMu = UINT64_C(8657571868);
@@ -49,10 +49,10 @@ struct KoalabearStdConfig : public KoalabearBaseConfig {
   constexpr static uint32_t kTwoAdicRootOfUnity = 1791270792;
 };
 
-struct KoalabearConfig : public KoalabearBaseConfig {
+struct KoalabearMontConfig : public KoalabearBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = KoalabearStdConfig;
+  using StdConfig = KoalabearConfig;
 
   constexpr static uint32_t kRSquared = 402124772;
   constexpr static uint32_t kNPrime = 2164260865;
@@ -63,7 +63,7 @@ struct KoalabearConfig : public KoalabearBaseConfig {
 };
 
 using Koalabear = PrimeField<KoalabearConfig>;
-using KoalabearStd = PrimeField<KoalabearStdConfig>;
+using KoalabearMont = PrimeField<KoalabearMontConfig>;
 
 }  // namespace zk_dtypes
 

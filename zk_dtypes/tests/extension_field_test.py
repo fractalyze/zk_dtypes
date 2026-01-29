@@ -27,21 +27,21 @@ from multi_thread_utils import multi_threaded
 import numpy as np
 
 babybearx4 = zk_dtypes.babybearx4
-babybearx4_std = zk_dtypes.babybearx4_std
-koalabearx4 = zk_dtypes.koalabearx4
-koalabearx4_std = zk_dtypes.koalabearx4_std
-mersenne31x2 = zk_dtypes.mersenne31x2
+babybearx4_mont = zk_dtypes.babybearx4_mont
 goldilocksx3 = zk_dtypes.goldilocksx3
-goldilocksx3_std = zk_dtypes.goldilocksx3_std
+goldilocksx3_mont = zk_dtypes.goldilocksx3_mont
+koalabearx4 = zk_dtypes.koalabearx4
+koalabearx4_mont = zk_dtypes.koalabearx4_mont
+mersenne31x2 = zk_dtypes.mersenne31x2
 
 EXT_FIELD_TYPES = [
     babybearx4,
-    babybearx4_std,
-    koalabearx4,
-    koalabearx4_std,
-    mersenne31x2,
+    babybearx4_mont,
     goldilocksx3,
-    goldilocksx3_std,
+    goldilocksx3_mont,
+    koalabearx4,
+    koalabearx4_mont,
+    mersenne31x2,
 ]
 
 
@@ -52,11 +52,11 @@ def make_values(degree):
 
 VALUES = {
     babybearx4: make_values(4),
-    babybearx4_std: make_values(4),
-    koalabearx4: make_values(4),
-    koalabearx4_std: make_values(4),
+    babybearx4_mont: make_values(4),
     goldilocksx3: make_values(3),
-    goldilocksx3_std: make_values(3),
+    goldilocksx3_mont: make_values(3),
+    koalabearx4: make_values(4),
+    koalabearx4_mont: make_values(4),
     mersenne31x2: make_values(2),
 }
 
@@ -291,19 +291,19 @@ class ExtensionFieldArrayTest(parameterized.TestCase):
 @multi_threaded(num_workers=3)
 class ExtensionFieldRawConversionTest(parameterized.TestCase):
 
-  # Montgomery extension field types
-  MONT_EXT_FIELD_TYPES = [
+  # Standard extension field types (non-Montgomery)
+  STD_EXT_FIELD_TYPES = [
       babybearx4,
       koalabearx4,
       goldilocksx3,
       mersenne31x2,
   ]
 
-  # Standard extension field types (non-Montgomery)
-  STD_EXT_FIELD_TYPES = [
-      babybearx4_std,
-      koalabearx4_std,
-      goldilocksx3_std,
+  # Montgomery extension field types
+  MONT_EXT_FIELD_TYPES = [
+      babybearx4_mont,
+      koalabearx4_mont,
+      goldilocksx3_mont,
   ]
 
   @parameterized.product(scalar_type=EXT_FIELD_TYPES)

@@ -45,10 +45,10 @@ struct FrBaseConfig {
   constexpr static bool kHasLargeSubgroupRootOfUnity = true;
 };
 
-struct FrStdConfig : public FrBaseConfig {
+struct FrConfig : public FrBaseConfig {
   constexpr static bool kUseMontgomery = false;
 
-  using StdConfig = FrStdConfig;
+  using StdConfig = FrConfig;
 
   constexpr static BigInt<4> kOne = 1;
 
@@ -66,10 +66,10 @@ struct FrStdConfig : public FrBaseConfig {
       UINT64_C(1274670453483637722),
   };
 };
-struct FrConfig : public FrBaseConfig {
+struct FrMontConfig : public FrBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = FrStdConfig;
+  using StdConfig = FrConfig;
 
   constexpr static BigInt<4> kRSquared = {
       UINT64_C(1997599621687373223),
@@ -102,7 +102,7 @@ struct FrConfig : public FrBaseConfig {
 };
 
 using Fr = PrimeField<FrConfig>;
-using FrStd = PrimeField<FrStdConfig>;
+using FrMont = PrimeField<FrMontConfig>;
 
 }  // namespace zk_dtypes::bn254
 

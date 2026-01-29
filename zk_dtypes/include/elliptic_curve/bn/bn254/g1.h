@@ -34,34 +34,34 @@ class G1SwCurveBaseConfig {
   constexpr static BaseField kY = 2;
 };
 
-class G1SwCurveStdConfig : public G1SwCurveBaseConfig<FqStd> {
+class G1SwCurveConfig : public G1SwCurveBaseConfig<Fq> {
  public:
   constexpr static bool kUseMontgomery = false;
 
-  using StdConfig = G1SwCurveStdConfig;
-
-  using BaseField = FqStd;
-  using ScalarField = FrStd;
-};
-
-class G1SwCurveConfig : public G1SwCurveBaseConfig<Fq> {
- public:
-  constexpr static bool kUseMontgomery = true;
-
-  using StdConfig = G1SwCurveStdConfig;
+  using StdConfig = G1SwCurveConfig;
 
   using BaseField = Fq;
   using ScalarField = Fr;
 };
 
+class G1SwCurveMontConfig : public G1SwCurveBaseConfig<FqMont> {
+ public:
+  constexpr static bool kUseMontgomery = true;
+
+  using StdConfig = G1SwCurveConfig;
+
+  using BaseField = FqMont;
+  using ScalarField = FrMont;
+};
+
 using G1Curve = SwCurve<G1SwCurveConfig>;
-using G1CurveStd = SwCurve<G1SwCurveStdConfig>;
+using G1CurveMont = SwCurve<G1SwCurveMontConfig>;
 using G1AffinePoint = AffinePoint<G1Curve>;
-using G1AffinePointStd = AffinePoint<G1CurveStd>;
+using G1AffinePointMont = AffinePoint<G1CurveMont>;
 using G1JacobianPoint = JacobianPoint<G1Curve>;
-using G1JacobianPointStd = JacobianPoint<G1CurveStd>;
+using G1JacobianPointMont = JacobianPoint<G1CurveMont>;
 using G1PointXyzz = PointXyzz<G1Curve>;
-using G1PointXyzzStd = PointXyzz<G1CurveStd>;
+using G1PointXyzzMont = PointXyzz<G1CurveMont>;
 
 }  // namespace zk_dtypes::bn254
 

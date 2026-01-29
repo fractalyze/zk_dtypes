@@ -163,12 +163,12 @@ TEST(JacobianPointTest, BatchToAffine) {
 }
 
 TEST(JacobianPointTest, MontReduce) {
-  JacobianPoint p(3, 2, 1);
-  JacobianPoint::StdType reduced = p.MontReduce();
+  JacobianPointMont p(3, 2, 1);
+  JacobianPointMont::StdType reduced = p.MontReduce();
 
-  EXPECT_EQ(reduced.x(), Fq(3).MontReduce());
-  EXPECT_EQ(reduced.y(), Fq(2).MontReduce());
-  EXPECT_EQ(reduced.z(), Fq(1).MontReduce());
+  EXPECT_EQ(reduced.x(), FqMont(3).MontReduce());
+  EXPECT_EQ(reduced.y(), FqMont(2).MontReduce());
+  EXPECT_EQ(reduced.z(), FqMont(1).MontReduce());
 }
 
 }  // namespace

@@ -15,9 +15,18 @@
 #include "zk_dtypes/include/field/mersenne31/mersenne31x2.h"
 
 // clang-format off
+// WITH_MONT generates entries for both Standard and Montgomery types.
+// Parameters:
+//   V: The visitor macro
+//   ActualType: The C++ Standard type (e.g., ::zk_dtypes::Babybear)
+//   UpperCamelCaseName: The upper camel case name (e.g., Babybear)
+//   UpperSnakeCaseName: The screaming snake case name (e.g., BABYBEAR)
+//   LowerSnakeCaseName: The lower snake case name (e.g., babybear)
+// The macro automatically generates the Montgomery type entry by appending "Mont"
+// suffix to produce ActualTypeMont, UpperCamelCaseNameMont, etc.
 #define WITH_MONT(V, ActualType, UpperCamelCaseName, UpperSnakeCaseName, LowerSnakeCaseName) \
 V(ActualType, UpperCamelCaseName, UpperSnakeCaseName, LowerSnakeCaseName)                    \
-V(ActualType##Std, UpperCamelCaseName##Std, UpperSnakeCaseName##_STD, LowerSnakeCaseName##_std)
+V(ActualType##Mont, UpperCamelCaseName##Mont, UpperSnakeCaseName##_MONT, LowerSnakeCaseName##_mont)
 
 //===----------------------------------------------------------------------===//
 // BinaryField Types

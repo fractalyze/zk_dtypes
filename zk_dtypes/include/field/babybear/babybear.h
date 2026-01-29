@@ -35,11 +35,11 @@ struct BabybearBaseConfig {
   constexpr static bool kHasLargeSubgroupRootOfUnity = false;
 };
 
-struct BabybearStdConfig : public BabybearBaseConfig {
+struct BabybearConfig : public BabybearBaseConfig {
   constexpr static bool kUseMontgomery = false;
   constexpr static bool kUseBarrett = true;
 
-  using StdConfig = BabybearStdConfig;
+  using StdConfig = BabybearConfig;
 
   // Barrett Precomputed Constant: floor(2⁶⁴ / P)
   constexpr static uint64_t kMu = UINT64_C(9162596893);
@@ -49,10 +49,10 @@ struct BabybearStdConfig : public BabybearBaseConfig {
   constexpr static uint32_t kTwoAdicRootOfUnity = 440564289;
 };
 
-struct BabybearConfig : public BabybearBaseConfig {
+struct BabybearMontConfig : public BabybearBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = BabybearStdConfig;
+  using StdConfig = BabybearConfig;
 
   constexpr static uint32_t kRSquared = 1172168163;
   constexpr static uint32_t kNPrime = 2281701377;
@@ -63,7 +63,7 @@ struct BabybearConfig : public BabybearBaseConfig {
 };
 
 using Babybear = PrimeField<BabybearConfig>;
-using BabybearStd = PrimeField<BabybearStdConfig>;
+using BabybearMont = PrimeField<BabybearMontConfig>;
 
 }  // namespace zk_dtypes
 

@@ -31,7 +31,7 @@ using PrimeFieldTypes = testing::Types<
     ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(PRIME_FIELD_TYPE)
 #undef PRIME_FIELD_TYPE
         test::Fr,
-    test::FrStd>;
+    test::FrMont>;
 TYPED_TEST_SUITE(PrimeFieldTypedTest, PrimeFieldTypes);
 
 TYPED_TEST(PrimeFieldTypedTest, Traits) {
