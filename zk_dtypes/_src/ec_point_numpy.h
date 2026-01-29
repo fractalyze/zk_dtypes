@@ -805,11 +805,11 @@ bool RegisterEcPointMultiplyUFunc(PyObject* numpy) {
                                    bn254::G1JacobianPoint, bn254::G1PointXyzz,
                                    bn254::G2AffinePoint, bn254::G2JacobianPoint,
                                    bn254::G2PointXyzz>(numpy);
-  } else if constexpr (std::is_same_v<ScalarField, bn254::FrStd>) {
+  } else if constexpr (std::is_same_v<ScalarField, bn254::FrMont>) {
     return RegisterEcPointMul_Impl<
-        bn254::FrStd, bn254::G1AffinePointStd, bn254::G1JacobianPointStd,
-        bn254::G1PointXyzzStd, bn254::G2AffinePointStd,
-        bn254::G2JacobianPointStd, bn254::G2PointXyzzStd>(numpy);
+        bn254::FrMont, bn254::G1AffinePointMont, bn254::G1JacobianPointMont,
+        bn254::G1PointXyzzMont, bn254::G2AffinePointMont,
+        bn254::G2JacobianPointMont, bn254::G2PointXyzzMont>(numpy);
   } else {
     return false;
   }

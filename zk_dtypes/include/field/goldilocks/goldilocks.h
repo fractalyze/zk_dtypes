@@ -37,11 +37,11 @@ struct GoldilocksBaseConfig {
   constexpr static bool kHasLargeSubgroupRootOfUnity = true;
 };
 
-struct GoldilocksStdConfig : public GoldilocksBaseConfig {
+struct GoldilocksConfig : public GoldilocksBaseConfig {
   constexpr static bool kUseMontgomery = false;
   constexpr static bool kUseBarrett = false;
 
-  using StdConfig = GoldilocksStdConfig;
+  using StdConfig = GoldilocksConfig;
 
   constexpr static uint64_t kOne = 1;
 
@@ -51,10 +51,10 @@ struct GoldilocksStdConfig : public GoldilocksBaseConfig {
       UINT64_C(14159254819154955796);
 };
 
-struct GoldilocksConfig : public GoldilocksBaseConfig {
+struct GoldilocksMontConfig : public GoldilocksBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = GoldilocksStdConfig;
+  using StdConfig = GoldilocksConfig;
 
   constexpr static uint64_t kRSquared = UINT64_C(18446744065119617025);
   constexpr static uint64_t kNPrime = 4294967297;
@@ -69,7 +69,7 @@ struct GoldilocksConfig : public GoldilocksBaseConfig {
 };
 
 using Goldilocks = PrimeField<GoldilocksConfig>;
-using GoldilocksStd = PrimeField<GoldilocksStdConfig>;
+using GoldilocksMont = PrimeField<GoldilocksMontConfig>;
 
 }  // namespace zk_dtypes
 
