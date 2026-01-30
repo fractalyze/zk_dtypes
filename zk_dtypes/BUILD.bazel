@@ -591,6 +591,83 @@ cc_library(
     hdrs = ["include/group/group.h"],
 )
 
+##########
+# Circle #
+##########
+
+cc_library(
+    name = "circle_point",
+    hdrs = ["include/circle/circle_point.h"],
+    deps = [
+        ":group",
+        ":str_join",
+    ],
+)
+
+cc_library(
+    name = "circle_point_index",
+    hdrs = ["include/circle/circle_point_index.h"],
+)
+
+cc_library(
+    name = "m31_circle",
+    hdrs = ["include/circle/m31_circle.h"],
+    deps = [
+        ":circle_point",
+        ":circle_point_index",
+        ":mersenne31",
+    ],
+)
+
+cc_library(
+    name = "coset",
+    hdrs = ["include/circle/coset.h"],
+    deps = [
+        ":circle_point",
+        ":circle_point_index",
+        ":m31_circle",
+        ":mersenne31",
+    ],
+)
+
+cc_library(
+    name = "circle_domain",
+    hdrs = ["include/circle/circle_domain.h"],
+    deps = [
+        ":circle_point",
+        ":circle_point_index",
+        ":coset",
+        ":m31_circle",
+        ":mersenne31",
+    ],
+)
+
+cc_library(
+    name = "circle_fft",
+    hdrs = ["include/circle/fft.h"],
+    deps = [":mersenne31"],
+)
+
+cc_test(
+    name = "circle_unittests",
+    srcs = [
+        "tests/circle/circle_domain_unittest.cc",
+        "tests/circle/circle_point_unittest.cc",
+        "tests/circle/coset_unittest.cc",
+    ],
+    deps = [
+        ":circle_domain",
+        ":circle_fft",
+        ":circle_point",
+        ":circle_point_index",
+        ":coset",
+        ":m31_circle",
+        ":mersenne31",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "point_traits",
     hdrs = ["include/geometry/point_traits.h"],
