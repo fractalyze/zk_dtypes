@@ -772,10 +772,20 @@ bool ParseRawFieldFromPyObject(PyObject* arg, F* output) {
         return false;
       }
       std::array<uint8_t, N * 8> bytes = {};
-      if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(arg),
-                              bytes.data(), bytes.size(),
-                              /*little_endian=*/true,
-                              /*is_signed=*/false) < 0) {
+#if PY_VERSION_HEX >= 0x030D0000  // Python 3.13 or later
+      int ret = _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(arg),
+                                    bytes.data(), bytes.size(),
+                                    /*little_endian=*/true,
+                                    /*is_signed=*/false,
+                                    /*with_exceptions=*/true);
+#else
+      int ret = _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(arg),
+                                    bytes.data(), bytes.size(),
+                                    /*little_endian=*/true,
+                                    /*is_signed=*/false);
+#endif
+      if (ret == -1) {
+        // Error already set by _PyLong_AsByteArray.
         return false;
       }
       BigInt<N> value = BigInt<N>::FromBytesLE(bytes);
