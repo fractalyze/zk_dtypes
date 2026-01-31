@@ -48,6 +48,7 @@ class PointXyzz<_Curve,
   using JacobianPoint = zk_dtypes::JacobianPoint<Curve>;
 
   constexpr static bool kUseMontgomery = Curve::kUseMontgomery;
+  constexpr static size_t kByteWidth = BaseField::kByteWidth * 4;
   constexpr static size_t kBitWidth = BaseField::kBitWidth * 4;
 
   constexpr PointXyzz()

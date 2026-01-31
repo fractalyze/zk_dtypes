@@ -43,6 +43,7 @@ class AffinePoint<
   using PointXyzz = zk_dtypes::PointXyzz<Curve>;
 
   constexpr static bool kUseMontgomery = Curve::kUseMontgomery;
+  constexpr static size_t kByteWidth = BaseField::kByteWidth * 2;
   constexpr static size_t kBitWidth = BaseField::kBitWidth * 2;
 
   constexpr AffinePoint() : AffinePoint(BaseField::Zero(), BaseField::Zero()) {}
