@@ -24,7 +24,7 @@ namespace zk_dtypes::bn254 {
 // Fq6 = Fq2[v] / (v³ - (9 + u))
 // where u is the non-residue of Fq2 (u² = -1)
 // Non-residue for cubic extension: 9 + u = {9, 1} in Fq2
-REGISTER_EXTENSION_FIELD_WITH_TOWER(FqX6, FqX2, Fq, 3, {{9, 1}});
+REGISTER_EXTENSION_FIELD_WITH_TOWER(FqX6, FqX2, Fq, 3, {9, 1});
 
 }  // namespace zk_dtypes::bn254
 
