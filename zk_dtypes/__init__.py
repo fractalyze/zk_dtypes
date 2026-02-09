@@ -18,6 +18,7 @@ __version__ = "0.0.3"
 __all__ = [
     "__version__",
     "ecinfo",
+    "efinfo",
     "iinfo",
     "pfinfo",
     "int2",
@@ -70,6 +71,7 @@ __all__ = [
 from typing import Type
 
 from zk_dtypes._ecinfo import ecinfo
+from zk_dtypes._efinfo import efinfo
 from zk_dtypes._iinfo import iinfo
 from zk_dtypes._pfinfo import pfinfo
 from zk_dtypes._zk_dtypes_ext import int2
