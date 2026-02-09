@@ -822,6 +822,7 @@ py_library(
     name = "zk_dtypes_py",
     srcs = [
         "__init__.py",
+        "_ecinfo.py",
         "_iinfo.py",
         "_pfinfo.py",
     ],
