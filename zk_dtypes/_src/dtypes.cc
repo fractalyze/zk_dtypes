@@ -98,229 +98,276 @@ struct TypeDescriptor<uint4> : IntNTypeDescriptor<uint4> {
 template <typename T>
 struct TypeDescriptorBase;
 
-template <>
-struct TypeDescriptorBase<Babybear> : FieldTypeDescriptor<Babybear> {
-  static constexpr const char* kTpDoc =
-      "babybear field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'b';
-};
+//===----------------------------------------------------------------------===//
+// PrimeField TypeDescriptorBase
+//===----------------------------------------------------------------------===//
 
 template <>
-struct TypeDescriptorBase<BabybearStd> : FieldTypeDescriptor<BabybearStd> {
+struct TypeDescriptorBase<Babybear> : FieldTypeDescriptor<Babybear> {
   static constexpr const char* kTpDoc =
       "babybear field values on standard domain";
   static constexpr char kNpyDescrType = 'B';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks> : FieldTypeDescriptor<Goldilocks> {
+struct TypeDescriptorBase<BabybearMont> : FieldTypeDescriptor<BabybearMont> {
   static constexpr const char* kTpDoc =
-      "goldilocks field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'g';
+      "babybear field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'b';
 };
 
 template <>
-struct TypeDescriptorBase<GoldilocksStd> : FieldTypeDescriptor<GoldilocksStd> {
+struct TypeDescriptorBase<Goldilocks> : FieldTypeDescriptor<Goldilocks> {
   static constexpr const char* kTpDoc =
       "goldilocks field values on standard domain";
   static constexpr char kNpyDescrType = 'G';
 };
 
 template <>
-struct TypeDescriptorBase<Koalabear> : FieldTypeDescriptor<Koalabear> {
+struct TypeDescriptorBase<GoldilocksMont>
+    : FieldTypeDescriptor<GoldilocksMont> {
   static constexpr const char* kTpDoc =
-      "koalabear field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'k';
+      "goldilocks field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'g';
 };
 
 template <>
-struct TypeDescriptorBase<KoalabearStd> : FieldTypeDescriptor<KoalabearStd> {
+struct TypeDescriptorBase<Koalabear> : FieldTypeDescriptor<Koalabear> {
   static constexpr const char* kTpDoc =
       "koalabear field values on standard domain";
   static constexpr char kNpyDescrType = 'K';
 };
 
 template <>
+struct TypeDescriptorBase<KoalabearMont> : FieldTypeDescriptor<KoalabearMont> {
+  static constexpr const char* kTpDoc =
+      "koalabear field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'k';
+};
+
+template <>
 struct TypeDescriptorBase<Mersenne31> : FieldTypeDescriptor<Mersenne31> {
   static constexpr const char* kTpDoc =
-      "mersenne31 field values on montgomery domain";
+      "mersenne31 field values on standard domain";
   static constexpr char kNpyDescrType = 'm';
 };
 
 template <>
-struct TypeDescriptorBase<Mersenne31Std> : FieldTypeDescriptor<Mersenne31Std> {
-  static constexpr const char* kTpDoc =
-      "mersenne31 field values on standard domain";
-  static constexpr char kNpyDescrType = 'M';
-};
-
-template <>
 struct TypeDescriptorBase<bn254::Fr> : FieldTypeDescriptor<bn254::Fr> {
-  static constexpr const char* kTpDoc =
-      "bn254 scalar field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'b';
-};
-
-template <>
-struct TypeDescriptorBase<bn254::FrStd> : FieldTypeDescriptor<bn254::FrStd> {
   static constexpr const char* kTpDoc =
       "bn254 scalar field values on standard domain";
   static constexpr char kNpyDescrType = 'B';
 };
 
 template <>
-struct TypeDescriptorBase<BabybearX4> : FieldTypeDescriptor<BabybearX4> {
+struct TypeDescriptorBase<bn254::FrMont> : FieldTypeDescriptor<bn254::FrMont> {
   static constexpr const char* kTpDoc =
-      "babybear quartic extension field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'd';
+      "bn254 scalar field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'b';
 };
 
+//===----------------------------------------------------------------------===//
+// ExtendedField TypeDescriptorBase
+//===----------------------------------------------------------------------===//
+
 template <>
-struct TypeDescriptorBase<BabybearX4Std> : FieldTypeDescriptor<BabybearX4Std> {
+struct TypeDescriptorBase<BabybearX4> : FieldTypeDescriptor<BabybearX4> {
   static constexpr const char* kTpDoc =
       "babybear quartic extension field values on standard domain";
   static constexpr char kNpyDescrType = 'D';
 };
 
 template <>
-struct TypeDescriptorBase<KoalabearX4> : FieldTypeDescriptor<KoalabearX4> {
+struct TypeDescriptorBase<BabybearX4Mont>
+    : FieldTypeDescriptor<BabybearX4Mont> {
   static constexpr const char* kTpDoc =
-      "koalabear quartic extension field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'e';
+      "babybear quartic extension field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'd';
 };
 
 template <>
-struct TypeDescriptorBase<KoalabearX4Std>
-    : FieldTypeDescriptor<KoalabearX4Std> {
+struct TypeDescriptorBase<KoalabearX4> : FieldTypeDescriptor<KoalabearX4> {
   static constexpr const char* kTpDoc =
       "koalabear quartic extension field values on standard domain";
   static constexpr char kNpyDescrType = 'E';
 };
 
 template <>
-struct TypeDescriptorBase<Mersenne31X2> : FieldTypeDescriptor<Mersenne31X2> {
+struct TypeDescriptorBase<KoalabearX4Mont>
+    : FieldTypeDescriptor<KoalabearX4Mont> {
   static constexpr const char* kTpDoc =
-      "mersenne31x2 quadratic extension field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'q';
-};
-
-template <>
-struct TypeDescriptorBase<Mersenne31X2Std>
-    : FieldTypeDescriptor<Mersenne31X2Std> {
-  static constexpr const char* kTpDoc =
-      "mersenne31x2 quadratic extension field values on standard domain";
-  static constexpr char kNpyDescrType = 'Q';
+      "koalabear quartic extension field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'e';
 };
 
 template <>
 struct TypeDescriptorBase<GoldilocksX3> : FieldTypeDescriptor<GoldilocksX3> {
-  static constexpr const char* kTpDoc =
-      "goldilocks cubic extension field values on montgomery domain";
-  static constexpr char kNpyDescrType = 't';
-};
-
-template <>
-struct TypeDescriptorBase<GoldilocksX3Std>
-    : FieldTypeDescriptor<GoldilocksX3Std> {
   static constexpr const char* kTpDoc =
       "goldilocks cubic extension field values on standard domain";
   static constexpr char kNpyDescrType = 'T';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G1AffinePoint>
-    : EcPointTypeDescriptor<bn254::G1AffinePoint> {
+struct TypeDescriptorBase<GoldilocksX3Mont>
+    : FieldTypeDescriptor<GoldilocksX3Mont> {
   static constexpr const char* kTpDoc =
-      "bn254 G1 elliptic curve affine point on montgomery domain";
-  static constexpr char kNpyDescrType = 'a';
+      "goldilocks cubic extension field values on montgomery domain";
+  static constexpr char kNpyDescrType = 't';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G1AffinePointStd>
-    : EcPointTypeDescriptor<bn254::G1AffinePointStd> {
+struct TypeDescriptorBase<Mersenne31X2> : FieldTypeDescriptor<Mersenne31X2> {
+  static constexpr const char* kTpDoc =
+      "mersenne31x2 quadratic extension field values on standard domain";
+  static constexpr char kNpyDescrType = 'q';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT0> : FieldTypeDescriptor<BinaryFieldT0> {
+  static constexpr const char* kTpDoc = "GF(2) binary field values";
+  static constexpr char kNpyDescrType = '1';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT1> : FieldTypeDescriptor<BinaryFieldT1> {
+  static constexpr const char* kTpDoc = "GF(2²) binary field values";
+  static constexpr char kNpyDescrType = '2';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT2> : FieldTypeDescriptor<BinaryFieldT2> {
+  static constexpr const char* kTpDoc = "GF(2⁴) binary field values";
+  static constexpr char kNpyDescrType = '4';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT3> : FieldTypeDescriptor<BinaryFieldT3> {
+  static constexpr const char* kTpDoc = "GF(2⁸) binary field values";
+  static constexpr char kNpyDescrType = '8';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT4> : FieldTypeDescriptor<BinaryFieldT4> {
+  static constexpr const char* kTpDoc = "GF(2¹⁶) binary field values";
+  static constexpr char kNpyDescrType = 's';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT5> : FieldTypeDescriptor<BinaryFieldT5> {
+  static constexpr const char* kTpDoc = "GF(2³²) binary field values";
+  static constexpr char kNpyDescrType = 'l';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT6> : FieldTypeDescriptor<BinaryFieldT6> {
+  static constexpr const char* kTpDoc = "GF(2⁶⁴) binary field values";
+  static constexpr char kNpyDescrType = 'L';
+};
+
+template <>
+struct TypeDescriptorBase<BinaryFieldT7> : FieldTypeDescriptor<BinaryFieldT7> {
+  static constexpr const char* kTpDoc = "GF(2¹²⁸) binary field values";
+  static constexpr char kNpyDescrType = 'w';
+};
+
+//===----------------------------------------------------------------------===//
+// EcPoint TypeDescriptorBase
+//===----------------------------------------------------------------------===//
+
+template <>
+struct TypeDescriptorBase<bn254::G1AffinePoint>
+    : EcPointTypeDescriptor<bn254::G1AffinePoint> {
   static constexpr const char* kTpDoc =
       "bn254 G1 elliptic curve affine point on standard domain";
   static constexpr char kNpyDescrType = 'A';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G1JacobianPoint>
-    : EcPointTypeDescriptor<bn254::G1JacobianPoint> {
+struct TypeDescriptorBase<bn254::G1AffinePointMont>
+    : EcPointTypeDescriptor<bn254::G1AffinePointMont> {
   static constexpr const char* kTpDoc =
-      "bn254 G1 elliptic curve jacobian point on montgomery domain";
-  static constexpr char kNpyDescrType = 'j';
+      "bn254 G1 elliptic curve affine point on montgomery domain";
+  static constexpr char kNpyDescrType = 'a';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G1JacobianPointStd>
-    : EcPointTypeDescriptor<bn254::G1JacobianPointStd> {
+struct TypeDescriptorBase<bn254::G1JacobianPoint>
+    : EcPointTypeDescriptor<bn254::G1JacobianPoint> {
   static constexpr const char* kTpDoc =
       "bn254 G1 elliptic curve jacobian point on standard domain";
   static constexpr char kNpyDescrType = 'J';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G1PointXyzz>
-    : EcPointTypeDescriptor<bn254::G1PointXyzz> {
+struct TypeDescriptorBase<bn254::G1JacobianPointMont>
+    : EcPointTypeDescriptor<bn254::G1JacobianPointMont> {
   static constexpr const char* kTpDoc =
-      "bn254 G1 elliptic curve xyzz point on montgomery domain";
-  static constexpr char kNpyDescrType = 'x';
+      "bn254 G1 elliptic curve jacobian point on montgomery domain";
+  static constexpr char kNpyDescrType = 'j';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G1PointXyzzStd>
-    : EcPointTypeDescriptor<bn254::G1PointXyzzStd> {
+struct TypeDescriptorBase<bn254::G1PointXyzz>
+    : EcPointTypeDescriptor<bn254::G1PointXyzz> {
   static constexpr const char* kTpDoc =
       "bn254 G1 elliptic curve xyzz point on standard domain";
   static constexpr char kNpyDescrType = 'X';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G2AffinePoint>
-    : EcPointTypeDescriptor<bn254::G2AffinePoint> {
+struct TypeDescriptorBase<bn254::G1PointXyzzMont>
+    : EcPointTypeDescriptor<bn254::G1PointXyzzMont> {
   static constexpr const char* kTpDoc =
-      "bn254 G2 elliptic curve affine point on montgomery domain";
-  static constexpr char kNpyDescrType = 'a';
+      "bn254 G1 elliptic curve xyzz point on montgomery domain";
+  static constexpr char kNpyDescrType = 'x';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G2AffinePointStd>
-    : EcPointTypeDescriptor<bn254::G2AffinePointStd> {
+struct TypeDescriptorBase<bn254::G2AffinePoint>
+    : EcPointTypeDescriptor<bn254::G2AffinePoint> {
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve affine point on standard domain";
   static constexpr char kNpyDescrType = 'A';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G2JacobianPoint>
-    : EcPointTypeDescriptor<bn254::G2JacobianPoint> {
+struct TypeDescriptorBase<bn254::G2AffinePointMont>
+    : EcPointTypeDescriptor<bn254::G2AffinePointMont> {
   static constexpr const char* kTpDoc =
-      "bn254 G2 elliptic curve jacobian point on montgomery domain";
-  static constexpr char kNpyDescrType = 'j';
+      "bn254 G2 elliptic curve affine point on montgomery domain";
+  static constexpr char kNpyDescrType = 'a';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G2JacobianPointStd>
-    : EcPointTypeDescriptor<bn254::G2JacobianPointStd> {
+struct TypeDescriptorBase<bn254::G2JacobianPoint>
+    : EcPointTypeDescriptor<bn254::G2JacobianPoint> {
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve jacobian point on standard domain";
   static constexpr char kNpyDescrType = 'J';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G2PointXyzz>
-    : EcPointTypeDescriptor<bn254::G2PointXyzz> {
+struct TypeDescriptorBase<bn254::G2JacobianPointMont>
+    : EcPointTypeDescriptor<bn254::G2JacobianPointMont> {
   static constexpr const char* kTpDoc =
-      "bn254 G2 elliptic curve xyzz point on montgomery domain";
-  static constexpr char kNpyDescrType = 'x';
+      "bn254 G2 elliptic curve jacobian point on montgomery domain";
+  static constexpr char kNpyDescrType = 'j';
 };
 
 template <>
-struct TypeDescriptorBase<bn254::G2PointXyzzStd>
-    : EcPointTypeDescriptor<bn254::G2PointXyzzStd> {
+struct TypeDescriptorBase<bn254::G2PointXyzz>
+    : EcPointTypeDescriptor<bn254::G2PointXyzz> {
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve xyzz point on standard domain";
   static constexpr char kNpyDescrType = 'X';
+};
+
+template <>
+struct TypeDescriptorBase<bn254::G2PointXyzzMont>
+    : EcPointTypeDescriptor<bn254::G2PointXyzzMont> {
+  static constexpr const char* kTpDoc =
+      "bn254 G2 elliptic curve xyzz point on montgomery domain";
+  static constexpr char kNpyDescrType = 'x';
 };
 
 #define REGISTER_TYPE_DESCRIPTOR(ActualType, UpperCamelCaseName,         \

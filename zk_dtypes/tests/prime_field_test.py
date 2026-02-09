@@ -33,41 +33,38 @@ from multi_thread_utils import multi_threaded
 import numpy as np
 
 babybear = zk_dtypes.babybear
-babybear_std = zk_dtypes.babybear_std
+babybear_mont = zk_dtypes.babybear_mont
 goldilocks = zk_dtypes.goldilocks
-goldilocks_std = zk_dtypes.goldilocks_std
+goldilocks_mont = zk_dtypes.goldilocks_mont
 koalabear = zk_dtypes.koalabear
-koalabear_std = zk_dtypes.koalabear_std
+koalabear_mont = zk_dtypes.koalabear_mont
 mersenne31 = zk_dtypes.mersenne31
-mersenne31_std = zk_dtypes.mersenne31_std
 bn254_sf = zk_dtypes.bn254_sf
-bn254_sf_std = zk_dtypes.bn254_sf_std
+bn254_sf_mont = zk_dtypes.bn254_sf_mont
 
 FIELD_TYPES = [
     babybear,
-    babybear_std,
+    babybear_mont,
     goldilocks,
-    goldilocks_std,
+    goldilocks_mont,
     koalabear,
-    koalabear_std,
+    koalabear_mont,
     mersenne31,
-    mersenne31_std,
     bn254_sf,
-    bn254_sf_std,
+    bn254_sf_mont,
 ]
 
 # Expected 2-adicity for each field type
 TWO_ADICITY = {
     babybear: 27,
-    babybear_std: 27,
+    babybear_mont: 27,
     goldilocks: 32,
-    goldilocks_std: 32,
+    goldilocks_mont: 32,
     koalabear: 24,
-    koalabear_std: 24,
+    koalabear_mont: 24,
     mersenne31: 1,
-    mersenne31_std: 1,
     bn254_sf: 28,
-    bn254_sf_std: 28,
+    bn254_sf_mont: 28,
 }
 
 BABYBEAR_MODULUS = 2**31 - 2**27 + 1
@@ -78,15 +75,14 @@ BN254_SF_MODULUS = 2188824287183927522224640574525727508854836440041603434369820
 
 VALUES = {
     babybear: random.sample(range(-100, 100), 4),
-    babybear_std: random.sample(range(-100, 100), 4),
+    babybear_mont: random.sample(range(-100, 100), 4),
     goldilocks: random.sample(range(-100, 100), 4),
-    goldilocks_std: random.sample(range(-100, 100), 4),
+    goldilocks_mont: random.sample(range(-100, 100), 4),
     koalabear: random.sample(range(-100, 100), 4),
-    koalabear_std: random.sample(range(-100, 100), 4),
+    koalabear_mont: random.sample(range(-100, 100), 4),
     mersenne31: random.sample(range(-100, 100), 4),
-    mersenne31_std: random.sample(range(-100, 100), 4),
     bn254_sf: random.sample(range(-100, 100), 4),
-    bn254_sf_std: random.sample(range(-100, 100), 4),
+    bn254_sf_mont: random.sample(range(-100, 100), 4),
 }
 
 
@@ -143,7 +139,7 @@ class ScalarTest(parameterized.TestCase):
           scalar_type(v), scalar_type(python_scalar(scalar_type(v)))
       )
 
-  @parameterized.product(scalar_type=[babybear])
+  @parameterized.product(scalar_type=[babybear_mont])
   def testRoundTripNumpyTypes(self, scalar_type):
     for dtype in [np.uint64]:
       for f in VALUES[scalar_type]:
@@ -269,22 +265,22 @@ class ScalarTest(parameterized.TestCase):
       np.uint64,
   ]
 
-  @parameterized.product(a=[babybear], b=CAST_DTYPES + [babybear])
+  @parameterized.product(a=[babybear_mont], b=CAST_DTYPES + [babybear_mont])
   def test32BitCanCast(self, a, b):
     allowed_casts = [
-        (babybear, babybear),
-        (babybear, np.uint32),
-        (babybear, np.uint64),
+        (babybear_mont, babybear_mont),
+        (babybear_mont, np.uint32),
+        (babybear_mont, np.uint64),
     ]
     self.assertEqual(
         ((a, b) in allowed_casts), np.can_cast(a, b, casting="safe")
     )
 
-  @parameterized.product(a=[goldilocks], b=CAST_DTYPES + [goldilocks])
+  @parameterized.product(a=[goldilocks_mont], b=CAST_DTYPES + [goldilocks_mont])
   def test64BitCanCast(self, a, b):
     allowed_casts = [
-        (goldilocks, goldilocks),
-        (goldilocks, np.uint64),
+        (goldilocks_mont, goldilocks_mont),
+        (goldilocks_mont, np.uint64),
     ]
     self.assertEqual(
         ((a, b) in allowed_casts), np.can_cast(a, b, casting="safe")
@@ -419,6 +415,120 @@ class ArrayTest(parameterized.TestCase):
     for i in range(len(y_result)):
       x = scalar_type(VALUES[scalar_type][i])
       self.assertEqual(x**5, y_result[i])
+
+
+# Tests for raw/from_raw Montgomery conversion helpers
+@multi_threaded(num_workers=3)
+class RawConversionTest(parameterized.TestCase):
+
+  # Standard types (non-Montgomery)
+  STD_FIELD_TYPES = [
+      babybear,
+      goldilocks,
+      koalabear,
+      bn254_sf,
+  ]
+
+  # Montgomery types (with _mont suffix, uses Montgomery multiplication)
+  MONT_FIELD_TYPES = [
+      babybear_mont,
+      goldilocks_mont,
+      koalabear_mont,
+      bn254_sf_mont,
+  ]
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testRawPropertyExists(self, scalar_type):
+    """Test that raw property is accessible."""
+    x = scalar_type(42)
+    raw = x.raw
+    self.assertIsInstance(raw, int)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawExists(self, scalar_type):
+    """Test that from_raw classmethod is accessible."""
+    self.assertTrue(hasattr(scalar_type, "from_raw"))
+    self.assertTrue(callable(scalar_type.from_raw))
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testRawFromRawRoundTrip(self, scalar_type):
+    """Test that from_raw(x.raw) == x for all field types."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      raw = x.raw
+      y = scalar_type.from_raw(raw)
+      self.assertEqual(x, y, msg=f"Round trip failed for {v}")
+
+  @parameterized.product(scalar_type=STD_FIELD_TYPES)
+  def testRawEqualsIntForStandardTypes(self, scalar_type):
+    """For non-Montgomery types, raw should equal int()."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      self.assertEqual(x.raw, int(x))
+
+  @parameterized.product(scalar_type=MONT_FIELD_TYPES)
+  def testRawDiffersFromIntForMontgomeryTypes(self, scalar_type):
+    """For Montgomery types, raw should differ from int() (except 0)."""
+    # Use a non-trivial value that's definitely not 0 or a special case
+    x = scalar_type(42)
+    raw = x.raw
+    int_val = int(x)
+    # For Montgomery representation: raw = value * R, int = value
+    # They should differ unless R = 1 (which is not the case for Montgomery)
+    self.assertNotEqual(
+        raw, int_val, msg="raw should differ from int() for Montgomery types"
+    )
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawPreservesValue(self, scalar_type):
+    """Test that from_raw stores the value directly without transformation."""
+    # Create a field element
+    x = scalar_type(7)
+    raw = x.raw
+
+    # Create another field element from the same raw value
+    y = scalar_type.from_raw(raw)
+
+    # They should be equal
+    self.assertEqual(x, y)
+
+    # The raw values should also be identical
+    self.assertEqual(x.raw, y.raw)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawNegativeValueRaisesError(self, scalar_type):
+    """Test that from_raw raises error with negative raw value."""
+    with self.assertRaises(ValueError):
+      scalar_type.from_raw(-1)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawWrongTypeRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong type."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw("invalid")
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw(1.5)
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw([1, 2, 3])
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawZero(self, scalar_type):
+    """Test that from_raw(0) creates zero element."""
+    x = scalar_type.from_raw(0)
+    self.assertEqual(x, scalar_type(0))
+    self.assertEqual(x.raw, 0)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawNoArgumentsRaisesError(self, scalar_type):
+    """Test that from_raw() with no arguments raises error."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw()
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testFromRawTooManyArgumentsRaisesError(self, scalar_type):
+    """Test that from_raw() with multiple arguments raises error."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw(1, 2)
 
 
 if __name__ == "__main__":

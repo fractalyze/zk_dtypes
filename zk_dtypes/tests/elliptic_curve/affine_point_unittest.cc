@@ -121,11 +121,11 @@ TEST(AffinePointTest, ToPointXyzz) {
 }
 
 TEST(AffinePointTest, MontReduce) {
-  AffinePoint p(3, 2);
-  AffinePoint::StdType reduced = p.MontReduce();
+  AffinePointMont p(3, 2);
+  AffinePointMont::StdType reduced = p.MontReduce();
 
-  EXPECT_EQ(reduced.x(), Fq(3).MontReduce());
-  EXPECT_EQ(reduced.y(), Fq(2).MontReduce());
+  EXPECT_EQ(reduced.x(), FqMont(3).MontReduce());
+  EXPECT_EQ(reduced.y(), FqMont(2).MontReduce());
 }
 
 TEST(AffinePointTypedTest, CreateFromX) {

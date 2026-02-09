@@ -43,10 +43,10 @@ struct FqBaseConfig {
   constexpr static bool kHasLargeSubgroupRootOfUnity = false;
 };
 
-struct FqStdConfig : public FqBaseConfig {
+struct FqConfig : public FqBaseConfig {
   constexpr static bool kUseMontgomery = false;
 
-  using StdConfig = FqStdConfig;
+  using StdConfig = FqConfig;
 
   constexpr static BigInt<4> kOne = 1;
 
@@ -58,10 +58,10 @@ struct FqStdConfig : public FqBaseConfig {
   };
 };
 
-struct FqConfig : public FqBaseConfig {
+struct FqMontConfig : public FqBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = FqStdConfig;
+  using StdConfig = FqConfig;
 
   constexpr static BigInt<4> kRSquared = {
       UINT64_C(17522657719365597833),
@@ -87,7 +87,7 @@ struct FqConfig : public FqBaseConfig {
 };
 
 using Fq = PrimeField<FqConfig>;
-using FqStd = PrimeField<FqStdConfig>;
+using FqMont = PrimeField<FqMontConfig>;
 
 }  // namespace zk_dtypes::bn254
 

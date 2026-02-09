@@ -13,44 +13,53 @@ used in Zero Knowledge libraries inspired by
   - `uint2`
   - `uint4`
 
-- Field:
+- Prime Field:
 
   - `babybear`
-  - `babybear_std`
+  - `babybear_mont`
   - `goldilocks`
-  - `goldilocks_std`
+  - `goldilocks_mont`
   - `koalabear`
-  - `koalabear_std`
+  - `koalabear_mont`
   - `mersenne31`
-  - `mersenne31_std`
 
 - Extension Field:
 
   - `babybearx4`
-  - `babybearx4_std`
+  - `babybearx4_mont`
   - `goldilocksx3`
-  - `goldilocksx3_std`
+  - `goldilocksx3_mont`
   - `koalabearx4`
-  - `koalabearx4_std`
+  - `koalabearx4_mont`
   - `mersenne31x2`
-  - `mersenne31x2_std`
+
+- Binary field:
+
+  - `binary_field_t0`
+  - `binary_field_t1`
+  - `binary_field_t2`
+  - `binary_field_t3`
+  - `binary_field_t4`
+  - `binary_field_t5`
+  - `binary_field_t6`
+  - `binary_field_t7`
 
 - Elliptic curve:
 
   - `bn254_sf`
-  - `bn254_sf_std`
+  - `bn254_sf_mont`
   - `bn254_g1_affine`
-  - `bn254_g1_affine_std`
+  - `bn254_g1_affine_mont`
   - `bn254_g1_jacobian`
-  - `bn254_g1_jacobian_std`
+  - `bn254_g1_jacobian_mont`
   - `bn254_g1_xyzz`
-  - `bn254_g1_xyzz_std`
+  - `bn254_g1_xyzz_mont`
   - `bn254_g2_affine`
-  - `bn254_g2_affine_std`
+  - `bn254_g2_affine_mont`
   - `bn254_g2_jacobian`
-  - `bn254_g2_jacobian_std`
+  - `bn254_g2_jacobian_mont`
   - `bn254_g2_xyzz`
-  - `bn254_g2_xyzz_std`
+  - `bn254_g2_xyzz_mont`
 
 ## Prerequisite
 
@@ -128,20 +137,20 @@ artifacts. This is the recommended path for development.
 ## Example Usage
 
 ```python
->>> from zk_dtypes import babybear
+>>> from zk_dtypes import babybear_mont
 >>> import numpy as np
->>> a = np.array([-1, -3, 2**30, 7], dtype=babybear)
->>> b = np.array([5, 2, 4, 10], dtype=babybear)
+>>> a = np.array([-1, -3, 2**30, 7], dtype=babybear_mont)
+>>> b = np.array([5, 2, 4, 10], dtype=babybear_mont)
 >>> a + b
-array([4, 2013265920, 1073741828, 17], dtype=babybear)
+array([4, 2013265920, 1073741828, 17], dtype=babybear_mont)
 ```
 
 Importing `zk_dtypes` also registers the data types with numpy, so that they may
 be referred to by their string name:
 
 ```python
->>> np.dtype('babybear')
-dtype(babybear)
+>>> np.dtype('babybear_mont')
+dtype(babybear_mont)
 ```
 
 See [examples/zk_dtypes_examples.ipynb](/examples/zk_dtypes_examples.ipynb) for

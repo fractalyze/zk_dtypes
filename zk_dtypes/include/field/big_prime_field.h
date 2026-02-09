@@ -81,7 +81,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   constexpr explicit PrimeField(const BigInt<N>& value) : value_(value) {
     DCHECK_LT(value_, Config::kModulus);
     if constexpr (kUseMontgomery) {
-      operator*=(PrimeField::FromUnchecked(Config::kRSquared));
+      operator*=(FromUnchecked(Config::kRSquared));
     }
   }
 
@@ -91,16 +91,14 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
 
   constexpr static PrimeField Zero() { return PrimeField(); }
 
-  constexpr static PrimeField One() {
-    return PrimeField::FromUnchecked(Config::kOne);
-  }
+  constexpr static PrimeField One() { return FromUnchecked(Config::kOne); }
 
   constexpr static PrimeField Min() { return Zero(); }
 
   constexpr static PrimeField Max() { return PrimeField(-1); }
 
   constexpr static PrimeField Random() {
-    return PrimeField::FromUnchecked(BigInt<N>::Random(Config::kModulus));
+    return FromUnchecked(BigInt<N>::Random(Config::kModulus));
   }
 
   // Returns 2^(-1) mod p.
@@ -115,7 +113,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     if constexpr (std::is_signed_v<UnderlyingTy>) {
       DCHECK_GE(value, 0);
     }
-    return PrimeField::FromUnchecked(BigInt<N>(value));
+    return FromUnchecked(BigInt<N>(value));
   }
 
   constexpr static PrimeField FromUnchecked(const BigInt<N>& value) {
@@ -187,7 +185,7 @@ class PrimeField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     if (IsZero()) return Zero();
     BigInt<N> ret_value = Config::kModulus;
     ret_value -= value_;
-    return PrimeField::FromUnchecked(ret_value);
+    return FromUnchecked(ret_value);
   }
 
   constexpr PrimeField operator*(const PrimeField& other) const {

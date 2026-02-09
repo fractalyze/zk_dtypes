@@ -85,7 +85,6 @@ struct intN {
   explicit constexpr operator T() const {
     return static_cast<T>(IntValue());
   }
-  // NOLINTNEXTLINE(google-explicit-constructor)
   constexpr operator std::optional<int64_t>() const {
     return static_cast<int64_t>(IntValue());
   }

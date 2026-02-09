@@ -16,28 +16,26 @@
 """Overload of numpy.pfinfo to handle dtypes defined in zk_dtypes."""
 
 from zk_dtypes._zk_dtypes_ext import babybear
-from zk_dtypes._zk_dtypes_ext import babybear_std
+from zk_dtypes._zk_dtypes_ext import babybear_mont
 from zk_dtypes._zk_dtypes_ext import goldilocks
-from zk_dtypes._zk_dtypes_ext import goldilocks_std
+from zk_dtypes._zk_dtypes_ext import goldilocks_mont
 from zk_dtypes._zk_dtypes_ext import koalabear
-from zk_dtypes._zk_dtypes_ext import koalabear_std
+from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
-from zk_dtypes._zk_dtypes_ext import mersenne31_std
 from zk_dtypes._zk_dtypes_ext import bn254_sf
-from zk_dtypes._zk_dtypes_ext import bn254_sf_std
+from zk_dtypes._zk_dtypes_ext import bn254_sf_mont
 
 import numpy as np
 
 _babybear_dtype = np.dtype(babybear)
-_babybear_std_dtype = np.dtype(babybear_std)
+_babybear_mont_dtype = np.dtype(babybear_mont)
 _goldilocks_dtype = np.dtype(goldilocks)
-_goldilocks_std_dtype = np.dtype(goldilocks_std)
+_goldilocks_mont_dtype = np.dtype(goldilocks_mont)
 _koalabear_dtype = np.dtype(koalabear)
-_koalabear_std_dtype = np.dtype(koalabear_std)
+_koalabear_mont_dtype = np.dtype(koalabear_mont)
 _mersenne31_dtype = np.dtype(mersenne31)
-_mersenne31_std_dtype = np.dtype(mersenne31_std)
 _bn254_sf_dtype = np.dtype(bn254_sf)
-_bn254_sf_std_dtype = np.dtype(bn254_sf_std)
+_bn254_sf_mont_dtype = np.dtype(bn254_sf_mont)
 
 
 _BN254_PARAM = 4965661367192848881
@@ -56,36 +54,36 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
   two_adicity: int
 
   def __init__(self, pf_type):
-    if pf_type == _babybear_dtype or pf_type == _babybear_std_dtype:
+    if pf_type == _babybear_dtype or pf_type == _babybear_mont_dtype:
       self.dtype = pf_type
       self.storage_bits = 32
       self.modulus_bits = 31
       self.modulus = 2**31 - 2**27 + 1
-      self.is_montgomery = pf_type == _babybear_dtype
-    elif pf_type == _goldilocks_dtype or pf_type == _goldilocks_std_dtype:
+      self.is_montgomery = pf_type == _babybear_mont_dtype
+    elif pf_type == _goldilocks_dtype or pf_type == _goldilocks_mont_dtype:
       self.dtype = pf_type
       self.storage_bits = 64
       self.modulus_bits = 64
       self.modulus = 2**64 - 2**32 + 1
-      self.is_montgomery = pf_type == _goldilocks_dtype
-    elif pf_type == _koalabear_dtype or pf_type == _koalabear_std_dtype:
+      self.is_montgomery = pf_type == _goldilocks_mont_dtype
+    elif pf_type == _koalabear_dtype or pf_type == _koalabear_mont_dtype:
       self.dtype = pf_type
       self.storage_bits = 32
       self.modulus_bits = 31
       self.modulus = 2**31 - 2**24 + 1
-      self.is_montgomery = pf_type == _koalabear_dtype
-    elif pf_type == _mersenne31_dtype or pf_type == _mersenne31_std_dtype:
+      self.is_montgomery = pf_type == _koalabear_mont_dtype
+    elif pf_type == _mersenne31_dtype:
       self.dtype = pf_type
       self.storage_bits = 32
       self.modulus_bits = 31
       self.modulus = 2**31 - 1
-      self.is_montgomery = pf_type == _mersenne31_dtype
-    elif pf_type == _bn254_sf_dtype or pf_type == _bn254_sf_std_dtype:
+      self.is_montgomery = False
+    elif pf_type == _bn254_sf_dtype or pf_type == _bn254_sf_mont_dtype:
       self.dtype = pf_type
       self.storage_bits = 256
       self.modulus_bits = 254
       self.modulus = _get_bn_scalar_field_modulus(_BN254_PARAM)
-      self.is_montgomery = pf_type == _bn254_sf_dtype
+      self.is_montgomery = pf_type == _bn254_sf_mont_dtype
     else:
       raise ValueError(f"Unknown prime field type: {pf_type}")
     # Calculate the 2-adicity of `modulus - 1`, which is the number of

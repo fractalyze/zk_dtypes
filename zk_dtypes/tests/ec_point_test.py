@@ -27,21 +27,21 @@ from multi_thread_utils import multi_threaded
 import numpy as np
 
 bn254_sf = zk_dtypes.bn254_sf
-bn254_sf_std = zk_dtypes.bn254_sf_std
+bn254_sf_mont = zk_dtypes.bn254_sf_mont
 bn254_g1_affine = zk_dtypes.bn254_g1_affine
-bn254_g1_affine_std = zk_dtypes.bn254_g1_affine_std
+bn254_g1_affine_mont = zk_dtypes.bn254_g1_affine_mont
 bn254_g1_jacobian = zk_dtypes.bn254_g1_jacobian
-bn254_g1_jacobian_std = zk_dtypes.bn254_g1_jacobian_std
+bn254_g1_jacobian_mont = zk_dtypes.bn254_g1_jacobian_mont
 bn254_g1_xyzz = zk_dtypes.bn254_g1_xyzz
-bn254_g1_xyzz_std = zk_dtypes.bn254_g1_xyzz_std
+bn254_g1_xyzz_mont = zk_dtypes.bn254_g1_xyzz_mont
 bn254_g2_affine = zk_dtypes.bn254_g2_affine
-bn254_g2_affine_std = zk_dtypes.bn254_g2_affine_std
+bn254_g2_affine_mont = zk_dtypes.bn254_g2_affine_mont
 bn254_g2_jacobian = zk_dtypes.bn254_g2_jacobian
-bn254_g2_jacobian_std = zk_dtypes.bn254_g2_jacobian_std
+bn254_g2_jacobian_mont = zk_dtypes.bn254_g2_jacobian_mont
 bn254_g2_xyzz = zk_dtypes.bn254_g2_xyzz
-bn254_g2_xyzz_std = zk_dtypes.bn254_g2_xyzz_std
+bn254_g2_xyzz_mont = zk_dtypes.bn254_g2_xyzz_mont
 
-EC_MONT_POINT_TYPES = [
+EC_STD_POINT_TYPES = [
     bn254_g1_affine,
     bn254_g1_jacobian,
     bn254_g1_xyzz,
@@ -50,60 +50,66 @@ EC_MONT_POINT_TYPES = [
     bn254_g2_xyzz,
 ]
 
-EC_STD_POINT_TYPES = [
-    bn254_g1_affine_std,
-    bn254_g1_jacobian_std,
-    bn254_g1_xyzz_std,
-    bn254_g2_affine_std,
-    bn254_g2_jacobian_std,
-    bn254_g2_xyzz_std,
+EC_MONT_POINT_TYPES = [
+    bn254_g1_affine_mont,
+    bn254_g1_jacobian_mont,
+    bn254_g1_xyzz_mont,
+    bn254_g2_affine_mont,
+    bn254_g2_jacobian_mont,
+    bn254_g2_xyzz_mont,
 ]
 
-EC_POINT_TYPES = EC_MONT_POINT_TYPES + EC_STD_POINT_TYPES
+EC_POINT_TYPES = EC_STD_POINT_TYPES + EC_MONT_POINT_TYPES
 
 VALUES = {
     bn254_g1_affine: [bn254_g1_affine(3), bn254_g1_affine(4)],
-    bn254_g1_affine_std: [bn254_g1_affine_std(3), bn254_g1_affine_std(4)],
+    bn254_g1_affine_mont: [bn254_g1_affine_mont(3), bn254_g1_affine_mont(4)],
     bn254_g1_jacobian: [bn254_g1_jacobian(3), bn254_g1_jacobian(4)],
-    bn254_g1_jacobian_std: [bn254_g1_jacobian_std(3), bn254_g1_jacobian_std(4)],
+    bn254_g1_jacobian_mont: [
+        bn254_g1_jacobian_mont(3),
+        bn254_g1_jacobian_mont(4),
+    ],
     bn254_g1_xyzz: [bn254_g1_xyzz(3), bn254_g1_xyzz(4)],
-    bn254_g1_xyzz_std: [bn254_g1_xyzz_std(3), bn254_g1_xyzz_std(4)],
+    bn254_g1_xyzz_mont: [bn254_g1_xyzz_mont(3), bn254_g1_xyzz_mont(4)],
     bn254_g2_affine: [bn254_g2_affine(3), bn254_g2_affine(4)],
-    bn254_g2_affine_std: [bn254_g2_affine_std(3), bn254_g2_affine_std(4)],
+    bn254_g2_affine_mont: [bn254_g2_affine_mont(3), bn254_g2_affine_mont(4)],
     bn254_g2_jacobian: [bn254_g2_jacobian(3), bn254_g2_jacobian(4)],
-    bn254_g2_jacobian_std: [bn254_g2_jacobian_std(3), bn254_g2_jacobian_std(4)],
+    bn254_g2_jacobian_mont: [
+        bn254_g2_jacobian_mont(3),
+        bn254_g2_jacobian_mont(4),
+    ],
     bn254_g2_xyzz: [bn254_g2_xyzz(3), bn254_g2_xyzz(4)],
-    bn254_g2_xyzz_std: [bn254_g2_xyzz_std(3), bn254_g2_xyzz_std(4)],
+    bn254_g2_xyzz_mont: [bn254_g2_xyzz_mont(3), bn254_g2_xyzz_mont(4)],
 }
 
 ADD_OP_RESULT_TYPES = {
     bn254_g1_affine: bn254_g1_jacobian,
-    bn254_g1_affine_std: bn254_g1_jacobian_std,
+    bn254_g1_affine_mont: bn254_g1_jacobian_mont,
     bn254_g1_jacobian: bn254_g1_jacobian,
-    bn254_g1_jacobian_std: bn254_g1_jacobian_std,
+    bn254_g1_jacobian_mont: bn254_g1_jacobian_mont,
     bn254_g1_xyzz: bn254_g1_xyzz,
-    bn254_g1_xyzz_std: bn254_g1_xyzz_std,
+    bn254_g1_xyzz_mont: bn254_g1_xyzz_mont,
     bn254_g2_affine: bn254_g2_jacobian,
-    bn254_g2_affine_std: bn254_g2_jacobian_std,
+    bn254_g2_affine_mont: bn254_g2_jacobian_mont,
     bn254_g2_jacobian: bn254_g2_jacobian,
-    bn254_g2_jacobian_std: bn254_g2_jacobian_std,
+    bn254_g2_jacobian_mont: bn254_g2_jacobian_mont,
     bn254_g2_xyzz: bn254_g2_xyzz,
-    bn254_g2_xyzz_std: bn254_g2_xyzz_std,
+    bn254_g2_xyzz_mont: bn254_g2_xyzz_mont,
 }
 
 SCALAR_FIELD_TYPES = {
     bn254_g1_affine: bn254_sf,
-    bn254_g1_affine_std: bn254_sf_std,
+    bn254_g1_affine_mont: bn254_sf_mont,
     bn254_g1_jacobian: bn254_sf,
-    bn254_g1_jacobian_std: bn254_sf_std,
+    bn254_g1_jacobian_mont: bn254_sf_mont,
     bn254_g1_xyzz: bn254_sf,
-    bn254_g1_xyzz_std: bn254_sf_std,
+    bn254_g1_xyzz_mont: bn254_sf_mont,
     bn254_g2_affine: bn254_sf,
-    bn254_g2_affine_std: bn254_sf_std,
+    bn254_g2_affine_mont: bn254_sf_mont,
     bn254_g2_jacobian: bn254_sf,
-    bn254_g2_jacobian_std: bn254_sf_std,
+    bn254_g2_jacobian_mont: bn254_sf_mont,
     bn254_g2_xyzz: bn254_sf,
-    bn254_g2_xyzz_std: bn254_sf_std,
+    bn254_g2_xyzz_mont: bn254_sf_mont,
 }
 
 
@@ -135,12 +141,12 @@ class ScalarTest(parameterized.TestCase):
       param=[
           (bn254_g1_affine, bn254_g1_jacobian),
           (bn254_g1_affine, bn254_g1_xyzz),
-          (bn254_g1_affine_std, bn254_g1_jacobian_std),
-          (bn254_g1_affine_std, bn254_g1_xyzz_std),
+          (bn254_g1_affine_mont, bn254_g1_jacobian_mont),
+          (bn254_g1_affine_mont, bn254_g1_xyzz_mont),
           (bn254_g2_affine, bn254_g2_jacobian),
           (bn254_g2_affine, bn254_g2_xyzz),
-          (bn254_g2_affine_std, bn254_g2_jacobian_std),
-          (bn254_g2_affine_std, bn254_g2_xyzz_std),
+          (bn254_g2_affine_mont, bn254_g2_jacobian_mont),
+          (bn254_g2_affine_mont, bn254_g2_xyzz_mont),
       ]
   )
   def testAffineMixedAddop(self, param):
@@ -167,31 +173,31 @@ class ScalarTest(parameterized.TestCase):
         (bn254_g1_affine, bn254_g1_affine),
         (bn254_g1_affine, bn254_g1_jacobian),
         (bn254_g1_affine, bn254_g1_xyzz),
-        (bn254_g1_affine_std, bn254_g1_affine_std),
-        (bn254_g1_affine_std, bn254_g1_jacobian_std),
-        (bn254_g1_affine_std, bn254_g1_xyzz_std),
+        (bn254_g1_affine_mont, bn254_g1_affine_mont),
+        (bn254_g1_affine_mont, bn254_g1_jacobian_mont),
+        (bn254_g1_affine_mont, bn254_g1_xyzz_mont),
         (bn254_g1_jacobian, bn254_g1_affine),
         (bn254_g1_jacobian, bn254_g1_jacobian),
-        (bn254_g1_jacobian_std, bn254_g1_affine_std),
-        (bn254_g1_jacobian_std, bn254_g1_jacobian_std),
+        (bn254_g1_jacobian_mont, bn254_g1_affine_mont),
+        (bn254_g1_jacobian_mont, bn254_g1_jacobian_mont),
         (bn254_g1_xyzz, bn254_g1_affine),
         (bn254_g1_xyzz, bn254_g1_xyzz),
-        (bn254_g1_xyzz_std, bn254_g1_affine_std),
-        (bn254_g1_xyzz_std, bn254_g1_xyzz_std),
+        (bn254_g1_xyzz_mont, bn254_g1_affine_mont),
+        (bn254_g1_xyzz_mont, bn254_g1_xyzz_mont),
         (bn254_g2_affine, bn254_g2_affine),
         (bn254_g2_affine, bn254_g2_jacobian),
         (bn254_g2_affine, bn254_g2_xyzz),
-        (bn254_g2_affine_std, bn254_g2_affine_std),
-        (bn254_g2_affine_std, bn254_g2_jacobian_std),
-        (bn254_g2_affine_std, bn254_g2_xyzz_std),
+        (bn254_g2_affine_mont, bn254_g2_affine_mont),
+        (bn254_g2_affine_mont, bn254_g2_jacobian_mont),
+        (bn254_g2_affine_mont, bn254_g2_xyzz_mont),
         (bn254_g2_jacobian, bn254_g2_affine),
         (bn254_g2_jacobian, bn254_g2_jacobian),
-        (bn254_g2_jacobian_std, bn254_g2_affine_std),
-        (bn254_g2_jacobian_std, bn254_g2_jacobian_std),
+        (bn254_g2_jacobian_mont, bn254_g2_affine_mont),
+        (bn254_g2_jacobian_mont, bn254_g2_jacobian_mont),
         (bn254_g2_xyzz, bn254_g2_affine),
         (bn254_g2_xyzz, bn254_g2_xyzz),
-        (bn254_g2_xyzz_std, bn254_g2_affine_std),
-        (bn254_g2_xyzz_std, bn254_g2_xyzz_std),
+        (bn254_g2_xyzz_mont, bn254_g2_affine_mont),
+        (bn254_g2_xyzz_mont, bn254_g2_xyzz_mont),
     ]
     self.assertEqual(
         ((a, b) in allowed_casts), np.can_cast(a, b, casting="safe")
@@ -270,6 +276,117 @@ class ArrayTest(parameterized.TestCase):
     y = x * SCALAR_FIELD_TYPES[scalar_type](4)
     for i in range(len(x)):
       self.assertEqual(x[i] * SCALAR_FIELD_TYPES[scalar_type](4), y[i])
+
+
+# Expected tuple lengths for each point type
+AFFINE_TYPES = [
+    bn254_g1_affine,
+    bn254_g1_affine_mont,
+    bn254_g2_affine,
+    bn254_g2_affine_mont,
+]
+
+JACOBIAN_TYPES = [
+    bn254_g1_jacobian,
+    bn254_g1_jacobian_mont,
+    bn254_g2_jacobian,
+    bn254_g2_jacobian_mont,
+]
+
+XYZZ_TYPES = [
+    bn254_g1_xyzz,
+    bn254_g1_xyzz_mont,
+    bn254_g2_xyzz,
+    bn254_g2_xyzz_mont,
+]
+
+
+# Tests for raw/from_raw Montgomery conversion helpers for EC points
+@multi_threaded(num_workers=3)
+class EcPointRawConversionTest(parameterized.TestCase):
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testRawPropertyExists(self, scalar_type):
+    """Test that raw property is accessible and returns a tuple."""
+    x = scalar_type(3)
+    raw = x.raw
+    self.assertIsInstance(raw, tuple)
+
+  @parameterized.product(scalar_type=AFFINE_TYPES)
+  def testRawPropertyLengthAffine(self, scalar_type):
+    """Test that raw property returns tuple of length 2 for affine points."""
+    x = scalar_type(3)
+    raw = x.raw
+    self.assertEqual(len(raw), 2, msg="Affine point should have 2 coordinates")
+
+  @parameterized.product(scalar_type=JACOBIAN_TYPES)
+  def testRawPropertyLengthJacobian(self, scalar_type):
+    """Test that raw property returns tuple of length 3 for jacobian points."""
+    x = scalar_type(3)
+    raw = x.raw
+    self.assertEqual(
+        len(raw), 3, msg="Jacobian point should have 3 coordinates"
+    )
+
+  @parameterized.product(scalar_type=XYZZ_TYPES)
+  def testRawPropertyLengthXyzz(self, scalar_type):
+    """Test that raw property returns tuple of length 4 for xyzz points."""
+    x = scalar_type(3)
+    raw = x.raw
+    self.assertEqual(len(raw), 4, msg="XYZZ point should have 4 coordinates")
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testFromRawExists(self, scalar_type):
+    """Test that from_raw classmethod is accessible."""
+    self.assertTrue(hasattr(scalar_type, "from_raw"))
+    self.assertTrue(callable(scalar_type.from_raw))
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testRawFromRawRoundTrip(self, scalar_type):
+    """Test that from_raw(x.raw) == x for EC points."""
+    for v in VALUES[scalar_type]:
+      raw = v.raw
+      y = scalar_type.from_raw(raw)
+      self.assertEqual(v, y, msg=f"Round trip failed for {v}")
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testRawTupleContainsIntOrTuple(self, scalar_type):
+    """Test that raw tuple contains ints (prime base field) or tuples (ext)."""
+    x = scalar_type(3)
+    raw = x.raw
+    for coord in raw:
+      # Each coordinate is either an int (prime field) or tuple (extension)
+      self.assertTrue(
+          isinstance(coord, (int, tuple)),
+          msg=f"Raw coordinate should be int or tuple, got {type(coord)}",
+      )
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testFromRawPreservesValue(self, scalar_type):
+    """Test that from_raw stores the value directly."""
+    for v in VALUES[scalar_type]:
+      raw = v.raw
+      y = scalar_type.from_raw(raw)
+      self.assertEqual(v, y)
+      self.assertEqual(v.raw, y.raw)
+
+  @parameterized.product(scalar_type=AFFINE_TYPES)
+  def testFromRawWrongLengthAffineRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong tuple length."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw((0, 0, 0))  # 3 elements for affine (expects 2)
+
+  @parameterized.product(scalar_type=JACOBIAN_TYPES)
+  def testFromRawWrongLengthJacobianRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong tuple length."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw((0, 0))  # 2 elements for jacobian (expects 3)
+
+  @parameterized.product(scalar_type=XYZZ_TYPES)
+  def testFromRawWrongLengthXyzzRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong tuple length."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw((0, 0, 0))  # 3 elements for xyzz (expects 4)
 
 
 if __name__ == "__main__":

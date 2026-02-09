@@ -28,7 +28,7 @@ using PrimeFieldTypes = testing::Types<
     ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(PRIME_FIELD_TYPE)
 #undef PRIME_FIELD_TYPE
         test::Fr,
-    test::FrStd>;
+    test::FrMont>;
 
 template <typename PrimeField>
 class RootOfUnityTest : public testing::Test {};

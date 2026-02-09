@@ -39,21 +39,21 @@ struct PrimeFieldBaseConfig {
   constexpr static bool kHasLargeSubgroupRootOfUnity = false;
 };
 
-struct PrimeFieldStdConfig : public PrimeFieldBaseConfig {
+struct PrimeFieldConfig : public PrimeFieldBaseConfig {
   constexpr static bool kUseMontgomery = false;
   constexpr static bool kUseBarrett = false;
 
-  using StdConfig = PrimeFieldStdConfig;
+  using StdConfig = PrimeFieldConfig;
 
   constexpr static uint8_t kOne = 1;
 
   constexpr static uint8_t kTwoAdicRootOfUnity = 6;
 };
 
-struct PrimeFieldConfig : public PrimeFieldBaseConfig {
+struct PrimeFieldMontConfig : public PrimeFieldBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = PrimeFieldStdConfig;
+  using StdConfig = PrimeFieldConfig;
 
   constexpr static uint8_t kRSquared = 2;
   constexpr static uint8_t kNPrime = 183;
@@ -64,11 +64,11 @@ struct PrimeFieldConfig : public PrimeFieldBaseConfig {
 };
 
 using Fq = PrimeField<PrimeFieldConfig>;
-using FqStd = PrimeField<PrimeFieldStdConfig>;
+using FqMont = PrimeField<PrimeFieldMontConfig>;
 using Fr = PrimeField<PrimeFieldConfig>;
-using FrStd = PrimeField<PrimeFieldStdConfig>;
+using FrMont = PrimeField<PrimeFieldMontConfig>;
 
-REGISTER_EXTENSION_FIELD(FqX2, Fq, 2, -1);
+REGISTER_EXTENSION_FIELD_WITH_MONT(FqX2, Fq, 2, -1);
 
 template <typename _BaseField, typename _ScalarField>
 class SwCurveBaseConfig {
@@ -82,28 +82,28 @@ class SwCurveBaseConfig {
   constexpr static BaseField kY = 5;
 };
 
-class SwCurveStdConfig : public SwCurveBaseConfig<FqStd, FrStd> {
+class SwCurveConfig : public SwCurveBaseConfig<Fq, Fr> {
  public:
   constexpr static bool kUseMontgomery = false;
 
-  using StdConfig = SwCurveStdConfig;
+  using StdConfig = SwCurveConfig;
 };
 
-class SwCurveConfig : public SwCurveBaseConfig<Fq, Fr> {
+class SwCurveMontConfig : public SwCurveBaseConfig<FqMont, FrMont> {
  public:
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = SwCurveStdConfig;
+  using StdConfig = SwCurveConfig;
 };
 
 using G1Curve = SwCurve<SwCurveConfig>;
-using G1CurveStd = SwCurve<SwCurveStdConfig>;
+using G1CurveMont = SwCurve<SwCurveMontConfig>;
 using AffinePoint = zk_dtypes::AffinePoint<G1Curve>;
-using AffinePointStd = zk_dtypes::AffinePoint<G1CurveStd>;
+using AffinePointMont = zk_dtypes::AffinePoint<G1CurveMont>;
 using JacobianPoint = zk_dtypes::JacobianPoint<G1Curve>;
-using JacobianPointStd = zk_dtypes::JacobianPoint<G1CurveStd>;
+using JacobianPointMont = zk_dtypes::JacobianPoint<G1CurveMont>;
 using PointXyzz = zk_dtypes::PointXyzz<G1Curve>;
-using PointXyzzStd = zk_dtypes::PointXyzz<G1CurveStd>;
+using PointXyzzMont = zk_dtypes::PointXyzz<G1CurveMont>;
 
 }  // namespace zk_dtypes::test
 
