@@ -42,9 +42,9 @@ class BN254CurveConfig {
   // Ate loop count: NAF representation of 6x + 2.
   // 6x + 2 = 29793968203157093290 for BN254.
   constexpr static int8_t kAteLoopCount[] = {
-      0, 0, 0, 1, 0, 1, 0, -1, 0, 0, 1, -1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 0, 0, 1,
-      0, -1, 0, 0, 0, 0, 1, 1, 1, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, -1, 0, 0, 1,
-      1, 0, 0, -1, 0, 0, 0, 1, 1, 0, -1, 0, 0, 1, 0, 1, 1,
+      0,  0, 0, 1,  0, 1, 0, -1, 0, 0, 1, -1, 0, 0,  1,  0, 0, 1, 1, 0, -1, 0,
+      0,  1, 0, -1, 0, 0, 0, 0,  1, 1, 1, 0,  0, -1, 0,  0, 1, 0, 0, 0, 0,  0,
+      -1, 0, 0, 1,  1, 0, 0, -1, 0, 0, 0, 1,  1, 0,  -1, 0, 0, 1, 0, 1, 1,
   };
 
   // Twist type for BN254 is D-type (divisive).
@@ -57,7 +57,8 @@ class BN254CurveConfig {
 
   static void Init() {
     // TwistMulByQX in Montgomery form
-    // = (21575463638280843010398324269430826099269044274347216827212613867836435027261,
+    // =
+    // (21575463638280843010398324269430826099269044274347216827212613867836435027261,
     //    10307601595873709700152284273816112264069230130616436755625194854815875713954)
     kTwistMulByQX = Fp2({
         {UINT64_C(8314163329781907090), UINT64_C(11942187234498585702),
@@ -67,7 +68,8 @@ class BN254CurveConfig {
     });
 
     // TwistMulByQY in Montgomery form
-    // = (2821565182194536844548159561693502659359617185244120367078079554186484126554,
+    // =
+    // (2821565182194536844548159561693502659359617185244120367078079554186484126554,
     //    3505843767911556378687030309984248845540243509899259641013678093033130930403)
     kTwistMulByQY = Fp2({
         {UINT64_C(12147909053109254563), UINT64_C(14017466716612724529),
@@ -78,8 +80,8 @@ class BN254CurveConfig {
   }
 };
 
-BN254CurveConfig::Fp2 BN254CurveConfig::kTwistMulByQX;
-BN254CurveConfig::Fp2 BN254CurveConfig::kTwistMulByQY;
+inline BN254CurveConfig::Fp2 BN254CurveConfig::kTwistMulByQX;
+inline BN254CurveConfig::Fp2 BN254CurveConfig::kTwistMulByQY;
 
 // BN254 pairing curve.
 using BN254Curve = BNCurve<BN254CurveConfig>;
