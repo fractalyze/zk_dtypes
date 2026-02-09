@@ -18,6 +18,7 @@ __version__ = "0.0.2"
 __all__ = [
     "__version__",
     "iinfo",
+    "pairing_check",
     "pfinfo",
     "int2",
     "int4",
@@ -63,6 +64,7 @@ from typing import Type
 
 from zk_dtypes._iinfo import iinfo
 from zk_dtypes._pfinfo import pfinfo
+from zk_dtypes._zk_dtypes_ext import pairing_check
 from zk_dtypes._zk_dtypes_ext import int2
 from zk_dtypes._zk_dtypes_ext import int4
 from zk_dtypes._zk_dtypes_ext import uint2

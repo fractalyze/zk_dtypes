@@ -340,6 +340,112 @@ struct TypeDescriptorBase<bn254::G2PointXyzzStd>
 ZK_DTYPES_PUBLIC_TYPE_LIST(REGISTER_TYPE_DESCRIPTOR)
 #undef REGISTER_TYPE_DESCRIPTOR
 
+}  // namespace zk_dtypes
+
+// Pairing support: close namespace to include bn254_curve.h (which opens its
+// own zk_dtypes namespace), then reopen for the rest of dtypes.cc.
+#include <vector>
+
+#include "zk_dtypes/include/elliptic_curve/bn/bn254/bn254_curve.h"
+
+namespace zk_dtypes {
+
+// pairing_check(g1_points, g2_points) -> bool
+//
+// Computes: e(g1[0], g2[0]) · ... · e(g1[n-1], g2[n-1]) == 1
+PyObject* PyBn254PairingCheck(PyObject* /*self*/, PyObject* args) {
+  PyObject* g1_obj;
+  PyObject* g2_obj;
+
+  if (!PyArg_ParseTuple(args, "OO", &g1_obj, &g2_obj)) {
+    return nullptr;
+  }
+
+  int g1_dtype = TypeDescriptor<bn254::G1AffinePoint>::Dtype();
+  int g2_dtype = TypeDescriptor<bn254::G2AffinePoint>::Dtype();
+
+  PyArrayObject* g1_arr = reinterpret_cast<PyArrayObject*>(
+      PyArray_FromAny(g1_obj, PyArray_DescrFromType(g1_dtype), 1, 1,
+                      NPY_ARRAY_C_CONTIGUOUS, nullptr));
+  if (!g1_arr) {
+    PyErr_SetString(PyExc_TypeError,
+                    "g1_points must be a 1-D array of bn254_g1_affine");
+    return nullptr;
+  }
+  Safe_PyObjectPtr g1_guard(reinterpret_cast<PyObject*>(g1_arr));
+
+  PyArrayObject* g2_arr = reinterpret_cast<PyArrayObject*>(
+      PyArray_FromAny(g2_obj, PyArray_DescrFromType(g2_dtype), 1, 1,
+                      NPY_ARRAY_C_CONTIGUOUS, nullptr));
+  if (!g2_arr) {
+    PyErr_SetString(PyExc_TypeError,
+                    "g2_points must be a 1-D array of bn254_g2_affine");
+    return nullptr;
+  }
+  Safe_PyObjectPtr g2_guard(reinterpret_cast<PyObject*>(g2_arr));
+
+  npy_intp n = PyArray_SIZE(g1_arr);
+  if (n != PyArray_SIZE(g2_arr)) {
+    PyErr_SetString(PyExc_ValueError,
+                    "g1_points and g2_points must have the same length");
+    return nullptr;
+  }
+  if (n == 0) {
+    PyErr_SetString(PyExc_ValueError,
+                    "g1_points and g2_points must not be empty");
+    return nullptr;
+  }
+
+  const auto* g1_data =
+      static_cast<const bn254::G1AffinePoint*>(PyArray_DATA(g1_arr));
+  const auto* g2_data =
+      static_cast<const bn254::G2AffinePoint*>(PyArray_DATA(g2_arr));
+
+  bn254::BN254CurveConfig::Init();
+
+  using G2Prepared = bn254::BN254Curve::G2Prepared;
+  std::vector<G2Prepared> g2_prepared;
+  g2_prepared.reserve(n);
+  for (npy_intp i = 0; i < n; ++i) {
+    g2_prepared.push_back(G2Prepared::From(g2_data[i]));
+  }
+
+  std::vector<bn254::G1AffinePoint> g1_vec(g1_data, g1_data + n);
+  auto f = bn254::BN254Curve::MultiMillerLoop(g1_vec, g2_prepared);
+  auto result = bn254::BN254Curve::FinalExponentiation(f);
+
+  if (result.IsOne()) {
+    Py_RETURN_TRUE;
+  }
+  Py_RETURN_FALSE;
+}
+
+static PyMethodDef kPairingMethods[] = {
+    {"pairing_check", PyBn254PairingCheck, METH_VARARGS,
+     "BN254 multi-pairing check.\n\n"
+     "pairing_check(g1_points, g2_points) -> bool\n\n"
+     "Checks: e(g1[0], g2[0]) * ... * e(g1[n-1], g2[n-1]) == 1\n\n"
+     "Args:\n"
+     "  g1_points: 1-D array of bn254_g1_affine, shape (n,)\n"
+     "  g2_points: 1-D array of bn254_g2_affine, shape (n,)\n\n"
+     "Returns:\n"
+     "  True if product of pairings equals identity in GT."},
+    {nullptr, nullptr, 0, nullptr},
+};
+
+bool RegisterPairingMethods(PyObject* module) {
+  for (PyMethodDef* def = kPairingMethods; def->ml_name != nullptr; ++def) {
+    Safe_PyObjectPtr func(PyCFunction_NewEx(def, nullptr, nullptr));
+    if (!func) {
+      return false;
+    }
+    if (PyModule_AddObject(module, def->ml_name, func.release()) < 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 namespace {
 
 // Performs a NumPy array cast from type 'From' to 'To' via `Via`.
@@ -491,6 +597,10 @@ extern "C" EXPORT_SYMBOL PyObject* PyInit__zk_dtypes_ext() {
   }
   ZK_DTYPES_PUBLIC_TYPE_LIST(INIT_MODULE_TYPE)
 #undef INIT_MODULE_TYPE
+
+  if (!RegisterPairingMethods(m.get())) {
+    return nullptr;
+  }
 
 #ifdef Py_GIL_DISABLED
   PyUnstable_Module_SetGIL(m.get(), Py_MOD_GIL_NOT_USED);

@@ -845,6 +845,7 @@ cc_library(
     ],
     deps = [
         ":all_types",
+        ":bn254_pairing",
         ":intn",
         "//third_party/py/numpy:headers",
         "@com_google_absl//absl/log",
@@ -900,6 +901,18 @@ py_test(
     name = "ec_point_test",
     srcs = ["tests/ec_point_test.py"],
     main = "tests/ec_point_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "pairing_test",
+    srcs = ["tests/pairing_test.py"],
+    main = "tests/pairing_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",
