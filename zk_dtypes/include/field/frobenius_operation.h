@@ -51,12 +51,14 @@ class FrobeniusOperation {
       ExtensionFieldOperationTraits<Derived>::kDegree;
 
   // clang-format off
-  // Frobenius endomorphism: φᴱ(x) = x^(pᴱ)
+  // Base-field Frobenius endomorphism: φᴱ(x) = x^(pᴱ)
   //
   // For extension field F[u] / (uⁿ - ξ):
   //   φᴱ(aᵢ · uⁱ) = aᵢ · ξ^(i * (pᴱ - 1) / n) · uⁱ
   //
-  // where p is order of F.
+  // where p = |F| is the order of the base field.
+  // Does NOT recurse into tower levels — each aᵢ is left unchanged.
+  // Used for FrobeniusInverse (base-field-linear norm computation).
   //
   // See:
   // https://fractalyze.gitbook.io/intro/primitives/abstract-algebra/extension-field/inversion#id-2.2.-optimized-computation-when
@@ -79,6 +81,58 @@ class FrobeniusOperation {
     }
 
     return static_cast<const Derived&>(*this).FromCoeffs(y);
+  }
+
+  // clang-format off
+  // Tower-aware Frobenius map: x ↦ x^(qᴱ)
+  //
+  // For tower extensions (e.g., Fp12 = Fp6[w] = Fp2[v][w]), computes the
+  // q-power Frobenius where q = |BasePrimeField| (the prime).
+  //
+  // Unlike Frobenius<E> which uses p = |BaseField|, this method:
+  //   1. Recursively applies FrobeniusMap<E> to base field components
+  //   2. Multiplies by ξ^(i * (qᴱ - 1) / n) using tower Frobenius coefficients
+  //
+  // Since x^(q^D) = x for any x in the extension field (where D is the total
+  // extension degree over the prime field), we reduce E mod D at each level.
+  //
+  // This is needed for pairing final exponentiation where Frobenius powers
+  // 1, 2, 3 are applied to Fp12 elements relative to the prime field.
+  // clang-format on
+  template <size_t E = 1>
+  Derived FrobeniusMap() const {
+    // Total extension degree over the prime field.
+    constexpr size_t D = kDegree * BaseField::ExtensionDegree();
+    // Reduce E mod D: x^(q^D) = x, so FrobeniusMap<E> = FrobeniusMap<E mod D>.
+    constexpr size_t EffE = E % D;
+
+    // If EffE == 0, Frobenius is identity.
+    if constexpr (EffE == 0) {
+      return static_cast<const Derived&>(*this);
+    } else {
+      const std::array<BaseField, kDegree>& x =
+          static_cast<const Derived&>(*this).ToCoeffs();
+      std::array<BaseField, kDegree> y;
+      const auto& coeffs =
+          static_cast<const Derived&>(*this).GetTowerFrobeniusCoeffs();
+
+      if constexpr (BaseField::ExtensionDegree() > 1) {
+        // Tower extension: recursively apply FrobeniusMap to base field
+        // elements. The recursive call will reduce E mod its own D.
+        y[0] = x[0].template FrobeniusMap<E>();
+        for (size_t i = 1; i < kDegree; ++i) {
+          y[i] = x[i].template FrobeniusMap<E>() * coeffs[EffE - 1][i - 1];
+        }
+      } else {
+        // Base case: BaseField is a prime field, x^(qᴱ) = x for x ∈ Fp
+        y[0] = x[0];
+        for (size_t i = 1; i < kDegree; ++i) {
+          y[i] = x[i] * coeffs[EffE - 1][i - 1];
+        }
+      }
+
+      return static_cast<const Derived&>(*this).FromCoeffs(y);
+    }
   }
 
   // Inverse in extension field using Frobenius endomorphism.

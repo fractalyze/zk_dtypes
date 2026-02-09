@@ -26,8 +26,15 @@ namespace zk_dtypes {
 
 // Mixin providing precomputed Frobenius coefficients for extension fields.
 //
-// Returns precomputed Frobenius coefficients for all φᴱ (E = 1, ..., N - 1):
-// coeffs[E - 1][i - 1] = ξ^(i * (pᴱ - 1) / n) for i = 1, ..., N - 1.
+// Provides two sets of coefficients:
+//
+// 1. Base-field Frobenius coefficients (GetFrobeniusCoeffs):
+//    coeffs[E - 1][i - 1] = ξ^(i * (pᴱ - 1) / n) where p = |BaseField|.
+//    Used for FrobeniusInverse (base-field-linear Frobenius).
+//
+// 2. Tower Frobenius coefficients (GetTowerFrobeniusCoeffs):
+//    coeffs[E - 1][i - 1] = ξ^(i * (qᴱ - 1) / n) where q = |BasePrimeField|.
+//    Used for FrobeniusMap (q-power Frobenius across the full tower).
 //
 // For Fp3: a = (a₁, a₂, a₃, a₄) where
 //   a₁ = ξ^((p - 1) / 3), a₂ = ξ^(2(p - 1) / 3)
@@ -44,6 +51,9 @@ class FrobeniusCoeffs {
   using BaseField = typename Config::BaseField;
   using BasePrimeField = typename Config::BasePrimeField;
   constexpr static size_t N = Config::kDegreeOverBaseField;
+
+  // Total extension degree over the prime field.
+  constexpr static size_t D = N * BaseField::ExtensionDegree();
 
   static const std::array<std::array<BaseField, N - 1>, N - 1>&
   GetFrobeniusCoeffs() {
@@ -69,6 +79,38 @@ class FrobeniusCoeffs {
           result[e - 1][i] = result[e - 1][i - 1] * nr_q_e;
         }
         p_e = p_e * p;
+      }
+      return result;
+    }();
+    return coeffs;
+  }
+
+  // Tower Frobenius coefficients using prime field characteristic q.
+  //
+  // coeffs[E - 1][i - 1] = ξ^(i * (qᴱ - 1) / n) for E = 1..D-1, i = 1..N-1
+  // where q = |BasePrimeField| is the prime field order.
+  //
+  // These are used for the q-power Frobenius map across the full extension
+  // tower (FrobeniusMap), which is needed for pairing operations.
+  static const std::array<std::array<BaseField, N - 1>, D - 1>&
+  GetTowerFrobeniusCoeffs() {
+    static const auto coeffs = []() {
+      constexpr size_t kLimbNums = BasePrimeField::kLimbNums * D;
+      BigInt<kLimbNums> q = BasePrimeField::Order();
+      BaseField nr = Config::kNonResidue;
+
+      std::array<std::array<BaseField, N - 1>, D - 1> result{};
+      BigInt<kLimbNums> q_e = q;
+      BigInt<kLimbNums> n_big(N);
+      for (size_t e = 1; e < D; ++e) {
+        auto exp = (q_e - 1) / n_big;
+        BaseField nr_exp = zk_dtypes::Pow(nr, exp);
+
+        result[e - 1][0] = nr_exp;
+        for (size_t i = 1; i < N - 1; ++i) {
+          result[e - 1][i] = result[e - 1][i - 1] * nr_exp;
+        }
+        q_e = q_e * q;
       }
       return result;
     }();

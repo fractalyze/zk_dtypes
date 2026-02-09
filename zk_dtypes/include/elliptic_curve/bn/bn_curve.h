@@ -129,10 +129,10 @@ class BNCurve : public PairingFriendlyCurve<Config> {
     Fp12 f2 = f.Inverse();            // f^(-1)
     Fp12 r = f1 * f2;                 // f^(q^6 - 1)
 
-    // Step 2: raise to (q^2 + 1)
+    // Step 2: raise to (q² + 1)
     f2 = r;
-    r = r.template Frobenius<2>();    // r^(q^2)
-    r *= f2;                          // r^(q^2 + 1)
+    r = r.template FrobeniusMap<2>();  // r^(q²)
+    r *= f2;                           // r^(q² + 1)
 
     // ==================== Hard Part ====================
     // Compute r^((q^4 - q^2 + 1) / r) using Fuentes-Castañeda's algorithm.
@@ -140,33 +140,33 @@ class BNCurve : public PairingFriendlyCurve<Config> {
     // in terms of the BN parameter x.
 
     // Build intermediate powers of r
-    Fp12 y0 = Base::PowByNegX(r);             // r^(-x)
-    Fp12 y1 = y0.CyclotomicSquare();          // r^(-2x)
-    Fp12 y2 = y1.CyclotomicSquare();          // r^(-4x)
-    Fp12 y3 = y2 * y1;                        // r^(-6x)
-    Fp12 y4 = Base::PowByNegX(y3);            // r^(6x²)
-    Fp12 y5 = y4.CyclotomicSquare();          // r^(12x²)
-    Fp12 y6 = Base::PowByNegX(y5);            // r^(-12x³)
+    Fp12 y0 = Base::PowByNegX(r);     // r^(-x)
+    Fp12 y1 = y0.CyclotomicSquare();  // r^(-2x)
+    Fp12 y2 = y1.CyclotomicSquare();  // r^(-4x)
+    Fp12 y3 = y2 * y1;                // r^(-6x)
+    Fp12 y4 = Base::PowByNegX(y3);    // r^(6x²)
+    Fp12 y5 = y4.CyclotomicSquare();  // r^(12x²)
+    Fp12 y6 = Base::PowByNegX(y5);    // r^(-12x³)
 
     // Adjust signs using cyclotomic inverse
-    y3 = y3.CyclotomicInverse();              // r^(6x)
-    y6 = y6.CyclotomicInverse();              // r^(12x³)
+    y3 = y3.CyclotomicInverse();  // r^(6x)
+    y6 = y6.CyclotomicInverse();  // r^(12x³)
 
     // Combine powers to build the final result
-    Fp12 y7 = y6 * y4;                        // r^(12x³ + 6x²)
-    Fp12 y8 = y7 * y3;                        // r^(12x³ + 6x² + 6x)
-    Fp12 y9 = y8 * y1;                        // r^(12x³ + 6x² + 4x)
-    Fp12 y10 = y8 * y4;                       // r^(12x³ + 12x² + 6x)
-    Fp12 y11 = y10 * r;                       // r^(12x³ + 12x² + 6x + 1)
+    Fp12 y7 = y6 * y4;   // r^(12x³ + 6x²)
+    Fp12 y8 = y7 * y3;   // r^(12x³ + 6x² + 6x)
+    Fp12 y9 = y8 * y1;   // r^(12x³ + 6x² + 4x)
+    Fp12 y10 = y8 * y4;  // r^(12x³ + 12x² + 6x)
+    Fp12 y11 = y10 * r;  // r^(12x³ + 12x² + 6x + 1)
 
     // Apply Frobenius maps and combine
-    Fp12 y12 = y9.template Frobenius<1>();    // y9^q
+    Fp12 y12 = y9.template FrobeniusMap<1>();  // y9^q
     Fp12 y13 = y12 * y11;
-    Fp12 y8_frob = y8.template Frobenius<2>();  // y8^(q²)
+    Fp12 y8_frob = y8.template FrobeniusMap<2>();  // y8^(q²)
     Fp12 y14 = y8_frob * y13;
 
-    r = r.CyclotomicInverse();                // r^(-1)
-    Fp12 y15 = (r * y9).template Frobenius<3>();  // (r^(-1) · y9)^(q³)
+    r = r.CyclotomicInverse();                       // r^(-1)
+    Fp12 y15 = (r * y9).template FrobeniusMap<3>();  // (r^(-1) · y9)^(q³)
     Fp12 result = y15 * y14;
 
     return result;
