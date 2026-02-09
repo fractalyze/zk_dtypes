@@ -687,6 +687,30 @@ void NPyEcPoint_PointCast(void* from_void, void* to_void, npy_intp n,
   }
 }
 
+// Cast from integer type to EC point type.
+// 0 → identity (Zero), non-zero n → n * Generator.
+template <typename IntType, typename EcType>
+void NPyEcPoint_IntegerCast(void* from_void, void* to_void, npy_intp n,
+                            void* /*fromarr*/, void* /*toarr*/) {
+  using IntT = typename TypeDescriptor<IntType>::T;
+  const auto* from = reinterpret_cast<const IntT*>(from_void);
+  auto* to = reinterpret_cast<EcType*>(to_void);
+  using ScalarField = typename EcType::ScalarField;
+  for (npy_intp i = 0; i < n; ++i) {
+    auto val = static_cast<uint64_t>(from[i]);
+    if (val == 0) {
+      to[i] = EcType::Zero();
+    } else {
+      ScalarField scalar(val);
+      if constexpr (IsAffinePoint<EcType>) {
+        to[i] = (EcType::Generator() * scalar).ToAffine();
+      } else {
+        to[i] = EcType::Generator() * scalar;
+      }
+    }
+  }
+}
+
 // Registers a cast between 'T' and type 'OtherT'. 'numpy_type'
 // is the NumPy type corresponding to 'OtherT'.
 template <typename T, typename OtherT>
@@ -762,6 +786,34 @@ bool RegisterEcPointCast() {
     }
   }
   return true;
+}
+
+// Registers a one-way cast from integer type 'IntType' to EC point type 'T'.
+template <typename T, typename IntType>
+bool RegisterEcPointIntegerCast_Impl(
+    int numpy_type = TypeDescriptor<IntType>::Dtype()) {
+  PyArray_Descr* descr = PyArray_DescrFromType(numpy_type);
+  if (PyArray_RegisterCastFunc(descr, EcPointTypeDescriptor<T>::Dtype(),
+                               NPyEcPoint_IntegerCast<IntType, T>) < 0) {
+    return false;
+  }
+  return true;
+}
+
+template <typename T>
+bool RegisterEcPointIntegerCasts() {
+  return RegisterEcPointIntegerCast_Impl<T, bool>(NPY_BOOL) &&
+         RegisterEcPointIntegerCast_Impl<T, unsigned char>(NPY_UBYTE) &&
+         RegisterEcPointIntegerCast_Impl<T, unsigned short>(NPY_USHORT) &&
+         RegisterEcPointIntegerCast_Impl<T, unsigned int>(NPY_UINT) &&
+         RegisterEcPointIntegerCast_Impl<T, unsigned long>(NPY_ULONG) &&
+         RegisterEcPointIntegerCast_Impl<T, unsigned long long>(
+             NPY_ULONGLONG) &&
+         RegisterEcPointIntegerCast_Impl<T, signed char>(NPY_BYTE) &&
+         RegisterEcPointIntegerCast_Impl<T, short>(NPY_SHORT) &&
+         RegisterEcPointIntegerCast_Impl<T, int>(NPY_INT) &&
+         RegisterEcPointIntegerCast_Impl<T, long>(NPY_LONG) &&
+         RegisterEcPointIntegerCast_Impl<T, long long>(NPY_LONGLONG);
 }
 
 template <typename T>
@@ -914,7 +966,7 @@ bool RegisterEcPointDtype(PyObject* numpy) {
     return false;
   }
 
-  return RegisterEcPointUFuncs<T>(numpy);
+  return RegisterEcPointIntegerCasts<T>() && RegisterEcPointUFuncs<T>(numpy);
 }
 
 }  // namespace zk_dtypes

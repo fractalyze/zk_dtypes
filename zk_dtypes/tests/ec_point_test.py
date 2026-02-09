@@ -61,6 +61,17 @@ EC_MONT_POINT_TYPES = [
 
 EC_POINT_TYPES = EC_STD_POINT_TYPES + EC_MONT_POINT_TYPES
 
+INT_CAST_DTYPES = [
+    np.int8,
+    np.int16,
+    np.int32,
+    np.int64,
+    np.uint8,
+    np.uint16,
+    np.uint32,
+    np.uint64,
+]
+
 VALUES = {
     bn254_g1_affine: [bn254_g1_affine(3), bn254_g1_affine(4)],
     bn254_g1_affine_mont: [bn254_g1_affine_mont(3), bn254_g1_affine_mont(4)],
@@ -276,6 +287,35 @@ class ArrayTest(parameterized.TestCase):
     y = x * SCALAR_FIELD_TYPES[scalar_type](4)
     for i in range(len(x)):
       self.assertEqual(x[i] * SCALAR_FIELD_TYPES[scalar_type](4), y[i])
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testCastFromInt(self, scalar_type):
+    x = np.array([3, 4], dtype=np.int64).astype(scalar_type)
+    self.assertEqual(x.dtype, np.dtype(scalar_type))
+    self.assertEqual(x[0], scalar_type(3))
+    self.assertEqual(x[1], scalar_type(4))
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testCastFromZero(self, scalar_type):
+    x = np.asarray(0).astype(scalar_type)
+    self.assertEqual(x.dtype, np.dtype(scalar_type))
+    self.assertEqual(x, scalar_type(0))
+
+  @parameterized.product(scalar_type=EC_POINT_TYPES)
+  def testZerosArray(self, scalar_type):
+    x = np.zeros(3, dtype=scalar_type)
+    self.assertEqual(x.dtype, np.dtype(scalar_type))
+    for i in range(3):
+      self.assertEqual(x[i], scalar_type(0))
+
+  @parameterized.product(
+      scalar_type=EC_POINT_TYPES,
+      int_dtype=INT_CAST_DTYPES,
+  )
+  def testCastFromIntDtypes(self, scalar_type, int_dtype):
+    x = np.asarray(1, dtype=int_dtype).astype(scalar_type)
+    self.assertEqual(x.dtype, np.dtype(scalar_type))
+    self.assertEqual(x, scalar_type(1))
 
 
 # Expected tuple lengths for each point type
