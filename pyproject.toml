@@ -49,6 +49,7 @@ version = { attr = "zk_dtypes.__version__" }
 zk_dtypes = ["py.typed"]
 
 [tool.cibuildwheel]
+build = ["*-manylinux_*", "*-macosx_*"]
 before-test = "pip install absl-py pytest"
 test-command = "pytest {project}/zk_dtypes/tests"
 
