@@ -68,3 +68,7 @@ before-all = """
     chmod +x bazelisk
     mv bazelisk /usr/local/bin/bazel
 """
+
+[tool.cibuildwheel.macos]
+archs = ["arm64"]
+before-all = "brew install bazelisk"
