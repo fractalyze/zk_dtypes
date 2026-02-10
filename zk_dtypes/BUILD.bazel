@@ -823,6 +823,7 @@ py_library(
     srcs = [
         "__init__.py",
         "_ecinfo.py",
+        "_efinfo.py",
         "_iinfo.py",
         "_pfinfo.py",
     ],
