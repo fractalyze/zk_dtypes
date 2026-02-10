@@ -1057,6 +1057,19 @@ void NPyField_IntegerCast(void* from_void, void* to_void, npy_intp n,
   }
 }
 
+// Performs a one-way NumPy array cast from integer type to extension field.
+// The integer is embedded as the constant coefficient (via
+// ExtFieldType(uint64_t)).
+template <typename IntType, typename ExtFieldType>
+void NPyField_IntegerToExtFieldCast(void* from_void, void* to_void, npy_intp n,
+                                    void* /*fromarr*/, void* /*toarr*/) {
+  const auto* from = reinterpret_cast<const IntType*>(from_void);
+  auto* to = reinterpret_cast<ExtFieldType*>(to_void);
+  for (npy_intp i = 0; i < n; ++i) {
+    to[i] = ExtFieldType(static_cast<uint64_t>(from[i]));
+  }
+}
+
 // Registers a cast between 'T' and type 'OtherT'. 'numpy_type'
 // is the NumPy type corresponding to 'OtherT'.
 template <typename T, typename OtherT>
@@ -1134,6 +1147,33 @@ bool RegisterFieldCasts() {
     }
   }
   return true;
+}
+
+// Registers a one-way cast from integer type to extension field type.
+template <typename T, typename IntType>
+bool RegisterExtFieldIntegerCast(int numpy_type) {
+  PyArray_Descr* descr = PyArray_DescrFromType(numpy_type);
+  if (PyArray_RegisterCastFunc(descr, TypeDescriptor<T>::Dtype(),
+                               NPyField_IntegerToExtFieldCast<IntType, T>) <
+      0) {
+    return false;
+  }
+  return true;
+}
+
+template <typename T>
+bool RegisterExtFieldIntegerCasts() {
+  return RegisterExtFieldIntegerCast<T, bool>(NPY_BOOL) &&
+         RegisterExtFieldIntegerCast<T, unsigned char>(NPY_UBYTE) &&
+         RegisterExtFieldIntegerCast<T, unsigned short>(NPY_USHORT) &&
+         RegisterExtFieldIntegerCast<T, unsigned int>(NPY_UINT) &&
+         RegisterExtFieldIntegerCast<T, unsigned long>(NPY_ULONG) &&
+         RegisterExtFieldIntegerCast<T, unsigned long long>(NPY_ULONGLONG) &&
+         RegisterExtFieldIntegerCast<T, signed char>(NPY_BYTE) &&
+         RegisterExtFieldIntegerCast<T, short>(NPY_SHORT) &&
+         RegisterExtFieldIntegerCast<T, int>(NPY_INT) &&
+         RegisterExtFieldIntegerCast<T, long>(NPY_LONG) &&
+         RegisterExtFieldIntegerCast<T, long long>(NPY_LONGLONG);
 }
 
 template <typename T>
@@ -1249,11 +1289,10 @@ bool RegisterFieldDtype(PyObject* numpy) {
     return false;
   }
 
-  // Extension fields don't support integer casts (but binary fields do)
   if constexpr (T::ExtensionDegree() == 1 || IsBinaryField<T>) {
     return RegisterFieldCasts<T>() && RegisterFieldUFuncs<T>(numpy);
   } else {
-    return RegisterFieldUFuncs<T>(numpy);
+    return RegisterExtFieldIntegerCasts<T>() && RegisterFieldUFuncs<T>(numpy);
   }
 }
 
