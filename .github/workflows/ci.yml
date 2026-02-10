@@ -52,11 +52,6 @@ jobs:
       - name: Checkout zk_dtypes
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4.7.0
-        with:
-          python-version: "3.11"
-
       - name: Build zk_dtypes
         run: |
           bazel build //zk_dtypes:_zk_dtypes_ext.so
