@@ -436,5 +436,41 @@ class ExtensionFieldRawConversionTest(parameterized.TestCase):
       scalar_type.from_raw((0, 0), (1, 1))
 
 
+@multi_threaded(num_workers=3)
+class ExtensionFieldIntegerCastTest(parameterized.TestCase):
+
+  INT_DTYPES = [
+      np.bool_,
+      np.int8,
+      np.int16,
+      np.int32,
+      np.int64,
+      np.uint8,
+      np.uint16,
+      np.uint32,
+      np.uint64,
+  ]
+
+  @parameterized.product(
+      scalar_type=EXT_FIELD_TYPES,
+      int_dtype=INT_DTYPES,
+  )
+  def testIntegerToExtFieldCast(self, scalar_type, int_dtype):
+    """Integer arrays can be cast to extension field arrays."""
+    arr = np.array([1, 2, 3], dtype=int_dtype)
+    result = arr.astype(scalar_type)
+    self.assertEqual(result.dtype, scalar_type)
+    # Each element should equal the scalar constructor from the casted value
+    for i in range(len(arr)):
+      self.assertEqual(result[i], scalar_type(int(arr[i])))
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testExtFieldToIntegerCastRaisesError(self, scalar_type):
+    """Extension field arrays cannot be cast to integer arrays."""
+    arr = make_array(scalar_type)
+    with self.assertRaises(TypeError):
+      arr.astype(np.int64)
+
+
 if __name__ == "__main__":
   absltest.main()
