@@ -60,30 +60,39 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.modulus_bits = 31
       self.modulus = 2**31 - 2**27 + 1
       self.is_montgomery = pf_type == _babybear_mont_dtype
+      self.two_adic_primitive_root = 440564289  # 31¹⁵ mod p
     elif pf_type == _goldilocks_dtype or pf_type == _goldilocks_mont_dtype:
       self.dtype = pf_type
       self.storage_bits = 64
       self.modulus_bits = 64
       self.modulus = 2**64 - 2**32 + 1
       self.is_montgomery = pf_type == _goldilocks_mont_dtype
+      self.two_adic_primitive_root = (
+          1753635133440165772  # 7^((p - 1) / 2³²) mod p
+      )
     elif pf_type == _koalabear_dtype or pf_type == _koalabear_mont_dtype:
       self.dtype = pf_type
       self.storage_bits = 32
       self.modulus_bits = 31
       self.modulus = 2**31 - 2**24 + 1
       self.is_montgomery = pf_type == _koalabear_mont_dtype
+      self.two_adic_primitive_root = 1791270792  # 3¹²⁷ mod p
     elif pf_type == _mersenne31_dtype:
       self.dtype = pf_type
       self.storage_bits = 32
       self.modulus_bits = 31
       self.modulus = 2**31 - 1
       self.is_montgomery = False
+      self.two_adic_primitive_root = 2**31 - 2  # p - 1 (two_adicity = 1)
     elif pf_type == _bn254_sf_dtype or pf_type == _bn254_sf_mont_dtype:
       self.dtype = pf_type
       self.storage_bits = 256
       self.modulus_bits = 254
       self.modulus = _get_bn_scalar_field_modulus(_BN254_PARAM)
       self.is_montgomery = pf_type == _bn254_sf_mont_dtype
+      self.two_adic_primitive_root = pow(
+          5, (self.modulus - 1) >> 28, self.modulus
+      )
     else:
       raise ValueError(f"Unknown prime field type: {pf_type}")
     # Calculate the 2-adicity of `modulus - 1`, which is the number of
