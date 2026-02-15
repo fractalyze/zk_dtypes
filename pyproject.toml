@@ -73,3 +73,4 @@ before-all = """
 [tool.cibuildwheel.macos]
 archs = ["arm64"]
 before-all = "brew install bazelisk"
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
