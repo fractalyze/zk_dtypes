@@ -4,6 +4,7 @@
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
+#include "zk_dtypes/include/elliptic_curve/secp256k1/g1.h"
 #include "zk_dtypes/include/field/babybear/babybear.h"
 #include "zk_dtypes/include/field/babybear/babybearx4.h"
 #include "zk_dtypes/include/field/binary_field.h"
@@ -56,9 +57,11 @@ WITH_MONT(V, ::zk_dtypes::Goldilocks, Goldilocks, GOLDILOCKS, goldilocks) \
 WITH_MONT(V, ::zk_dtypes::Koalabear, Koalabear, KOALABEAR, koalabear)     \
 WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)
 
-#define ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V) \
-ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)      \
-WITH_MONT(V, ::zk_dtypes::bn254::Fq, Bn254Bf, BN254_BF, bn254_bf)
+#define ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V)                                    \
+ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)                                         \
+WITH_MONT(V, ::zk_dtypes::bn254::Fq, Bn254Bf, BN254_BF, bn254_bf)                 \
+WITH_MONT(V, ::zk_dtypes::secp256k1::Fq, Secp256k1Bf, SECP256K1_BF, secp256k1_bf) \
+WITH_MONT(V, ::zk_dtypes::secp256k1::Fr, Secp256k1Sf, SECP256K1_SF, secp256k1_sf)
 
 //===----------------------------------------------------------------------===//
 // ExtendedField Types
@@ -111,7 +114,8 @@ ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)      \
 ZK_DTYPES_PUBLIC_R2_AFFINE_POINT_TYPE_LIST(V)
 
 #define ZK_DTYPES_ALL_R1_AFFINE_POINT_TYPE_LIST(V) \
-ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)
+ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)      \
+WITH_MONT(V, ::zk_dtypes::secp256k1::G1AffinePoint, Secp256k1G1Affine, SECP256K1_G1_AFFINE, secp256k1_g1_affine)
 
 #define ZK_DTYPES_ALL_R2_AFFINE_POINT_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_R2_AFFINE_POINT_TYPE_LIST(V)
@@ -135,7 +139,8 @@ ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)      \
 ZK_DTYPES_PUBLIC_R2_JACOBIAN_POINT_TYPE_LIST(V)
 
 #define ZK_DTYPES_ALL_R1_JACOBIAN_POINT_TYPE_LIST(V) \
-ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)
+ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)      \
+WITH_MONT(V, ::zk_dtypes::secp256k1::G1JacobianPoint, Secp256k1G1Jacobian, SECP256K1_G1_JACOBIAN, secp256k1_g1_jacobian)
 
 #define ZK_DTYPES_ALL_R2_JACOBIAN_POINT_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_R2_JACOBIAN_POINT_TYPE_LIST(V)
@@ -159,7 +164,8 @@ ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)      \
 ZK_DTYPES_PUBLIC_R2_XYZZ_POINT_TYPE_LIST(V)
 
 #define ZK_DTYPES_ALL_R1_XYZZ_POINT_TYPE_LIST(V) \
-ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)
+ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)      \
+WITH_MONT(V, ::zk_dtypes::secp256k1::G1PointXyzz, Secp256k1G1Xyzz, SECP256K1_G1_XYZZ, secp256k1_g1_xyzz)
 
 #define ZK_DTYPES_ALL_R2_XYZZ_POINT_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_R2_XYZZ_POINT_TYPE_LIST(V)

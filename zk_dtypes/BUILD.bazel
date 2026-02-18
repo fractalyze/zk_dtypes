@@ -43,6 +43,7 @@ cc_library(
         ":mersenne31",
         ":mersenne31x2",
         ":mersenne31x2x2",
+        ":secp256k1_g1",
     ],
 )
 
@@ -653,6 +654,31 @@ cc_library(
     deps = [
         ":bn254_fqx2",
         ":bn254_fr",
+        ":sw_affine_point",
+        ":sw_curve",
+        ":sw_jacobian_point",
+        ":sw_point_xyzz",
+    ],
+)
+
+cc_library(
+    name = "secp256k1_fq",
+    hdrs = ["include/elliptic_curve/secp256k1/fq.h"],
+    deps = [":big_prime_field"],
+)
+
+cc_library(
+    name = "secp256k1_fr",
+    hdrs = ["include/elliptic_curve/secp256k1/fr.h"],
+    deps = [":big_prime_field"],
+)
+
+cc_library(
+    name = "secp256k1_g1",
+    hdrs = ["include/elliptic_curve/secp256k1/g1.h"],
+    deps = [
+        ":secp256k1_fq",
+        ":secp256k1_fr",
         ":sw_affine_point",
         ":sw_curve",
         ":sw_jacobian_point",
