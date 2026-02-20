@@ -23,6 +23,7 @@ import random
 from absl.testing import absltest
 from absl.testing import parameterized
 import zk_dtypes
+from zk_dtypes import efinfo
 from multi_thread_utils import multi_threaded
 import numpy as np
 
@@ -470,6 +471,31 @@ class ExtensionFieldIntegerCastTest(parameterized.TestCase):
     arr = make_array(scalar_type)
     with self.assertRaises(TypeError):
       arr.astype(np.int64)
+
+
+class EfinfoTest(parameterized.TestCase):
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testDegreeOverPrimeEqualsDegreeForDirectExtensions(self, scalar_type):
+    """All current types are direct extensions, so degree_over_prime == degree."""
+    info = efinfo(scalar_type)
+    self.assertEqual(info.degree_over_prime, info.degree)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testStorageBitsEqualsDegreeTimesPrimeFieldBits(self, scalar_type):
+    """storage_bits should be degree_over_prime * base prime field element bits."""
+    info = efinfo(scalar_type)
+    from zk_dtypes import pfinfo
+
+    base_dtype = info.base_field_dtype
+    while True:
+      try:
+        base_info = efinfo(base_dtype)
+        base_dtype = base_info.base_field_dtype
+      except ValueError:
+        break
+    prime_bits = pfinfo(base_dtype).storage_bits
+    self.assertEqual(info.storage_bits, info.degree_over_prime * prime_bits)
 
 
 if __name__ == "__main__":
