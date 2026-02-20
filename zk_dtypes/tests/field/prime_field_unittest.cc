@@ -163,4 +163,40 @@ TYPED_TEST(PrimeFieldTypedTest, Inverse) {
   EXPECT_TRUE(F::Zero().Inverse().IsZero());
 }
 
+// Regression test for MontMulReduce carry propagation fix.
+//
+// MontMulReduce previously dropped the carry from its reduction loop when
+// calling Reduce(). For moduli without a spare bit (secp256k1 Fq: p ≈ 2²⁵⁶),
+// this caused incorrect results when the carry was non-zero but the lower
+// N limbs happened to be < modulus.
+//
+// These tests use values near p that maximize the chance of producing a
+// non-zero carry in the MontMulReduce loop.
+TEST(Secp256k1FqMontTest, MontMulReduceCarry) {
+  using F = secp256k1::FqMont;
+
+  // (-1)² = 1 mod p.
+  // p-1 is the largest field element; squaring it in Montgomery form exercises
+  // the SlowMontMul → MontMulReduce path and is most likely to produce a
+  // non-zero carry that must be forwarded to Reduce().
+  F neg_one = -F::One();
+  EXPECT_TRUE((neg_one * neg_one).IsOne());
+
+  // (-1) * (-2) = 2 mod p.
+  F two = F::One() + F::One();
+  F neg_two = -two;
+  EXPECT_EQ(neg_one * neg_two, two);
+
+  // (-1) * a = -a for random elements (run multiple times to increase
+  // probability of hitting carry=1 cases).
+  for (int i = 0; i < 10; ++i) {
+    F a = F::Random();
+    EXPECT_EQ(neg_one * a, -a);
+  }
+
+  // a * a⁻¹ = 1 for values near p (high limbs maximize carry likelihood).
+  F near_p = -F::One() - F::One();  // p - 2
+  EXPECT_TRUE((near_p * near_p.Inverse()).IsOne());
+}
+
 }  // namespace zk_dtypes
