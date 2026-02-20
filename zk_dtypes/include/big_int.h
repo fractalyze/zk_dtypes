@@ -671,6 +671,23 @@ std::ostream& operator<<(std::ostream& os, const BigInt<N>& big_int) {
   return os << big_int.ToString();
 }
 
+// SignedBigInt is a thin wrapper around BigInt that serves as a distinct C++
+// type for signed 128/256-bit integers. The signed/unsigned distinction exists
+// purely at the type level (MLIR integers are signless); the underlying storage
+// and arithmetic are identical to BigInt.
+template <size_t N>
+class SignedBigInt : public BigInt<N> {
+ public:
+  using BigInt<N>::BigInt;
+  constexpr SignedBigInt() = default;
+  constexpr SignedBigInt(const BigInt<N>& v) : BigInt<N>(v) {}  // NOLINT
+};
+
+template <size_t N>
+std::ostream& operator<<(std::ostream& os, const SignedBigInt<N>& v) {
+  return os << static_cast<const BigInt<N>&>(v);
+}
+
 template <size_t N>
 class BitTraits<BigInt<N>> {
  public:
@@ -697,6 +714,9 @@ class BitTraits<BigInt<N>> {
     }
   }
 };
+
+template <size_t N>
+class BitTraits<SignedBigInt<N>> : public BitTraits<BigInt<N>> {};
 
 }  // namespace zk_dtypes
 
