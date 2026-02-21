@@ -135,6 +135,17 @@ cc_library(
 )
 
 cc_library(
+    name = "signed_big_int",
+    srcs = ["_src/signed_big_int.cc"],
+    hdrs = ["include/signed_big_int.h"],
+    deps = [
+        ":big_int",
+        "@com_google_absl//absl/numeric:int128",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
     name = "pow",
     hdrs = ["include/pow.h"],
     deps = [
@@ -177,6 +188,7 @@ cc_test(
         "tests/bit_iterator_unittest.cc",
         "tests/byinverter_unittest.cc",
         "tests/intn_unittest.cc",
+        "tests/signed_big_int_unittest.cc",
     ],
     deps = [
         ":batch_inverse",
@@ -184,6 +196,7 @@ cc_test(
         ":bit_iterator",
         ":byinverter",
         ":intn",
+        ":signed_big_int",
         ":sw_test_curve_config",
         "@com_google_absl//absl/container:inlined_vector",
         "@com_google_absl//absl/status:status_matchers",

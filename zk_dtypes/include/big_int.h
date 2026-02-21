@@ -254,7 +254,7 @@ class BigInt {
 
   constexpr explicit operator uint64_t() const { return limbs_[0]; }
 
-  BigInt operator-() const {
+  constexpr BigInt operator-() const {
     BigInt ret = *this;
 
     for (size_t i = 0; i < N; ++i) {
@@ -662,6 +662,9 @@ class BigInt {
  private:
   template <size_t N2>
   friend class BigInt;
+
+  template <size_t N2>
+  friend class SignedBigInt;
 
   uint64_t limbs_[N];
 };
