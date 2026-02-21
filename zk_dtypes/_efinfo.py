@@ -54,6 +54,7 @@ _MERSENNE31_MODULUS = 2**31 - 1
 class efinfo:  # pylint: disable=invalid-name,missing-class-docstring
   base_field_dtype: np.dtype
   degree: int
+  degree_over_prime: int
   non_residue: int
   storage_bits: int
   is_montgomery: bool
@@ -101,6 +102,22 @@ class efinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.is_montgomery = False
     else:
       raise ValueError(f"Unknown extension field type: {ef_type}")
+
+    # Compute total degree over the base prime field.
+    # For tower extensions (base_field_dtype is itself an extension field),
+    # multiply by the base's degree_over_prime.
+    try:
+      base_info = efinfo(self.base_field_dtype)
+      self.degree_over_prime = self.degree * base_info.degree_over_prime
+    except ValueError:
+      # base_field_dtype is a prime field, not an extension field
+      self.degree_over_prime = self.degree
+
+    # storage_bits is the total bits for the extension field element,
+    # i.e., degree_over_prime * (base prime field element bits).
+    # The per-type blocks above set storage_bits to the prime field element
+    # bits; multiply by degree_over_prime to get the total.
+    self.storage_bits *= self.degree_over_prime
 
   def __repr__(self):
     return f"efinfo(degree={self.degree}, dtype={self.dtype})"
