@@ -22,18 +22,19 @@ limitations under the License.
 #include "absl/strings/substitute.h"
 
 #include "zk_dtypes/include/elliptic_curve/pairing/ell_coeff.h"
+#include "zk_dtypes/include/elliptic_curve/pairing/pairing_traits_forward.h"
 #include "zk_dtypes/include/str_join.h"
 
 namespace zk_dtypes {
 
 // Base class for prepared G2 points used in pairing computation.
 // Stores precomputed line coefficients to optimize the Miller loop.
-template <typename PairingFriendlyCurveConfig>
+template <typename PairingFriendlyCurveConfig, typename Derived = void>
 class G2PreparedBase {
  public:
   using Config = PairingFriendlyCurveConfig;
-  using G2Curve = typename Config::G2Curve;
-  using Fp2 = typename G2Curve::BaseField;
+  using Types = PairingTypes<Config, Derived>;
+  using Fp2 = typename Types::Fp2;
 
   G2PreparedBase() = default;
   explicit G2PreparedBase(const EllCoeffs<Fp2>& ell_coeffs)

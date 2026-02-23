@@ -26,11 +26,17 @@ limitations under the License.
 namespace zk_dtypes {
 
 // clang-format off
-// BN curve pairing implementation.
+// BN curve pairing implementation (CRTP-enabled).
 //
 // Implements the optimal ate pairing for BN (Barreto-Naehrig) curves.
 // The pairing e: G1 × G2 → GT is computed as:
 //   e(P, Q) = FinalExponentiation(MillerLoop(P, Q))
+//
+// Template parameters:
+//   Config  - Curve configuration (field types, BN parameter, ate loop count)
+//   Derived - CRTP derived type. When void (default), uses concrete field
+//             types from Config. When set (e.g., PairingCodeGen), enables
+//             IR code generation via PairingTraits<Derived>.
 //
 // References:
 // - "High-Speed Software Implementation of the Optimal Ate Pairing over
@@ -39,12 +45,13 @@ namespace zk_dtypes {
 // - "Faster hashing to G2" by Fuentes-Castañeda et al.
 //   https://eprint.iacr.org/2011/297.pdf
 // clang-format on
-template <typename Config>
-class BNCurve : public PairingFriendlyCurve<Config> {
+template <typename Config, typename Derived = void>
+class BNCurve : public PairingFriendlyCurve<Config, Derived> {
  public:
-  using Base = PairingFriendlyCurve<Config>;
-  using Fp12 = typename Config::Fp12;
-  using G2Prepared = bn::G2Prepared<Config>;
+  using Base = PairingFriendlyCurve<Config, Derived>;
+  using Fp12 = typename Base::Fp12;
+  using Fp2 = typename Base::Fp2;
+  using G2Prepared = bn::G2Prepared<Config, Derived>;
 
   // clang-format off
   // Multi-Miller loop for computing multiple pairings simultaneously.

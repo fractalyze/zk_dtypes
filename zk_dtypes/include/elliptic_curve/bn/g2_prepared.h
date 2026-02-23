@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_G2_PREPARED_H_
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_BN_G2_PREPARED_H_
 
+#include <type_traits>
 #include <utility>
 
 #include "zk_dtypes/include/elliptic_curve/pairing/g2_prepared_base.h"
@@ -35,22 +36,26 @@ namespace zk_dtypes::bn {
 //   2. For each non-zero NAF bit, compute addition coefficients
 //   3. For BN curves, add two Frobenius-related corrections at the end
 //
+// Template parameters:
+//   BNCurveConfig - BN curve configuration
+//   Derived       - CRTP derived type for code generation (void = concrete)
+//
 // Reference: https://eprint.iacr.org/2013/722.pdf
 // clang-format on
-template <typename BNCurveConfig>
-class G2Prepared : public G2PreparedBase<BNCurveConfig> {
+template <typename BNCurveConfig, typename Derived = void>
+class G2Prepared : public G2PreparedBase<BNCurveConfig, Derived> {
  public:
   using Config = BNCurveConfig;
-  using G2Curve = typename Config::G2Curve;
-  using Fp2 = typename G2Curve::BaseField;
-  using Fp = typename Fp2::BaseField;
-  using G2AffinePoint = typename G2Curve::AffinePoint;
+  using Types = PairingTypes<Config, Derived>;
+  using Fp2 = typename Types::Fp2;
+  using Fp = typename Types::Fp;
+  using G2AffinePoint = typename Types::G2AffinePoint;
 
   G2Prepared() = default;
   explicit G2Prepared(const EllCoeffs<Fp2>& ell_coeffs)
-      : G2PreparedBase<BNCurveConfig>(ell_coeffs) {}
+      : G2PreparedBase<BNCurveConfig, Derived>(ell_coeffs) {}
   explicit G2Prepared(EllCoeffs<Fp2>&& ell_coeffs)
-      : G2PreparedBase<BNCurveConfig>(std::move(ell_coeffs)) {}
+      : G2PreparedBase<BNCurveConfig, Derived>(std::move(ell_coeffs)) {}
 
   // Precomputes line function coefficients from an affine G2 point Q.
   // The coefficients are computed in the same order they will be consumed
@@ -61,7 +66,7 @@ class G2Prepared : public G2PreparedBase<BNCurveConfig> {
     }
 
     // Start with R = Q in projective coordinates
-    G2Projective<Config> r(q.x(), q.y(), Fp2::One());
+    G2Projective<Config, Derived> r(q.x(), q.y(), Fp2::One());
 
     EllCoeffs<Fp2> ell_coeffs;
     size_t size = std::size(Config::kAteLoopCount);
@@ -123,12 +128,30 @@ class G2Prepared : public G2PreparedBase<BNCurveConfig> {
   }
 
  private:
+  // Access twist constants. When Derived = void, these come from Config.
+  // When Derived is provided, PairingTraits may supply them differently.
+  static Fp2 TwistMulByQX() {
+    if constexpr (std::is_void_v<Derived>) {
+      return Config::kTwistMulByQX;
+    } else {
+      return PairingTraits<Derived>::TwistMulByQX();
+    }
+  }
+
+  static Fp2 TwistMulByQY() {
+    if constexpr (std::is_void_v<Derived>) {
+      return Config::kTwistMulByQY;
+    } else {
+      return PairingTraits<Derived>::TwistMulByQY();
+    }
+  }
+
   // Applies the Frobenius endomorphism and scales by twist constants.
   // This computes π(P) where π is the q-power Frobenius map, adjusted for
   // the twist isomorphism between E'(Fp2) and E(Fp12).
   static G2AffinePoint MulByCharacteristic(const G2AffinePoint& r) {
-    Fp2 x = r.x().template Frobenius<1>() * Config::kTwistMulByQX;
-    Fp2 y = r.y().template Frobenius<1>() * Config::kTwistMulByQY;
+    Fp2 x = r.x().template Frobenius<1>() * TwistMulByQX();
+    Fp2 y = r.y().template Frobenius<1>() * TwistMulByQY();
     return {x, y};
   }
 };

@@ -16,15 +16,17 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_PAIRING_PAIRING_FRIENDLY_CURVE_H_
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_PAIRING_PAIRING_FRIENDLY_CURVE_H_
 
+#include <type_traits>
 #include <vector>
 
 #include "zk_dtypes/include/elliptic_curve/pairing/ell_coeff.h"
+#include "zk_dtypes/include/elliptic_curve/pairing/pairing_traits_forward.h"
 #include "zk_dtypes/include/elliptic_curve/pairing/twist_type.h"
 
 namespace zk_dtypes {
 
 // clang-format off
-// Base class for pairing-friendly elliptic curves.
+// Base class for pairing-friendly elliptic curves (CRTP-enabled).
 //
 // Provides common infrastructure for computing bilinear pairings:
 //   e: G1 × G2 → GT
@@ -34,18 +36,25 @@ namespace zk_dtypes {
 // is then raised to a large power (final exponentiation) to ensure the
 // pairing maps into the correct subgroup of GT.
 //
+// Template parameters:
+//   Config  - Curve configuration (field types, curve parameters)
+//   Derived - CRTP derived type for overriding field operations.
+//             When void (default), uses Config's concrete field types.
+//             When set to a codegen type, PairingTraits<Derived> provides
+//             IR builder types, enabling the same algorithm to emit IR.
+//
 // Derived classes (e.g., BNCurve) implement curve-specific optimizations
 // for the Miller loop and final exponentiation.
 // clang-format on
-template <typename _Config>
+template <typename _Config, typename Derived = void>
 class PairingFriendlyCurve {
  public:
   using Config = _Config;
-  using G1Curve = typename Config::G1Curve;
-  using G2Curve = typename Config::G2Curve;
-  using Fp2 = typename G2Curve::BaseField;
-  using Fp12 = typename Config::Fp12;
-  using G1AffinePoint = typename G1Curve::AffinePoint;
+  using Types = PairingTypes<Config, Derived>;
+  using Fp2 = typename Types::Fp2;
+  using Fp = typename Types::Fp;
+  using Fp12 = typename Types::Fp12;
+  using G1AffinePoint = typename Types::G1AffinePoint;
 
  protected:
   // clang-format off

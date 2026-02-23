@@ -754,6 +754,11 @@ cc_library(
 )
 
 cc_library(
+    name = "pairing_traits_forward",
+    hdrs = ["include/elliptic_curve/pairing/pairing_traits_forward.h"],
+)
+
+cc_library(
     name = "ell_coeff",
     hdrs = ["include/elliptic_curve/pairing/ell_coeff.h"],
     deps = ["@com_google_absl//absl/strings"],
@@ -764,6 +769,7 @@ cc_library(
     hdrs = ["include/elliptic_curve/pairing/g2_projective.h"],
     deps = [
         ":ell_coeff",
+        ":pairing_traits_forward",
         ":twist_type",
     ],
 )
@@ -773,6 +779,7 @@ cc_library(
     hdrs = ["include/elliptic_curve/pairing/g2_prepared_base.h"],
     deps = [
         ":ell_coeff",
+        ":pairing_traits_forward",
         ":str_join",
         "@com_google_absl//absl/strings",
     ],
@@ -783,6 +790,7 @@ cc_library(
     hdrs = ["include/elliptic_curve/pairing/pairing_friendly_curve.h"],
     deps = [
         ":ell_coeff",
+        ":pairing_traits_forward",
         ":twist_type",
     ],
 )

@@ -17,6 +17,7 @@ limitations under the License.
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_PAIRING_G2_PROJECTIVE_H_
 
 #include "zk_dtypes/include/elliptic_curve/pairing/ell_coeff.h"
+#include "zk_dtypes/include/elliptic_curve/pairing/pairing_traits_forward.h"
 #include "zk_dtypes/include/elliptic_curve/pairing/twist_type.h"
 
 namespace zk_dtypes {
@@ -32,16 +33,22 @@ namespace zk_dtypes {
 // and Q (or tangent at R for doubling), evaluated at the G1 point P.
 // These coefficients are used in the Miller loop to accumulate the pairing.
 //
+// Template parameters:
+//   Config  - Pairing curve configuration
+//   Derived - CRTP derived type. When void (default), field types resolve
+//             from Config. When provided, PairingTraits<Derived> resolves
+//             field types for code generation.
+//
 // Reference: https://hyperelliptic.org/EFD/g1p/auto-shortw-projective.html
 // clang-format on
-template <typename PairingFriendlyCurveConfig>
+template <typename PairingFriendlyCurveConfig, typename Derived = void>
 class G2Projective {
  public:
   using Config = PairingFriendlyCurveConfig;
-  using G2Curve = typename Config::G2Curve;
-  using Fp2 = typename G2Curve::BaseField;
-  using Fp = typename Fp2::BaseField;
-  using G2AffinePoint = typename G2Curve::AffinePoint;
+  using Types = PairingTypes<Config, Derived>;
+  using Fp2 = typename Types::Fp2;
+  using Fp = typename Types::Fp;
+  using G2AffinePoint = typename Types::G2AffinePoint;
 
   G2Projective() = default;
   G2Projective(const Fp2& x, const Fp2& y, const Fp2& z)
@@ -118,7 +125,7 @@ class G2Projective {
     Fp2 a = (x_ * y_) * two_inv;
     Fp2 b = y_.Square();
     Fp2 c = z_.Square();
-    Fp2 e = G2Curve::Config::kB * (c.Double() + c);
+    Fp2 e = G2CurveB() * (c.Double() + c);
     Fp2 f = e.Double() + e;
     Fp2 g = (b + f) * two_inv;
     Fp2 h = (y_ + z_).Square() - (b + c);
@@ -142,6 +149,17 @@ class G2Projective {
   G2Projective Negate() const { return {x_, -y_, z_}; }
 
  private:
+  // Access the G2 curve coefficient b. When Derived = void, this comes
+  // directly from Config::G2Curve::Config::kB. When Derived is provided,
+  // PairingTraits may supply it differently.
+  static Fp2 G2CurveB() {
+    if constexpr (std::is_void_v<Derived>) {
+      return Config::G2Curve::Config::kB;
+    } else {
+      return PairingTraits<Derived>::G2CurveB();
+    }
+  }
+
   Fp2 x_;
   Fp2 y_;
   Fp2 z_;
