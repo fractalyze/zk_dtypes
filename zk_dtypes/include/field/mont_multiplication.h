@@ -107,7 +107,7 @@ constexpr void MontMulReduce(BigInt<2 * N>& a, BigInt<N>& b,
     a[N + i] = add_result.value;
   }
   std::copy_n(&a[N], N, &b[0]);
-  Reduce(b, modulus, has_modulus_spare_bit);
+  Reduce(b, modulus, has_modulus_spare_bit, add_result.carry);
 }
 
 template <typename T,

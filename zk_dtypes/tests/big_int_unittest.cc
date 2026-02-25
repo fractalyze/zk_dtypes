@@ -120,6 +120,57 @@ TEST(BigIntTest, Operations) {
       -a, *BigInt<2>::FromDecString("340158910131926117784464730888556976144"));
 }
 
+TEST(BigIntTest, MultiLimbDivision) {
+  // 4-limb / 2-limb divisor.
+  {
+    BigInt<4> a = *BigInt<4>::FromHexString(
+        "FFFFFFFFFFFFFFFF0000000000000001"
+        "AAAAAAAAAAAAAAAA5555555555555555");
+    BigInt<4> b = *BigInt<4>::FromHexString("DEADBEEFCAFEBABE1234567890ABCDEF");
+    EXPECT_EQ(a / b,
+              *BigInt<4>::FromHexString("1264EB564B347462ADE70B59B51BD2005"));
+    EXPECT_EQ(a % b,
+              *BigInt<4>::FromHexString("7093DD4880733E6F0787BD305FC96FAA"));
+  }
+  // 4-limb / 4-limb, near-equal (secp256k1 p / n).
+  {
+    BigInt<4> a = *BigInt<4>::FromHexString(
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F");
+    BigInt<4> b = *BigInt<4>::FromHexString(
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
+    EXPECT_EQ(a / b, BigInt<4>::One());
+    EXPECT_EQ(a % b,
+              *BigInt<4>::FromHexString("14551231950B75FC4402DA1722FC9BAEE"));
+  }
+  // Dividend < divisor → quotient = 0, remainder = dividend.
+  {
+    BigInt<4> a = *BigInt<4>::FromHexString(
+        "0000000000000001FFFFFFFFFFFFFFFF"
+        "0000000000000000AAAAAAAAAAAAAAAA");
+    BigInt<4> b = *BigInt<4>::FromHexString(
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
+    EXPECT_EQ(a / b, BigInt<4>::Zero());
+    EXPECT_EQ(a % b, a);
+  }
+  // Equal values → quotient = 1, remainder = 0.
+  {
+    BigInt<4> a = *BigInt<4>::FromHexString(
+        "DEADBEEFCAFEBABE1234567890ABCDEF0011223344556677AABBCCDDEEFF0011");
+    EXPECT_EQ(a / a, BigInt<4>::One());
+    EXPECT_EQ(a % a, BigInt<4>::Zero());
+  }
+  // 4-limb / 3-limb divisor.
+  {
+    BigInt<4> a = *BigInt<4>::FromHexString(
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000");
+    BigInt<4> b = *BigInt<4>::FromHexString(
+        "DEADBEEFCAFEBABEABCDEF01234567891111111111111111");
+    EXPECT_EQ(a / b, *BigInt<4>::FromHexString("1264EB564B347462B"));
+    EXPECT_EQ(a % b, *BigInt<4>::FromHexString(
+                         "323957D04BDC3C54F167141D028CEE1B57E31D28D8C07C25"));
+  }
+}
+
 TEST(BigIntTest, ShiftLeftExtended) {
   // Test with BigInt<2> (128-bit)
   BigInt<2> a = *BigInt<2>::FromHexString("123456789ABCDEF0FEDCBA9876543210");
