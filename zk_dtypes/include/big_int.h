@@ -691,7 +691,7 @@ class BigInt {
       // D3. Estimate quotient digit q̂.
       __uint128_t num =
           (static_cast<__uint128_t>(un[j + n]) << 64) | un[j + n - 1];
-      uint64_t qhat;
+      uint64_t qhat = 0;  // Zero-init required for C++20 constexpr.
 
       if (un[j + n] >= vn[n - 1]) {
         qhat = UINT64_MAX;
