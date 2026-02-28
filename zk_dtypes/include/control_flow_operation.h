@@ -33,6 +33,22 @@ class ControlFlowOperation<bool> {
     }
   }
 
+  // Iterate body count times, threading state through.
+  // BodyFn: (int64_t iv, State) -> State
+  template <typename State, typename BodyFn>
+  constexpr static State For(int64_t count, State init, BodyFn&& body) {
+    for (int64_t i = 0; i < count; ++i) {
+      init = body(i, std::move(init));
+    }
+    return init;
+  }
+
+  // Ternary operator abstraction.
+  template <typename T>
+  constexpr static T Select(bool condition, const T& a, const T& b) {
+    return condition ? a : b;
+  }
+
   template <typename R>
   constexpr static bool Equal(const R& a, const R& b) {
     return a == b;

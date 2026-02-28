@@ -17,7 +17,6 @@ limitations under the License.
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_PAIRING_ELL_COEFF_H_
 
 #include <string>
-#include <vector>
 
 #include "absl/strings/substitute.h"
 
@@ -64,9 +63,6 @@ class EllCoeff {
   F c1_;
   F c2_;
 };
-
-template <typename F>
-using EllCoeffs = std::vector<EllCoeff<F>>;
 
 }  // namespace zk_dtypes
 

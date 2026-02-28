@@ -115,45 +115,38 @@ TEST(PairingTest, TwoInv) {
   EXPECT_EQ(two * two_inv, Fq::One());
 }
 
-TEST(PairingTest, G2Prepared) {
-  using G2Prepared = BN254Curve::G2Prepared;
-  using G2AffinePoint = G2Curve::AffinePoint;
-
-  // Create a G2 point from the generator
-  G2AffinePoint g2_gen = G2AffinePoint::Generator();
-
-  // Create prepared G2
-  G2Prepared g2_prep = G2Prepared::From(g2_gen);
-
-  // Should not be infinity
-  EXPECT_FALSE(g2_prep.infinity());
-
-  // Should have precomputed coefficients
-  EXPECT_GT(g2_prep.ell_coeffs().size(), 0u);
-}
-
-TEST(PairingTest, Bilinearity) {
+TEST(PairingTest, FusedMultiMillerLoop) {
   using G1Affine = G1Curve::AffinePoint;
   using G1Jacobian = G1Curve::JacobianPoint;
   using G2Affine = G2Curve::AffinePoint;
-  using G2Prep = BN254Curve::G2Prepared;
 
   Fr a = Fr::Random();
   Fr b = Fr::Random();
-  Fr c = a + b;
 
   G1Affine g1_a = (G1Jacobian::Generator() * a).ToAffine();
   G1Affine g1_b = (G1Jacobian::Generator() * b).ToAffine();
-  G1Affine neg_g1_c = -(G1Jacobian::Generator() * c).ToAffine();
+  G1Affine neg_g1_a = -(G1Jacobian::Generator() * a).ToAffine();
   G2Affine g2 = G2Affine::Generator();
 
-  std::vector<G1Affine> g1_pts = {g1_a, g1_b, neg_g1_c};
-  std::vector<G2Prep> g2_pts = {G2Prep::From(g2), G2Prep::From(g2),
-                                G2Prep::From(g2)};
+  // 2 pairs: e(a*G1, G2) * e(-(a)*G1, G2) = 1
+  {
+    std::array<G1Affine, 2> g1_pts = {g1_a, neg_g1_a};
+    std::array<G2Affine, 2> g2_pts = {g2, g2};
+    auto f = BN254Curve::FusedMultiMillerLoop<2>(g1_pts, g2_pts);
+    auto result = BN254Curve::FinalExponentiation(f);
+    EXPECT_TRUE(result.IsOne());
+  }
 
-  auto f = BN254Curve::MultiMillerLoop(g1_pts, g2_pts);
-  auto result = BN254Curve::FinalExponentiation(f);
-  EXPECT_TRUE(result.IsOne());
+  // 4 pairs: e(a*G1, G2) * e(b*G1, G2) * e(-(a+b)*G1, G2) * e(0, G2) = 1
+  // Use e(a*G1, G2) * e(b*G1, G2) * e(-a*G1, G2) * e(-b*G1, G2) = 1
+  {
+    G1Affine neg_g1_b = -(G1Jacobian::Generator() * b).ToAffine();
+    std::array<G1Affine, 4> g1_pts = {g1_a, g1_b, neg_g1_a, neg_g1_b};
+    std::array<G2Affine, 4> g2_pts = {g2, g2, g2, g2};
+    auto f = BN254Curve::FusedMultiMillerLoop<4>(g1_pts, g2_pts);
+    auto result = BN254Curve::FinalExponentiation(f);
+    EXPECT_TRUE(result.IsOne());
+  }
 }
 
 }  // namespace

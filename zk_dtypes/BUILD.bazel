@@ -754,6 +754,11 @@ cc_library(
 )
 
 cc_library(
+    name = "pairing_traits_forward",
+    hdrs = ["include/elliptic_curve/pairing/pairing_traits_forward.h"],
+)
+
+cc_library(
     name = "ell_coeff",
     hdrs = ["include/elliptic_curve/pairing/ell_coeff.h"],
     deps = ["@com_google_absl//absl/strings"],
@@ -763,18 +768,10 @@ cc_library(
     name = "g2_projective",
     hdrs = ["include/elliptic_curve/pairing/g2_projective.h"],
     deps = [
+        ":control_flow_operation_forward",
         ":ell_coeff",
+        ":pairing_traits_forward",
         ":twist_type",
-    ],
-)
-
-cc_library(
-    name = "g2_prepared_base",
-    hdrs = ["include/elliptic_curve/pairing/g2_prepared_base.h"],
-    deps = [
-        ":ell_coeff",
-        ":str_join",
-        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -783,16 +780,8 @@ cc_library(
     hdrs = ["include/elliptic_curve/pairing/pairing_friendly_curve.h"],
     deps = [
         ":ell_coeff",
+        ":pairing_traits_forward",
         ":twist_type",
-    ],
-)
-
-cc_library(
-    name = "bn_g2_prepared",
-    hdrs = ["include/elliptic_curve/bn/g2_prepared.h"],
-    deps = [
-        ":g2_prepared_base",
-        ":g2_projective",
     ],
 )
 
@@ -800,7 +789,8 @@ cc_library(
     name = "bn_curve",
     hdrs = ["include/elliptic_curve/bn/bn_curve.h"],
     deps = [
-        ":bn_g2_prepared",
+        ":control_flow_operation",
+        ":g2_projective",
         ":pairing_friendly_curve",
     ],
 )

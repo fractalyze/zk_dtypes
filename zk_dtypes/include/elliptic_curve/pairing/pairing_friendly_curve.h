@@ -16,15 +16,16 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_PAIRING_PAIRING_FRIENDLY_CURVE_H_
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_PAIRING_PAIRING_FRIENDLY_CURVE_H_
 
-#include <vector>
+#include <type_traits>
 
 #include "zk_dtypes/include/elliptic_curve/pairing/ell_coeff.h"
+#include "zk_dtypes/include/elliptic_curve/pairing/pairing_traits_forward.h"
 #include "zk_dtypes/include/elliptic_curve/pairing/twist_type.h"
 
 namespace zk_dtypes {
 
 // clang-format off
-// Base class for pairing-friendly elliptic curves.
+// Base class for pairing-friendly elliptic curves (CRTP-enabled).
 //
 // Provides common infrastructure for computing bilinear pairings:
 //   e: G1 × G2 → GT
@@ -34,67 +35,25 @@ namespace zk_dtypes {
 // is then raised to a large power (final exponentiation) to ensure the
 // pairing maps into the correct subgroup of GT.
 //
+// Template parameters:
+//   Config  - Curve configuration (field types, curve parameters)
+//   Derived - CRTP derived type for overriding field operations.
+//             When void (default), uses Config's concrete field types.
+//             When set to a codegen type, PairingTraits<Derived> provides
+//             IR builder types, enabling the same algorithm to emit IR.
+//
 // Derived classes (e.g., BNCurve) implement curve-specific optimizations
 // for the Miller loop and final exponentiation.
 // clang-format on
-template <typename _Config>
+template <typename _Config, typename Derived = void>
 class PairingFriendlyCurve {
  public:
   using Config = _Config;
-  using G1Curve = typename Config::G1Curve;
-  using G2Curve = typename Config::G2Curve;
-  using Fp2 = typename G2Curve::BaseField;
-  using Fp12 = typename Config::Fp12;
-  using G1AffinePoint = typename G1Curve::AffinePoint;
-
- protected:
-  // clang-format off
-  // Pairs a G1 point with precomputed G2 line coefficients for Miller loop.
-  //
-  // During the Miller loop, we need to evaluate line functions passing through
-  // points on G2 at the G1 point. These line coefficients are precomputed in
-  // G2Prepared to avoid redundant computation when the same G2 point is used
-  // in multiple pairings.
-  //
-  // The idx_ member tracks which coefficient to use next, allowing sequential
-  // access during the Miller loop iteration.
-  // clang-format on
-  class Pair {
-   public:
-    Pair() = default;
-    Pair(const G1AffinePoint* g1, const std::vector<EllCoeff<Fp2>>* ell_coeffs)
-        : g1_(g1), ell_coeffs_(ell_coeffs) {}
-
-    const G1AffinePoint& g1() const { return *g1_; }
-
-    // Returns the next line coefficient and advances the index.
-    const EllCoeff<Fp2>& NextEllCoeff() const { return (*ell_coeffs_)[idx_++]; }
-
-   private:
-    const G1AffinePoint* g1_ = nullptr;
-    const std::vector<EllCoeff<Fp2>>* ell_coeffs_ = nullptr;
-    mutable size_t idx_ = 0;
-  };
-
-  // Computes f^x where x is the curve parameter (e.g., BN parameter).
-  // Uses cyclotomic exponentiation for efficiency since f is in the
-  // cyclotomic subgroup after the easy part of final exponentiation.
-  static Fp12 PowByX(const Fp12& f_in) {
-    Fp12 f = f_in.CyclotomicPow(Config::kX);
-    if constexpr (Config::kXIsNegative) {
-      f = f.CyclotomicInverse();
-    }
-    return f;
-  }
-
-  // Computes f^(-x) where x is the curve parameter.
-  static Fp12 PowByNegX(const Fp12& f_in) {
-    Fp12 f = f_in.CyclotomicPow(Config::kX);
-    if constexpr (!Config::kXIsNegative) {
-      f = f.CyclotomicInverse();
-    }
-    return f;
-  }
+  using Types = PairingTypes<Config, Derived>;
+  using Fp2 = typename Types::Fp2;
+  using Fp = typename Types::Fp;
+  using Fp12 = typename Types::Fp12;
+  using G1AffinePoint = typename Types::G1AffinePoint;
 
   // clang-format off
   // Evaluates the line function and multiplies into the accumulator f.
@@ -117,20 +76,25 @@ class PairingFriendlyCurve {
     }
   }
 
-  // Creates (G1 point, G2 coefficients) pairs, filtering out identity points.
-  // Identity points contribute 1 to the pairing and can be skipped.
-  template <typename G1AffinePointContainer, typename G2PreparedContainer>
-  static std::vector<Pair> CreatePairs(const G1AffinePointContainer& a,
-                                       const G2PreparedContainer& b) {
-    size_t size = std::size(a);
-    std::vector<Pair> pairs;
-    pairs.reserve(size);
-    for (size_t i = 0; i < size; ++i) {
-      if (!a[i].IsZero() && !b[i].infinity()) {
-        pairs.emplace_back(&a[i], &b[i].ell_coeffs());
-      }
+ protected:
+  // Computes f^x where x is the curve parameter (e.g., BN parameter).
+  // Uses cyclotomic exponentiation for efficiency since f is in the
+  // cyclotomic subgroup after the easy part of final exponentiation.
+  static Fp12 PowByX(const Fp12& f_in) {
+    Fp12 f = f_in.CyclotomicPow(Config::kX);
+    if constexpr (Config::kXIsNegative) {
+      f = f.CyclotomicInverse();
     }
-    return pairs;
+    return f;
+  }
+
+  // Computes f^(-x) where x is the curve parameter.
+  static Fp12 PowByNegX(const Fp12& f_in) {
+    Fp12 f = f_in.CyclotomicPow(Config::kX);
+    if constexpr (!Config::kXIsNegative) {
+      f = f.CyclotomicInverse();
+    }
+    return f;
   }
 };
 
