@@ -39,6 +39,7 @@ struct PairingTypes {
   using Fp12 = typename Config::Fp12;
   using G1AffinePoint = typename G1Curve::AffinePoint;
   using G2AffinePoint = typename G2Curve::AffinePoint;
+  using BoolType = bool;
 };
 
 template <typename Config, typename Derived>
@@ -49,6 +50,7 @@ struct PairingTypes<Config, Derived,
   using Fp12 = typename PairingTraits<Derived>::Fp12;
   using G1AffinePoint = typename PairingTraits<Derived>::G1AffinePoint;
   using G2AffinePoint = typename PairingTraits<Derived>::G2AffinePoint;
+  using BoolType = typename PairingTraits<Derived>::BoolType;
 };
 
 }  // namespace zk_dtypes

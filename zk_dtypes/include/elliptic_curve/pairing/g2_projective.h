@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_PAIRING_G2_PROJECTIVE_H_
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_PAIRING_G2_PROJECTIVE_H_
 
+#include "zk_dtypes/include/control_flow_operation_forward.h"
 #include "zk_dtypes/include/elliptic_curve/pairing/ell_coeff.h"
 #include "zk_dtypes/include/elliptic_curve/pairing/pairing_traits_forward.h"
 #include "zk_dtypes/include/elliptic_curve/pairing/twist_type.h"
@@ -147,6 +148,15 @@ class G2Projective {
   // Point negation: -R = (X : -Y : Z).
   // For elliptic curves, -P reflects the point across the x-axis.
   G2Projective Negate() const { return {x_, -y_, z_}; }
+
+  // Component-wise select: returns a if condition, else b.
+  using BoolType = typename PairingTypes<Config, Derived>::BoolType;
+  static G2Projective Select(BoolType cond, const G2Projective& a,
+                             const G2Projective& b) {
+    using CFOp = ControlFlowOperation<BoolType>;
+    return {CFOp::Select(cond, a.x_, b.x_), CFOp::Select(cond, a.y_, b.y_),
+            CFOp::Select(cond, a.z_, b.z_)};
+  }
 
  private:
   // Access the G2 curve coefficient b. When Derived = void, this comes

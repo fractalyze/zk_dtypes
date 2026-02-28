@@ -17,7 +17,6 @@ limitations under the License.
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_PAIRING_PAIRING_FRIENDLY_CURVE_H_
 
 #include <type_traits>
-#include <vector>
 
 #include "zk_dtypes/include/elliptic_curve/pairing/ell_coeff.h"
 #include "zk_dtypes/include/elliptic_curve/pairing/pairing_traits_forward.h"
@@ -56,55 +55,6 @@ class PairingFriendlyCurve {
   using Fp12 = typename Types::Fp12;
   using G1AffinePoint = typename Types::G1AffinePoint;
 
- protected:
-  // clang-format off
-  // Pairs a G1 point with precomputed G2 line coefficients for Miller loop.
-  //
-  // During the Miller loop, we need to evaluate line functions passing through
-  // points on G2 at the G1 point. These line coefficients are precomputed in
-  // G2Prepared to avoid redundant computation when the same G2 point is used
-  // in multiple pairings.
-  //
-  // The idx_ member tracks which coefficient to use next, allowing sequential
-  // access during the Miller loop iteration.
-  // clang-format on
-  class Pair {
-   public:
-    Pair() = default;
-    Pair(const G1AffinePoint* g1, const std::vector<EllCoeff<Fp2>>* ell_coeffs)
-        : g1_(g1), ell_coeffs_(ell_coeffs) {}
-
-    const G1AffinePoint& g1() const { return *g1_; }
-
-    // Returns the next line coefficient and advances the index.
-    const EllCoeff<Fp2>& NextEllCoeff() const { return (*ell_coeffs_)[idx_++]; }
-
-   private:
-    const G1AffinePoint* g1_ = nullptr;
-    const std::vector<EllCoeff<Fp2>>* ell_coeffs_ = nullptr;
-    mutable size_t idx_ = 0;
-  };
-
-  // Computes f^x where x is the curve parameter (e.g., BN parameter).
-  // Uses cyclotomic exponentiation for efficiency since f is in the
-  // cyclotomic subgroup after the easy part of final exponentiation.
-  static Fp12 PowByX(const Fp12& f_in) {
-    Fp12 f = f_in.CyclotomicPow(Config::kX);
-    if constexpr (Config::kXIsNegative) {
-      f = f.CyclotomicInverse();
-    }
-    return f;
-  }
-
-  // Computes f^(-x) where x is the curve parameter.
-  static Fp12 PowByNegX(const Fp12& f_in) {
-    Fp12 f = f_in.CyclotomicPow(Config::kX);
-    if constexpr (!Config::kXIsNegative) {
-      f = f.CyclotomicInverse();
-    }
-    return f;
-  }
-
   // clang-format off
   // Evaluates the line function and multiplies into the accumulator f.
   //
@@ -126,20 +76,25 @@ class PairingFriendlyCurve {
     }
   }
 
-  // Creates (G1 point, G2 coefficients) pairs, filtering out identity points.
-  // Identity points contribute 1 to the pairing and can be skipped.
-  template <typename G1AffinePointContainer, typename G2PreparedContainer>
-  static std::vector<Pair> CreatePairs(const G1AffinePointContainer& a,
-                                       const G2PreparedContainer& b) {
-    size_t size = std::size(a);
-    std::vector<Pair> pairs;
-    pairs.reserve(size);
-    for (size_t i = 0; i < size; ++i) {
-      if (!a[i].IsZero() && !b[i].infinity()) {
-        pairs.emplace_back(&a[i], &b[i].ell_coeffs());
-      }
+ protected:
+  // Computes f^x where x is the curve parameter (e.g., BN parameter).
+  // Uses cyclotomic exponentiation for efficiency since f is in the
+  // cyclotomic subgroup after the easy part of final exponentiation.
+  static Fp12 PowByX(const Fp12& f_in) {
+    Fp12 f = f_in.CyclotomicPow(Config::kX);
+    if constexpr (Config::kXIsNegative) {
+      f = f.CyclotomicInverse();
     }
-    return pairs;
+    return f;
+  }
+
+  // Computes f^(-x) where x is the curve parameter.
+  static Fp12 PowByNegX(const Fp12& f_in) {
+    Fp12 f = f_in.CyclotomicPow(Config::kX);
+    if constexpr (!Config::kXIsNegative) {
+      f = f.CyclotomicInverse();
+    }
+    return f;
   }
 };
 
