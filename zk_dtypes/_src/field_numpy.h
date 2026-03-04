@@ -33,6 +33,7 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
+#include "zk_dtypes/include/field/extension_field.h"
 #include "zk_dtypes/include/field/prime_field.h"
 
 namespace zk_dtypes {
@@ -345,11 +346,20 @@ PyObject* PyField_nb_add(PyObject* a, PyObject* b) {
   T x, y;
   if (PyField_Value(a, &x) && PyField_Value(b, &y)) {
     return PyField_FromValue(x + y).release();
-  } else {
-    PyErr_Format(PyExc_TypeError, "expected %s as argument for addition",
-                 TypeDescriptor<T>::kTypeName);
-    return nullptr;
   }
+  if constexpr (IsExtensionField<T>) {
+    using BaseField = typename T::BaseField;
+    T ext_val;
+    BaseField base_val;
+    if (PyField_Value(a, &ext_val) && PyField_Value<BaseField>(b, &base_val)) {
+      return PyField_FromValue(ext_val + base_val).release();
+    }
+    if (PyField_Value<BaseField>(a, &base_val) && PyField_Value(b, &ext_val)) {
+      return PyField_FromValue(base_val + ext_val).release();
+    }
+  }
+  Py_INCREF(Py_NotImplemented);
+  return Py_NotImplemented;
 }
 
 template <typename T>
@@ -357,11 +367,20 @@ PyObject* PyField_nb_subtract(PyObject* a, PyObject* b) {
   T x, y;
   if (PyField_Value(a, &x) && PyField_Value(b, &y)) {
     return PyField_FromValue(x - y).release();
-  } else {
-    PyErr_Format(PyExc_TypeError, "expected %s as argument for subtraction",
-                 TypeDescriptor<T>::kTypeName);
-    return nullptr;
   }
+  if constexpr (IsExtensionField<T>) {
+    using BaseField = typename T::BaseField;
+    T ext_val;
+    BaseField base_val;
+    if (PyField_Value(a, &ext_val) && PyField_Value<BaseField>(b, &base_val)) {
+      return PyField_FromValue(ext_val - base_val).release();
+    }
+    if (PyField_Value<BaseField>(a, &base_val) && PyField_Value(b, &ext_val)) {
+      return PyField_FromValue(base_val - ext_val).release();
+    }
+  }
+  Py_INCREF(Py_NotImplemented);
+  return Py_NotImplemented;
 }
 
 template <typename T>
@@ -384,16 +403,25 @@ PyObject* PyField_nb_ec_multiply(T x, PyObject* b) {
 
 template <typename T>
 PyObject* PyField_nb_multiply(PyObject* a, PyObject* b) {
-  T x;
-  if (!PyField_Value(a, &x)) {
-    PyErr_Format(PyExc_TypeError, "expected %s as argument for multiplication",
-                 TypeDescriptor<T>::kTypeName);
-    return nullptr;
-  }
-  T y;
-  if (PyField_Value(b, &y)) {
+  // Same type
+  T x, y;
+  if (PyField_Value(a, &x) && PyField_Value(b, &y)) {
     return PyField_FromValue(x * y).release();
-  } else {
+  }
+  // Mixed type: ExtensionField * BaseField or BaseField * ExtensionField
+  if constexpr (IsExtensionField<T>) {
+    using BaseField = typename T::BaseField;
+    T ext_val;
+    BaseField base_val;
+    if (PyField_Value(a, &ext_val) && PyField_Value<BaseField>(b, &base_val)) {
+      return PyField_FromValue(ext_val * base_val).release();
+    }
+    if (PyField_Value<BaseField>(a, &base_val) && PyField_Value(b, &ext_val)) {
+      return PyField_FromValue(base_val * ext_val).release();
+    }
+  }
+  // EC point multiplication
+  if (PyField_Value(a, &x)) {
     if constexpr (std::is_same_v<T, bn254::Fr>) {
       return PyField_nb_ec_multiply<bn254::Fr, bn254::G1AffinePoint,
                                     bn254::G1JacobianPoint, bn254::G1PointXyzz,
@@ -408,8 +436,8 @@ PyObject* PyField_nb_multiply(PyObject* a, PyObject* b) {
     }
   }
 
-  PyErr_SetString(PyExc_TypeError, "invalid argument for multiplication");
-  return nullptr;
+  Py_INCREF(Py_NotImplemented);
+  return Py_NotImplemented;
 }
 
 template <typename T>
@@ -421,11 +449,30 @@ PyObject* PyField_nb_true_divide(PyObject* a, PyObject* b) {
       return nullptr;
     }
     return PyField_FromValue(x / y).release();
-  } else {
-    PyErr_Format(PyExc_TypeError, "expected %s as argument for division",
-                 TypeDescriptor<T>::kTypeName);
-    return nullptr;
   }
+  if constexpr (IsExtensionField<T>) {
+    using BaseField = typename T::BaseField;
+    T ext_val;
+    BaseField base_val;
+    // ExtensionField / BaseField
+    if (PyField_Value(a, &ext_val) && PyField_Value<BaseField>(b, &base_val)) {
+      if (base_val.IsZero()) {
+        PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
+        return nullptr;
+      }
+      return PyField_FromValue(ext_val / base_val).release();
+    }
+    // BaseField / ExtensionField
+    if (PyField_Value<BaseField>(a, &base_val) && PyField_Value(b, &ext_val)) {
+      if (ext_val.IsZero()) {
+        PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
+        return nullptr;
+      }
+      return PyField_FromValue(base_val / ext_val).release();
+    }
+  }
+  Py_INCREF(Py_NotImplemented);
+  return Py_NotImplemented;
 }
 
 template <typename T>
@@ -1210,6 +1257,34 @@ bool RegisterFieldUFuncs(PyObject* numpy) {
   return ok;
 }
 
+// Registers mixed-type ufunc loops for ExtensionField <-> BaseField operations.
+template <typename ExtF, typename BaseF>
+bool RegisterMixedFieldUFuncs(PyObject* numpy) {
+  // ExtF op BaseF -> ExtF
+  bool ok =
+      RegisterUFunc<UFunc<ufuncs::Add<ExtF, BaseF>, ExtF, ExtF, BaseF>, ExtF>(
+          numpy, "add") &&
+      RegisterUFunc<UFunc<ufuncs::Subtract<ExtF, BaseF>, ExtF, ExtF, BaseF>,
+                    ExtF>(numpy, "subtract") &&
+      RegisterUFunc<UFunc<ufuncs::Multiply<ExtF, BaseF>, ExtF, ExtF, BaseF>,
+                    ExtF>(numpy, "multiply") &&
+      RegisterUFunc<UFunc<ufuncs::TrueDivide<ExtF, BaseF>, ExtF, ExtF, BaseF>,
+                    ExtF>(numpy, "true_divide");
+
+  // BaseF op ExtF -> ExtF
+  ok = ok &&
+       RegisterUFunc<UFunc<ufuncs::Add<BaseF, ExtF>, ExtF, BaseF, ExtF>, ExtF>(
+           numpy, "add") &&
+       RegisterUFunc<UFunc<ufuncs::Subtract<BaseF, ExtF>, ExtF, BaseF, ExtF>,
+                     ExtF>(numpy, "subtract") &&
+       RegisterUFunc<UFunc<ufuncs::Multiply<BaseF, ExtF>, ExtF, BaseF, ExtF>,
+                     ExtF>(numpy, "multiply") &&
+       RegisterUFunc<UFunc<ufuncs::TrueDivide<BaseF, ExtF>, ExtF, BaseF, ExtF>,
+                     ExtF>(numpy, "true_divide");
+
+  return ok;
+}
+
 template <typename T>
 bool RegisterFieldDtype(PyObject* numpy) {
   // bases must be a tuple for Python 3.9 and earlier. Change to just pass
@@ -1292,7 +1367,8 @@ bool RegisterFieldDtype(PyObject* numpy) {
   if constexpr (T::ExtensionDegree() == 1 || IsBinaryField<T>) {
     return RegisterFieldCasts<T>() && RegisterFieldUFuncs<T>(numpy);
   } else {
-    return RegisterExtFieldIntegerCasts<T>() && RegisterFieldUFuncs<T>(numpy);
+    return RegisterExtFieldIntegerCasts<T>() && RegisterFieldUFuncs<T>(numpy) &&
+           RegisterMixedFieldUFuncs<T, typename T::BaseField>(numpy);
   }
 }
 

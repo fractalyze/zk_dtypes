@@ -473,6 +473,88 @@ class ExtensionFieldIntegerCastTest(parameterized.TestCase):
       arr.astype(np.int64)
 
 
+EXT_TO_BASE = {
+    babybearx4: zk_dtypes.babybear,
+    babybearx4_mont: zk_dtypes.babybear_mont,
+    goldilocksx3: zk_dtypes.goldilocks,
+    goldilocksx3_mont: zk_dtypes.goldilocks_mont,
+    koalabearx4: zk_dtypes.koalabear,
+    koalabearx4_mont: zk_dtypes.koalabear_mont,
+    mersenne31x2: zk_dtypes.mersenne31,
+}
+
+
+def make_base_array(ext_type):
+  """Create a numpy array of base field elements."""
+  base_type = EXT_TO_BASE[ext_type]
+  return np.array([base_type(i + 1) for i in range(4)])
+
+
+@multi_threaded(num_workers=3)
+class ExtensionFieldMixedTypeTest(parameterized.TestCase):
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testMixedScalarAdd(self, scalar_type):
+    """ExtensionField + BaseField and BaseField + ExtensionField."""
+    base_type = EXT_TO_BASE[scalar_type]
+    ext_val = scalar_type(VALUES[scalar_type][0])
+    base_val = base_type(42)
+    result = ext_val + base_val
+    self.assertIsInstance(result, scalar_type)
+    result2 = base_val + ext_val
+    self.assertIsInstance(result2, scalar_type)
+    self.assertEqual(result, result2)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testMixedScalarSub(self, scalar_type):
+    """ExtensionField - BaseField and BaseField - ExtensionField."""
+    base_type = EXT_TO_BASE[scalar_type]
+    ext_val = scalar_type(VALUES[scalar_type][0])
+    base_val = base_type(42)
+    result = ext_val - base_val
+    self.assertIsInstance(result, scalar_type)
+    result2 = base_val - ext_val
+    self.assertIsInstance(result2, scalar_type)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testMixedScalarMul(self, scalar_type):
+    """ExtensionField * BaseField and BaseField * ExtensionField."""
+    base_type = EXT_TO_BASE[scalar_type]
+    ext_val = scalar_type(VALUES[scalar_type][0])
+    base_val = base_type(42)
+    result = ext_val * base_val
+    self.assertIsInstance(result, scalar_type)
+    result2 = base_val * ext_val
+    self.assertIsInstance(result2, scalar_type)
+    self.assertEqual(result, result2)
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testMixedScalarDiv(self, scalar_type):
+    """ExtensionField / BaseField."""
+    base_type = EXT_TO_BASE[scalar_type]
+    ext_val = scalar_type(VALUES[scalar_type][0])
+    base_val = base_type(42)
+    result = ext_val / base_val
+    self.assertIsInstance(result, scalar_type)
+    # (ext / base) * base == ext
+    self.assertEqual(result * base_val, ext_val)
+
+  @parameterized.product(
+      scalar_type=EXT_FIELD_TYPES,
+      ufunc=[np.add, np.subtract, np.multiply, np.divide],
+  )
+  def testMixedArrayUfuncs(self, scalar_type, ufunc):
+    """Test mixed-type ufuncs on arrays."""
+    ext_arr = make_array(scalar_type)
+    base_arr = make_base_array(scalar_type)
+    # ExtField op BaseField
+    result = ufunc(ext_arr, base_arr)
+    self.assertEqual(scalar_type, result.dtype)
+    # BaseField op ExtField
+    result2 = ufunc(base_arr, ext_arr)
+    self.assertEqual(scalar_type, result2.dtype)
+
+
 class EfinfoTest(parameterized.TestCase):
 
   @parameterized.product(scalar_type=EXT_FIELD_TYPES)

@@ -102,13 +102,14 @@ template <typename T, typename U = T>
 struct Multiply {
   auto operator()(T a, U b) { return a * b; }
 };
-template <typename T>
+template <typename T, typename U = T>
 struct TrueDivide {
-  T operator()(T a, T b) {
+  auto operator()(T a, U b) {
     if (b.IsZero()) {
       PyErr_WarnEx(PyExc_RuntimeWarning,
                    "divide by zero encountered in true_divide", 1);
-      return T(0);
+      using ResultType = decltype(a / b);
+      return ResultType(0);
     }
     return a / b;
   }
