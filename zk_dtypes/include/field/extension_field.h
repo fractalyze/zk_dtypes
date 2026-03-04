@@ -439,14 +439,6 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
       _Config, _Config::kDegreeOverBaseField>::Type;
   using ExtensionFieldOperationBase::operator*;
 
-  constexpr ExtensionField operator*(const BaseField& other) const {
-    ExtensionField ret;
-    for (size_t i = 0; i < std::size(values_); ++i) {
-      ret[i] = values_[i] * other;
-    }
-    return ret;
-  }
-
   constexpr ExtensionField& operator*=(const ExtensionField& other) {
     return *this = *this * other;
   }
