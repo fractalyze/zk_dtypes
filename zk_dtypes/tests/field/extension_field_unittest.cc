@@ -173,6 +173,101 @@ TYPED_TEST(ExtensionFieldTypedTest, ScalarMul) {
   }
 }
 
+TYPED_TEST(ExtensionFieldTypedTest, AddBaseField) {
+  using ExtF = TypeParam;
+  using BaseField = typename ExtF::BaseField;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+
+  ExtF a = ExtF::Random();
+  BaseField b = BaseField::Random();
+
+  // (a + b)[0] = a[0] + b, other coefficients unchanged
+  ExtF c = a + b;
+  EXPECT_EQ(c[0], a[0] + b);
+  for (size_t i = 1; i < kDegree; ++i) {
+    EXPECT_EQ(c[i], a[i]);
+  }
+
+  // BaseField + ExtensionField = ExtensionField + BaseField (commutativity)
+  EXPECT_EQ(c, b + a);
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, SubBaseField) {
+  using ExtF = TypeParam;
+  using BaseField = typename ExtF::BaseField;
+  constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
+
+  ExtF a = ExtF::Random();
+  BaseField b = BaseField::Random();
+
+  // (a - b)[0] = a[0] - b, other coefficients unchanged
+  ExtF c = a - b;
+  EXPECT_EQ(c[0], a[0] - b);
+  for (size_t i = 1; i < kDegree; ++i) {
+    EXPECT_EQ(c[i], a[i]);
+  }
+
+  // b - a = -(a - b)
+  EXPECT_EQ(b - a, -(a - b));
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, MulBaseFieldReverse) {
+  using ExtF = TypeParam;
+  using BaseField = typename ExtF::BaseField;
+
+  ExtF a = ExtF::Random();
+  BaseField b = BaseField::Random();
+
+  // BaseField * ExtensionField = ExtensionField * BaseField (commutativity)
+  EXPECT_EQ(a * b, b * a);
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, DivBaseField) {
+  using ExtF = TypeParam;
+  using BaseField = typename ExtF::BaseField;
+
+  ExtF a = ExtF::Random();
+  BaseField b = BaseField::Random();
+  while (b.IsZero()) b = BaseField::Random();
+
+  // (a / b) * b = a
+  ExtF c = a / b;
+  EXPECT_EQ(c * b, a);
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, BaseDivExtension) {
+  using ExtF = TypeParam;
+  using BaseField = typename ExtF::BaseField;
+
+  BaseField a = BaseField::Random();
+  ExtF b = ExtF::Random();
+  while (b.IsZero()) b = ExtF::Random();
+
+  // (a / b) * b = ExtF(a)
+  ExtF c = a / b;
+  EXPECT_EQ(c * b, ExtF(a));
+}
+
+TYPED_TEST(ExtensionFieldTypedTest, CompoundAssignBaseField) {
+  using ExtF = TypeParam;
+  using BaseField = typename ExtF::BaseField;
+
+  ExtF a = ExtF::Random();
+  BaseField b = BaseField::Random();
+
+  ExtF copy_a = a;
+  copy_a += b;
+  EXPECT_EQ(copy_a, a + b);
+
+  copy_a = a;
+  copy_a -= b;
+  EXPECT_EQ(copy_a, a - b);
+
+  copy_a = a;
+  copy_a *= b;
+  EXPECT_EQ(copy_a, a * b);
+}
+
 TYPED_TEST(ExtensionFieldTypedTest, Square) {
   using ExtF = TypeParam;
 

@@ -439,12 +439,18 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
       _Config, _Config::kDegreeOverBaseField>::Type;
   using ExtensionFieldOperationBase::operator*;
 
-  constexpr ExtensionField operator*(const BaseField& other) const {
-    ExtensionField ret;
-    for (size_t i = 0; i < std::size(values_); ++i) {
-      ret[i] = values_[i] * other;
-    }
-    return ret;
+  template <typename B = BaseField,
+            std::enable_if_t<std::is_same_v<B, BaseField>>* = nullptr>
+  constexpr ExtensionField& operator+=(const B& other) {
+    values_[0] += other;
+    return *this;
+  }
+
+  template <typename B = BaseField,
+            std::enable_if_t<std::is_same_v<B, BaseField>>* = nullptr>
+  constexpr ExtensionField& operator-=(const B& other) {
+    values_[0] -= other;
+    return *this;
   }
 
   constexpr ExtensionField& operator*=(const ExtensionField& other) {
@@ -453,6 +459,12 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
 
   constexpr ExtensionField& operator*=(const BaseField& other) {
     return *this = *this * other;
+  }
+
+  template <typename B = BaseField,
+            std::enable_if_t<std::is_same_v<B, BaseField>>* = nullptr>
+  constexpr ExtensionField& operator/=(const B& other) {
+    return *this *= other.Inverse();
   }
 
   template <size_t N>
@@ -595,6 +607,34 @@ class ExtensionFieldOperationTraits<ExtensionField<Config>> {
 template <typename Config>
 std::ostream& operator<<(std::ostream& os, const ExtensionField<Config>& ef) {
   return os << ef.ToString();
+}
+
+// Free function operators for BaseField op ExtensionField.
+// Config is deduced from the ExtensionField<Config> argument;
+// typename Config::BaseField is a non-deduced context.
+
+template <typename Config>
+constexpr ExtensionField<Config> operator+(
+    const typename Config::BaseField& lhs, const ExtensionField<Config>& rhs) {
+  return rhs + lhs;
+}
+
+template <typename Config>
+constexpr ExtensionField<Config> operator-(
+    const typename Config::BaseField& lhs, const ExtensionField<Config>& rhs) {
+  return -(rhs - lhs);
+}
+
+template <typename Config>
+constexpr ExtensionField<Config> operator*(
+    const typename Config::BaseField& lhs, const ExtensionField<Config>& rhs) {
+  return rhs * lhs;
+}
+
+template <typename Config>
+constexpr ExtensionField<Config> operator/(
+    const typename Config::BaseField& lhs, const ExtensionField<Config>& rhs) {
+  return rhs.Inverse() * lhs;
 }
 
 template <typename T>

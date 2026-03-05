@@ -590,15 +590,13 @@ class BigInt {
 
     // Combined limb and bit shift
     uint64_t borrow = 0;
-    for (size_t i = N - 1; i != SIZE_MAX; --i) {
-      if (i + limb_shift >= N) {
-        b[i] = 0;
-      } else {
-        size_t src_idx = i + limb_shift;
-        uint64_t src = a[src_idx];
-        b[i] = (src >> bit_shift) | borrow;
-        borrow = src << (kLimbBitWidth - bit_shift);
-      }
+    for (size_t i = N - 1 - limb_shift; i != SIZE_MAX; --i) {
+      uint64_t src = a[i + limb_shift];
+      b[i] = (src >> bit_shift) | borrow;
+      borrow = src << (kLimbBitWidth - bit_shift);
+    }
+    for (size_t i = N - limb_shift; i < N; ++i) {
+      b[i] = 0;
     }
     return borrow;
   }

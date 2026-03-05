@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <array>
 #include <cstddef>
+#include <type_traits>
 
 #include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
 #include "zk_dtypes/include/field/frobenius_operation.h"
@@ -91,6 +92,34 @@ class ExtensionFieldOperation : public FrobeniusOperation<Derived> {
       y[i] = x[i] * scalar;
     }
     return static_cast<const Derived&>(*this).FromCoeffs(y);
+  }
+
+  // BaseField arithmetic: only the constant coefficient is affected.
+  // SFINAE ensures these only match exact BaseField arguments, avoiding
+  // ambiguity with integer literals that can implicitly convert to both
+  // BaseField and ExtensionField (Derived).
+  template <typename B = BaseField,
+            std::enable_if_t<std::is_same_v<B, BaseField>>* = nullptr>
+  constexpr Derived operator+(const B& other) const {
+    std::array<BaseField, kDegree> z =
+        static_cast<const Derived&>(*this).ToCoeffs();
+    z[0] += other;
+    return static_cast<const Derived&>(*this).FromCoeffs(z);
+  }
+
+  template <typename B = BaseField,
+            std::enable_if_t<std::is_same_v<B, BaseField>>* = nullptr>
+  constexpr Derived operator-(const B& other) const {
+    std::array<BaseField, kDegree> z =
+        static_cast<const Derived&>(*this).ToCoeffs();
+    z[0] -= other;
+    return static_cast<const Derived&>(*this).FromCoeffs(z);
+  }
+
+  template <typename B = BaseField,
+            std::enable_if_t<std::is_same_v<B, BaseField>>* = nullptr>
+  constexpr Derived operator/(const B& scalar) const {
+    return static_cast<const Derived&>(*this) * scalar.Inverse();
   }
 
   constexpr Derived operator/(const Derived& other) const {
