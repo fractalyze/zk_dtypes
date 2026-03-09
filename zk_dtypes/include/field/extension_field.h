@@ -536,8 +536,8 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
       return mul_algorithm_.value();
     }
     if constexpr (Config::kDegreeOverBaseField == 4) {
-      // ToomCook's naive Vandermonde interpolation generates ~30+ muls,
-      // only beneficial for multi-limb fields. Single-limb fields use
+      // ToomCook's naive Vandermonde interpolation generates ~30+ muls, which
+      // is only beneficial for multi-limb fields. Single-limb fields use
       // Karatsuba (~13 muls).
       if constexpr (Config::BasePrimeField::kLimbNums > 1) {
         return ExtensionFieldMulAlgorithm::kToomCook;
@@ -586,8 +586,8 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
         return ExtensionFieldMulAlgorithm::kKaratsuba;
       }
     } else if constexpr (Config::kDegreeOverBaseField == 4) {
-      // kCustom saves 1 mul, 1 add, 2 doubles vs Karatsuba for quartic square.
-      // ToomCook only for multi-limb fields.
+      // kCustom saves 1 mul, 1 add, and 2 doubles vs Karatsuba for quartic
+      // square. ToomCook is used only for multi-limb fields.
       if constexpr (Config::BasePrimeField::kLimbNums > 1) {
         return ExtensionFieldMulAlgorithm::kToomCook;
       } else {
