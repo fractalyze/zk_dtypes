@@ -33,6 +33,7 @@ limitations under the License.
 
 #include "zk_dtypes/include/arithmetics.h"
 #include "zk_dtypes/include/bit_traits_forward.h"
+#include "zk_dtypes/include/comparable_traits.h"
 #include "zk_dtypes/include/random.h"
 
 namespace zk_dtypes {
@@ -791,6 +792,26 @@ class BitTraits<BigInt<N>> {
       bigint[limb_index] &= ~bit_index_value;
     }
   }
+};
+
+// Type trait to check if a type is a BigInt.
+template <typename T>
+struct IsBigIntImpl {
+  constexpr static bool value = false;
+};
+
+template <size_t N>
+struct IsBigIntImpl<BigInt<N>> {
+  constexpr static bool value = true;
+};
+
+template <typename T>
+constexpr bool IsBigInt = IsBigIntImpl<T>::value;
+
+// Specialize IsComparable for BigInt types, which implement all comparison ops.
+template <typename T>
+struct IsComparableImpl<T, std::enable_if_t<IsBigInt<T>>> {
+  constexpr static bool value = true;
 };
 
 }  // namespace zk_dtypes

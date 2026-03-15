@@ -76,6 +76,7 @@ cc_library(
     deps = [
         ":arithmetics",
         ":bit_traits_forward",
+        ":comparable_traits",
         ":random",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/log:check",
