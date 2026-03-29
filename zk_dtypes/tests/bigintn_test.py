@@ -182,17 +182,25 @@ class ScalarTest(parameterized.TestCase):
     with self.assertRaises(OverflowError):
       uint256(-1)
 
-  def testInt256Overflow(self):
+  def testInt256PositiveOverflow(self):
     with self.assertRaises(OverflowError):
       int256(2**255)
+
+  def testInt256NegativeOverflow(self):
+    with self.assertRaises(OverflowError):
+      int256(-(2**255) - 1)
 
   def testUint128Overflow(self):
     with self.assertRaises(OverflowError):
       uint128(2**128)
 
-  def testInt128Overflow(self):
+  def testInt128PositiveOverflow(self):
     with self.assertRaises(OverflowError):
       int128(2**127)
+
+  def testInt128NegativeOverflow(self):
+    with self.assertRaises(OverflowError):
+      int128(-(2**127) - 1)
 
   @parameterized.product(scalar_type=BIGINT_TYPES)
   def testConstructFromString(self, scalar_type):
@@ -342,6 +350,69 @@ class ArrayTest(parameterized.TestCase):
     z = np.multiply(x, y)
     self.assertEqual(z.dtype.type, scalar_type)
     for i, expected in enumerate([10, 40, 90]):
+      self.assertEqual(int(z[i]), expected)
+
+  @parameterized.product(scalar_type=BIGINT_TYPES)
+  def testUfuncFloorDivide(self, scalar_type):
+    x = np.array([100, 200, 300], dtype=scalar_type)
+    y = np.array([3, 7, 11], dtype=scalar_type)
+    z = np.floor_divide(x, y)
+    self.assertEqual(z.dtype.type, scalar_type)
+    for i, expected in enumerate([33, 28, 27]):
+      self.assertEqual(int(z[i]), expected)
+
+  @parameterized.product(scalar_type=BIGINT_TYPES)
+  def testUfuncRemainder(self, scalar_type):
+    x = np.array([100, 200, 300], dtype=scalar_type)
+    y = np.array([3, 7, 11], dtype=scalar_type)
+    z = np.remainder(x, y)
+    self.assertEqual(z.dtype.type, scalar_type)
+    for i, expected in enumerate([1, 4, 3]):
+      self.assertEqual(int(z[i]), expected)
+
+  @parameterized.product(scalar_type=BIGINT_TYPES)
+  def testUfuncBitwiseAnd(self, scalar_type):
+    x = np.array([0xFF, 0xF0, 0xAA], dtype=scalar_type)
+    y = np.array([0x0F, 0x0F, 0x55], dtype=scalar_type)
+    z = np.bitwise_and(x, y)
+    self.assertEqual(z.dtype.type, scalar_type)
+    for i, expected in enumerate([0x0F, 0x00, 0x00]):
+      self.assertEqual(int(z[i]), expected)
+
+  @parameterized.product(scalar_type=BIGINT_TYPES)
+  def testUfuncBitwiseOr(self, scalar_type):
+    x = np.array([0xF0, 0xA0, 0x0F], dtype=scalar_type)
+    y = np.array([0x0F, 0x05, 0xF0], dtype=scalar_type)
+    z = np.bitwise_or(x, y)
+    self.assertEqual(z.dtype.type, scalar_type)
+    for i, expected in enumerate([0xFF, 0xA5, 0xFF]):
+      self.assertEqual(int(z[i]), expected)
+
+  @parameterized.product(scalar_type=BIGINT_TYPES)
+  def testUfuncBitwiseXor(self, scalar_type):
+    x = np.array([0xFF, 0xAA, 0x00], dtype=scalar_type)
+    y = np.array([0x0F, 0x55, 0xFF], dtype=scalar_type)
+    z = np.bitwise_xor(x, y)
+    self.assertEqual(z.dtype.type, scalar_type)
+    for i, expected in enumerate([0xF0, 0xFF, 0xFF]):
+      self.assertEqual(int(z[i]), expected)
+
+  @parameterized.product(scalar_type=BIGINT_TYPES)
+  def testUfuncLeftShift(self, scalar_type):
+    x = np.array([1, 2, 3], dtype=scalar_type)
+    y = np.array([4, 8, 16], dtype=scalar_type)
+    z = np.left_shift(x, y)
+    self.assertEqual(z.dtype.type, scalar_type)
+    for i, expected in enumerate([16, 512, 196608]):
+      self.assertEqual(int(z[i]), expected)
+
+  @parameterized.product(scalar_type=BIGINT_TYPES)
+  def testUfuncRightShift(self, scalar_type):
+    x = np.array([256, 1024, 65536], dtype=scalar_type)
+    y = np.array([4, 8, 16], dtype=scalar_type)
+    z = np.right_shift(x, y)
+    self.assertEqual(z.dtype.type, scalar_type)
+    for i, expected in enumerate([16, 4, 1]):
       self.assertEqual(int(z[i]), expected)
 
 

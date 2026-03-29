@@ -185,9 +185,11 @@ bool PyLongToBigInt(PyObject* obj, T* output) {
   if (bits == static_cast<size_t>(-1)) return false;
 
   if constexpr (IsSignedBigIntType<T>) {
-    // _PyLong_NumBits returns bits for the absolute value.
-    // Positive max: 2^(kBitLen-1) - 1 needs kBitLen-1 bits.
-    // Negative min: -2^(kBitLen-1) needs kBitLen bits for its abs value.
+    // Positive: max is 2^(kBitLen-1) - 1, needs at most kBitLen-1 bits.
+    // Negative: min is -2^(kBitLen-1), abs needs exactly kBitLen bits.
+    // Values like -(2^(kBitLen-1) + 1) also need kBitLen bits but are
+    // out of range. We catch that after byte conversion by verifying the
+    // negated result is actually negative (two's complement).
     size_t max_bits = (sign < 0) ? kBitLen : kBitLen - 1;
     if (bits > max_bits) {
       PyErr_SetString(PyExc_OverflowError,
@@ -235,7 +237,19 @@ bool PyLongToBigInt(PyObject* obj, T* output) {
       BigInt<N>::FromBytesLE(absl::Span<uint8_t>(bytes.data(), kByteLen));
 
   if (sign < 0) {
-    *output = T(-result);
+    T negated(-result);
+    if constexpr (IsSignedBigIntType<T>) {
+      // Verify the negation didn't wrap: the result must be negative
+      // (or zero, which can't happen since sign < 0 implies non-zero).
+      // e.g. -(2^255 + 1) wraps to a positive value in 256-bit two's
+      // complement.
+      if (negated.IsNonNegative()) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "value out of range for signed big integer type");
+        return false;
+      }
+    }
+    *output = negated;
   } else {
     *output = T(result);
   }
@@ -688,11 +702,25 @@ bool RegisterBigIntNCasts() {
 
 template <typename T>
 bool RegisterBigIntNUFuncs(PyObject* numpy) {
-  bool ok =
-      RegisterUFunc<UFunc<ufuncs::Add<T>, T, T, T>, T>(numpy, "add") &&
-      RegisterUFunc<UFunc<ufuncs::Subtract<T>, T, T, T>, T>(numpy,
-                                                            "subtract") &&
-      RegisterUFunc<UFunc<ufuncs::Multiply<T>, T, T, T>, T>(numpy, "multiply");
+  bool ok = RegisterUFunc<UFunc<ufuncs::Add<T>, T, T, T>, T>(numpy, "add") &&
+            RegisterUFunc<UFunc<ufuncs::Subtract<T>, T, T, T>, T>(numpy,
+                                                                  "subtract") &&
+            RegisterUFunc<UFunc<ufuncs::Multiply<T>, T, T, T>, T>(numpy,
+                                                                  "multiply") &&
+            RegisterUFunc<UFunc<ufuncs::FloorDivide<T>, T, T, T>, T>(
+                numpy, "floor_divide") &&
+            RegisterUFunc<UFunc<ufuncs::Remainder<T>, T, T, T>, T>(
+                numpy, "remainder") &&
+            RegisterUFunc<UFunc<ufuncs::BitwiseAnd<T>, T, T, T>, T>(
+                numpy, "bitwise_and") &&
+            RegisterUFunc<UFunc<ufuncs::BitwiseOr<T>, T, T, T>, T>(
+                numpy, "bitwise_or") &&
+            RegisterUFunc<UFunc<ufuncs::BitwiseXor<T>, T, T, T>, T>(
+                numpy, "bitwise_xor") &&
+            RegisterUFunc<UFunc<ufuncs::LeftShift<T>, T, T, T>, T>(
+                numpy, "left_shift") &&
+            RegisterUFunc<UFunc<ufuncs::RightShift<T>, T, T, T>, T>(
+                numpy, "right_shift");
   return ok;
 }
 
