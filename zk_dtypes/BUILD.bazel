@@ -949,6 +949,7 @@ cc_test(
 cc_library(
     name = "_zk_dtypes_ext_cc",
     srcs = [
+        "_src/bigint_numpy.h",
         "_src/common.h",
         "_src/dtypes.cc",
         "_src/ec_point_numpy.h",
@@ -963,6 +964,7 @@ cc_library(
     deps = [
         ":all_types",
         ":intn",
+        ":signed_big_int",
         "//third_party/py/numpy:headers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/types:span",

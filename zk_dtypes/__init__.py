@@ -23,8 +23,12 @@ __all__ = [
     "pfinfo",
     "int2",
     "int4",
+    "int128",
+    "int256",
     "uint2",
     "uint4",
+    "uint128",
+    "uint256",
     # Small prime field types
     "babybear",
     "babybear_mont",
@@ -78,6 +82,10 @@ from zk_dtypes._zk_dtypes_ext import int2
 from zk_dtypes._zk_dtypes_ext import int4
 from zk_dtypes._zk_dtypes_ext import uint2
 from zk_dtypes._zk_dtypes_ext import uint4
+from zk_dtypes._zk_dtypes_ext import int128
+from zk_dtypes._zk_dtypes_ext import uint128
+from zk_dtypes._zk_dtypes_ext import int256
+from zk_dtypes._zk_dtypes_ext import uint256
 from zk_dtypes._zk_dtypes_ext import babybear
 from zk_dtypes._zk_dtypes_ext import babybear_mont
 from zk_dtypes._zk_dtypes_ext import goldilocks
@@ -121,6 +129,10 @@ int2: Type[np.generic]
 int4: Type[np.generic]
 uint2: Type[np.generic]
 uint4: Type[np.generic]
+int128: Type[np.generic]
+uint128: Type[np.generic]
+int256: Type[np.generic]
+uint256: Type[np.generic]
 babybear: Type[np.generic]
 babybear_mont: Type[np.generic]
 goldilocks: Type[np.generic]

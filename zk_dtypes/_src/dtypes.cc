@@ -27,11 +27,13 @@ limitations under the License.
 // Place `<locale>` before <Python.h> to avoid a build failure in macOS.
 #include <Python.h>
 
+#include "zk_dtypes/_src/bigint_numpy.h"
 #include "zk_dtypes/_src/ec_point_numpy.h"
 #include "zk_dtypes/_src/field_numpy.h"
 #include "zk_dtypes/_src/intn_numpy.h"
 #include "zk_dtypes/include/all_types.h"
 #include "zk_dtypes/include/intn.h"
+#include "zk_dtypes/include/signed_big_int.h"
 
 namespace zk_dtypes {
 
@@ -92,6 +94,64 @@ struct TypeDescriptor<uint4> : IntNTypeDescriptor<uint4> {
   // TODO(phawkins): there doesn't seem to be a way of guaranteeing a type
   // character is unique.
   static constexpr char kNpyDescrType = 'A';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+// BigInt types: int128, uint128, int256, uint256
+using int128 = SignedBigInt<2>;
+using uint128 = BigInt<2>;
+using int256 = SignedBigInt<4>;
+using uint256 = BigInt<4>;
+
+template <>
+struct TypeDescriptor<int128> : BigIntNTypeDescriptor<int128> {
+  typedef int128 T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = true;
+  static constexpr const char* kTypeName = "int128";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.int128";
+  static constexpr const char* kTpDoc = "int128 signed integer values";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'n';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<uint128> : BigIntNTypeDescriptor<uint128> {
+  typedef uint128 T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = true;
+  static constexpr const char* kTypeName = "uint128";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.uint128";
+  static constexpr const char* kTpDoc = "uint128 unsigned integer values";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'N';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<int256> : BigIntNTypeDescriptor<int256> {
+  typedef int256 T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = true;
+  static constexpr const char* kTypeName = "int256";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.int256";
+  static constexpr const char* kTpDoc = "int256 signed integer values";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'z';
+  static constexpr char kNpyDescrByteorder = '=';
+};
+
+template <>
+struct TypeDescriptor<uint256> : BigIntNTypeDescriptor<uint256> {
+  typedef uint256 T;
+  static constexpr bool is_floating = false;
+  static constexpr bool is_integral = true;
+  static constexpr const char* kTypeName = "uint256";
+  static constexpr const char* kQualifiedTypeName = "zk_dtypes.uint256";
+  static constexpr const char* kTpDoc = "uint256 unsigned integer values";
+  static constexpr char kNpyDescrKind = 'V';
+  static constexpr char kNpyDescrType = 'Z';
   static constexpr char kNpyDescrByteorder = '=';
 };
 
@@ -452,6 +512,17 @@ bool Initialize() {
     return false;
   }
 
+  if (!RegisterBigIntNDtypes<
+          // clang-format off
+          int128,
+          uint128,
+          int256,
+          uint256
+          // clang-format on
+          >(numpy.get())) {
+    return false;
+  }
+
 #define REGISTER_FIELD_DTYPES(ActualType, ...)        \
   if (!RegisterFieldDtype<ActualType>(numpy.get())) { \
     return false;                                     \
@@ -527,7 +598,11 @@ extern "C" EXPORT_SYMBOL PyObject* PyInit__zk_dtypes_ext() {
   if (!InitModuleType<int2>(m.get(), "int2") ||
       !InitModuleType<int4>(m.get(), "int4") ||
       !InitModuleType<uint2>(m.get(), "uint2") ||
-      !InitModuleType<uint4>(m.get(), "uint4")) {
+      !InitModuleType<uint4>(m.get(), "uint4") ||
+      !InitModuleType<int128>(m.get(), "int128") ||
+      !InitModuleType<uint128>(m.get(), "uint128") ||
+      !InitModuleType<int256>(m.get(), "int256") ||
+      !InitModuleType<uint256>(m.get(), "uint256")) {
     return nullptr;
   }
 
