@@ -185,8 +185,11 @@ bool PyLongToBigInt(PyObject* obj, T* output) {
   if (bits == static_cast<size_t>(-1)) return false;
 
   if constexpr (IsSignedBigIntType<T>) {
-    // Signed: check bits < kBitLen (kBitLen-1 bits of magnitude + 1 sign bit).
-    if (bits > kBitLen - 1) {
+    // _PyLong_NumBits returns bits for the absolute value.
+    // Positive max: 2^(kBitLen-1) - 1 needs kBitLen-1 bits.
+    // Negative min: -2^(kBitLen-1) needs kBitLen bits for its abs value.
+    size_t max_bits = (sign < 0) ? kBitLen : kBitLen - 1;
+    if (bits > max_bits) {
       PyErr_SetString(PyExc_OverflowError,
                       "value out of range for signed big integer type");
       return false;

@@ -1066,6 +1066,18 @@ py_test(
 )
 
 py_test(
+    name = "bigintn_test",
+    srcs = ["tests/bigintn_test.py"],
+    main = "tests/bigintn_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
     name = "prime_field_test",
     srcs = ["tests/prime_field_test.py"],
     main = "tests/prime_field_test.py",
