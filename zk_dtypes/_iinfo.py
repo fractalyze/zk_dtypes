@@ -18,8 +18,12 @@
 
 from zk_dtypes._zk_dtypes_ext import int2
 from zk_dtypes._zk_dtypes_ext import int4
+from zk_dtypes._zk_dtypes_ext import int128
+from zk_dtypes._zk_dtypes_ext import int256
 from zk_dtypes._zk_dtypes_ext import uint2
 from zk_dtypes._zk_dtypes_ext import uint4
+from zk_dtypes._zk_dtypes_ext import uint128
+from zk_dtypes._zk_dtypes_ext import uint256
 
 import numpy as np
 
@@ -27,6 +31,10 @@ _int2_dtype = np.dtype(int2)
 _uint2_dtype = np.dtype(uint2)
 _int4_dtype = np.dtype(int4)
 _uint4_dtype = np.dtype(uint4)
+_int128_dtype = np.dtype(int128)
+_uint128_dtype = np.dtype(uint128)
+_int256_dtype = np.dtype(int256)
+_uint256_dtype = np.dtype(uint256)
 
 
 class iinfo:  # pylint: disable=invalid-name,missing-class-docstring
@@ -61,6 +69,30 @@ class iinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.bits = 4
       self.min = 0
       self.max = 15
+    elif int_type == _int128_dtype:
+      self.dtype = _int128_dtype
+      self.kind = "i"
+      self.bits = 128
+      self.min = -(2**127)
+      self.max = 2**127 - 1
+    elif int_type == _uint128_dtype:
+      self.dtype = _uint128_dtype
+      self.kind = "u"
+      self.bits = 128
+      self.min = 0
+      self.max = 2**128 - 1
+    elif int_type == _int256_dtype:
+      self.dtype = _int256_dtype
+      self.kind = "i"
+      self.bits = 256
+      self.min = -(2**255)
+      self.max = 2**255 - 1
+    elif int_type == _uint256_dtype:
+      self.dtype = _uint256_dtype
+      self.kind = "u"
+      self.bits = 256
+      self.min = 0
+      self.max = 2**256 - 1
     else:
       ii = np.iinfo(int_type)
       self.dtype = ii.dtype

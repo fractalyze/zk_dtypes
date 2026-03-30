@@ -197,6 +197,26 @@ struct Ge {
   npy_bool operator()(T a, T b) { return a >= b; }
 };
 template <typename T>
+struct BitwiseAnd {
+  T operator()(T a, T b) { return a & b; }
+};
+template <typename T>
+struct BitwiseOr {
+  T operator()(T a, T b) { return a | b; }
+};
+template <typename T>
+struct BitwiseXor {
+  T operator()(T a, T b) { return a ^ b; }
+};
+template <typename T>
+struct LeftShift {
+  T operator()(T a, T b) { return a << static_cast<uint64_t>(b); }
+};
+template <typename T>
+struct RightShift {
+  T operator()(T a, T b) { return a >> static_cast<uint64_t>(b); }
+};
+template <typename T>
 struct Maximum {
   T operator()(T a, T b) { return a > b ? a : b; }
 };
