@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: [self-hosted, zk_dtypes]
+    runs-on: [self-hosted, cpu]
     steps:
       - name: Checkout zk_dtypes
         uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
             //...
 
   pre-commit-style:
-    runs-on: [self-hosted, zk_dtypes]
+    runs-on: [self-hosted, cpu]
     steps:
       - name: Checkout zk_dtypes
         uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
         uses: pre-commit/action@646c83fcd040023954eafda54b4db0192ce70507 # pin@v3
 
   notebook-check:
-    runs-on: [self-hosted, zk_dtypes]
+    runs-on: [self-hosted, cpu]
     steps:
       - name: Checkout zk_dtypes
         uses: actions/checkout@v4
