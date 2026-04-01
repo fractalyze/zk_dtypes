@@ -9,7 +9,7 @@ on:
 
 jobs:
   main:
-    runs-on: [self-hosted, zk_dtypes]
+    runs-on: [self-hosted, cpu]
     name: Semantic Pull Request
     permissions:
       pull-requests: read
