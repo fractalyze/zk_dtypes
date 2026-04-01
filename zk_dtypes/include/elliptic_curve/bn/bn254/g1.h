@@ -25,33 +25,38 @@ limitations under the License.
 
 namespace zk_dtypes::bn254 {
 
-template <typename BaseField>
-class G1SwCurveBaseConfig {
+// BN254 G1: y² = x³ + 3, generator (1, 2).
+class G1SwCurveConfig {
  public:
+  constexpr static bool kUseMontgomery = false;
+  using StdConfig = G1SwCurveConfig;
+  using BaseField = Fq;
+  using ScalarField = Fr;
+
   constexpr static BaseField kA = 0;
   constexpr static BaseField kB = 3;
   constexpr static BaseField kX = 1;
   constexpr static BaseField kY = 2;
 };
 
-class G1SwCurveConfig : public G1SwCurveBaseConfig<Fq> {
- public:
-  constexpr static bool kUseMontgomery = false;
-
-  using StdConfig = G1SwCurveConfig;
-
-  using BaseField = Fq;
-  using ScalarField = Fr;
-};
-
-class G1SwCurveMontConfig : public G1SwCurveBaseConfig<FqMont> {
+class G1SwCurveMontConfig {
  public:
   constexpr static bool kUseMontgomery = true;
-
   using StdConfig = G1SwCurveConfig;
-
   using BaseField = FqMont;
   using ScalarField = FrMont;
+
+  constexpr static BaseField kA = BaseField::FromUnchecked(
+      {UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)});
+  constexpr static BaseField kB = BaseField::FromUnchecked(
+      {UINT64_C(8797723225643362519), UINT64_C(2263834496217719225),
+       UINT64_C(3696305541684646532), UINT64_C(3035258219084094862)});
+  constexpr static BaseField kX = BaseField::FromUnchecked(
+      {UINT64_C(15230403791020821917), UINT64_C(754611498739239741),
+       UINT64_C(7381016538464732716), UINT64_C(1011752739694698287)});
+  constexpr static BaseField kY = BaseField::FromUnchecked(
+      {UINT64_C(12014063508332092218), UINT64_C(1509222997478479483),
+       UINT64_C(14762033076929465432), UINT64_C(2023505479389396574)});
 };
 
 using G1Curve = SwCurve<G1SwCurveConfig>;

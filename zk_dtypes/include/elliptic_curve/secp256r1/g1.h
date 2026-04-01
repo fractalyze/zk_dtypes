@@ -24,56 +24,45 @@ limitations under the License.
 
 namespace zk_dtypes::secp256r1 {
 
-// secp256r1 (P-256): y² = x³ + ax + b
-// a = -3, b =
-// 0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B
-template <typename BaseField>
-class G1SwCurveBaseConfig {
- public:
-  constexpr static BaseField kA = {
-      UINT64_C(18446744073709551612),
-      UINT64_C(4294967295),
-      UINT64_C(0),
-      UINT64_C(18446744069414584321),
-  };
-  constexpr static BaseField kB = {
-      UINT64_C(4309448131093880907),
-      UINT64_C(7285987128567378166),
-      UINT64_C(12964664127075681980),
-      UINT64_C(6540974713487397863),
-  };
-
-  // Generator point (standard form).
-  constexpr static BaseField kX = {
-      UINT64_C(17627433388654248598),
-      UINT64_C(8575836109218198432),
-      UINT64_C(17923454489921339634),
-      UINT64_C(7716867327612699207),
-  };
-  constexpr static BaseField kY = {
-      UINT64_C(14678990851816772085),
-      UINT64_C(3156516839386865358),
-      UINT64_C(10297457778147434006),
-      UINT64_C(5756518291402817435),
-  };
-};
-
-class G1SwCurveConfig : public G1SwCurveBaseConfig<Fq> {
+// secp256r1 (P-256): y² = x³ - 3x + b
+class G1SwCurveConfig {
  public:
   constexpr static bool kUseMontgomery = false;
-
   using StdConfig = G1SwCurveConfig;
-
   using BaseField = Fq;
+
+  constexpr static BaseField kA = {UINT64_C(18446744073709551612),
+                                   UINT64_C(4294967295), UINT64_C(0),
+                                   UINT64_C(18446744069414584321)};
+  constexpr static BaseField kB = {
+      UINT64_C(4309448131093880907), UINT64_C(7285987128567378166),
+      UINT64_C(12964664127075681980), UINT64_C(6540974713487397863)};
+  constexpr static BaseField kX = {
+      UINT64_C(17627433388654248598), UINT64_C(8575836109218198432),
+      UINT64_C(17923454489921339634), UINT64_C(7716867327612699207)};
+  constexpr static BaseField kY = {
+      UINT64_C(14678990851816772085), UINT64_C(3156516839386865358),
+      UINT64_C(10297457778147434006), UINT64_C(5756518291402817435)};
 };
 
-class G1SwCurveMontConfig : public G1SwCurveBaseConfig<FqMont> {
+class G1SwCurveMontConfig {
  public:
   constexpr static bool kUseMontgomery = true;
-
   using StdConfig = G1SwCurveConfig;
-
   using BaseField = FqMont;
+
+  constexpr static BaseField kA = BaseField::FromUnchecked(
+      {UINT64_C(18446744073709551612), UINT64_C(17179869183), UINT64_C(0),
+       UINT64_C(18446744056529682436)});
+  constexpr static BaseField kB = BaseField::FromUnchecked(
+      {UINT64_C(15608596021259845087), UINT64_C(12461466548982526096),
+       UINT64_C(16546823903870267094), UINT64_C(15866188208926050356)});
+  constexpr static BaseField kX = BaseField::FromUnchecked(
+      {UINT64_C(8784043285714375740), UINT64_C(8483257759279461889),
+       UINT64_C(8789745728267363600), UINT64_C(1770019616739251654)});
+  constexpr static BaseField kY = BaseField::FromUnchecked(
+      {UINT64_C(15992936863339206154), UINT64_C(10037038012062884956),
+       UINT64_C(15197544864945402661), UINT64_C(9615747158586711429)});
 };
 
 using G1Curve = SwCurve<G1SwCurveConfig>;

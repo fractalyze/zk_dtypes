@@ -25,9 +25,14 @@ limitations under the License.
 
 namespace zk_dtypes::bn254 {
 
-template <typename BaseField>
-class G2SwCurveBaseConfig {
+// BN254 G2: y² = x³ + b' over FqX2 (degree-2 extension of Fq).
+class G2SwCurveConfig {
  public:
+  constexpr static bool kUseMontgomery = false;
+  using StdConfig = G2SwCurveConfig;
+  using BaseField = FqX2;
+  using ScalarField = Fr;
+
   constexpr static BaseField kA = {{0, 0}};
   constexpr static BaseField kB = {{
                                        UINT64_C(3632125457679333605),
@@ -67,24 +72,36 @@ class G2SwCurveBaseConfig {
                                    }};
 };
 
-class G2SwCurveConfig : public G2SwCurveBaseConfig<FqX2> {
- public:
-  constexpr static bool kUseMontgomery = false;
-
-  using StdConfig = G2SwCurveConfig;
-
-  using BaseField = FqX2;
-  using ScalarField = Fr;
-};
-
-class G2SwCurveMontConfig : public G2SwCurveBaseConfig<FqX2Mont> {
+class G2SwCurveMontConfig {
  public:
   constexpr static bool kUseMontgomery = true;
-
   using StdConfig = G2SwCurveConfig;
-
   using BaseField = FqX2Mont;
   using ScalarField = FrMont;
+
+  constexpr static BaseField kA = {FqMont::FromUnchecked(
+      {UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)})};
+  constexpr static BaseField kB = {
+      FqMont::FromUnchecked(
+          {UINT64_C(4321547867055981224), UINT64_C(147241268046680925),
+           UINT64_C(2789960110459671136), UINT64_C(2671978398120978541)}),
+      FqMont::FromUnchecked(
+          {UINT64_C(4100506350182530919), UINT64_C(7345568344173317438),
+           UINT64_C(15513160039642431658), UINT64_C(90557763186888013)})};
+  constexpr static BaseField kX = {
+      FqMont::FromUnchecked(
+          {UINT64_C(10269251484633538598), UINT64_C(15918845024527909234),
+           UINT64_C(18138289588161026783), UINT64_C(1825990028691918907)}),
+      FqMont::FromUnchecked(
+          {UINT64_C(12660871435976991040), UINT64_C(6936631231174072516),
+           UINT64_C(714191060563144582), UINT64_C(1512910971262892907)})};
+  constexpr static BaseField kY = {
+      FqMont::FromUnchecked(
+          {UINT64_C(7034053747528165878), UINT64_C(18338607757778656120),
+           UINT64_C(18419188534790028798), UINT64_C(2953656481336934918)}),
+      FqMont::FromUnchecked(
+          {UINT64_C(7208393106848765678), UINT64_C(15877432936589245627),
+           UINT64_C(6195041853444001910), UINT64_C(983087530859390082)})};
 };
 
 using G2Curve = SwCurve<G2SwCurveConfig>;
