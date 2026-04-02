@@ -737,10 +737,17 @@ cc_library(
 )
 
 cc_library(
+    name = "secp256r1_fr",
+    hdrs = ["include/elliptic_curve/secp256r1/fr.h"],
+    deps = [":big_prime_field"],
+)
+
+cc_library(
     name = "secp256r1_g1",
     hdrs = ["include/elliptic_curve/secp256r1/g1.h"],
     deps = [
         ":secp256r1_fq",
+        ":secp256r1_fr",
         ":sw_affine_point",
         ":sw_curve",
         ":sw_jacobian_point",
@@ -941,10 +948,17 @@ cc_test(
     name = "elliptic_curve_unittests",
     srcs = [
         "tests/elliptic_curve/affine_point_unittest.cc",
+        "tests/elliptic_curve/constexpr_curve_config_unittest.cc",
         "tests/elliptic_curve/jacobian_point_unittest.cc",
         "tests/elliptic_curve/point_xyzz_unittest.cc",
     ],
     deps = [
+        ":bls12_381_g1",
+        ":bn254_g1",
+        ":bn254_g2",
+        ":secp256k1_g1",
+        ":secp256r1_fq",
+        ":secp256r1_g1",
         ":sw_test_curve_config",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
