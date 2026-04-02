@@ -17,6 +17,7 @@ limitations under the License.
 #define ZK_DTYPES_INCLUDE_ELLIPTIC_CURVE_SECP256R1_G1_H_
 
 #include "zk_dtypes/include/elliptic_curve/secp256r1/fq.h"
+#include "zk_dtypes/include/elliptic_curve/secp256r1/fr.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/affine_point.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/jacobian_point.h"
 #include "zk_dtypes/include/elliptic_curve/short_weierstrass/point_xyzz.h"
@@ -30,6 +31,7 @@ class G1SwCurveConfig {
   constexpr static bool kUseMontgomery = false;
   using StdConfig = G1SwCurveConfig;
   using BaseField = Fq;
+  using ScalarField = Fr;
 
   constexpr static BaseField kA = {UINT64_C(18446744073709551612),
                                    UINT64_C(4294967295), UINT64_C(0),
@@ -50,6 +52,7 @@ class G1SwCurveMontConfig {
   constexpr static bool kUseMontgomery = true;
   using StdConfig = G1SwCurveConfig;
   using BaseField = FqMont;
+  using ScalarField = FrMont;
 
   constexpr static BaseField kA = BaseField::FromUnchecked(
       {UINT64_C(18446744073709551612), UINT64_C(17179869183), UINT64_C(0),

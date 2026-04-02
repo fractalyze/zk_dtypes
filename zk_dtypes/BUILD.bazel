@@ -737,10 +737,17 @@ cc_library(
 )
 
 cc_library(
+    name = "secp256r1_fr",
+    hdrs = ["include/elliptic_curve/secp256r1/fr.h"],
+    deps = [":big_prime_field"],
+)
+
+cc_library(
     name = "secp256r1_g1",
     hdrs = ["include/elliptic_curve/secp256r1/g1.h"],
     deps = [
         ":secp256r1_fq",
+        ":secp256r1_fr",
         ":sw_affine_point",
         ":sw_curve",
         ":sw_jacobian_point",
