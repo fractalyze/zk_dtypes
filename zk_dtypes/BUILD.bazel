@@ -31,6 +31,7 @@ cc_library(
         ":babybear",
         ":babybearx4",
         ":binary_field",
+        ":bls12_381_fqx2",
         ":bls12_381_g1",
         ":bn254_fq",
         ":bn254_fqx2",
@@ -759,6 +760,15 @@ cc_library(
     name = "bls12_381_fq",
     hdrs = ["include/elliptic_curve/bls12_381/fq.h"],
     deps = [":big_prime_field"],
+)
+
+cc_library(
+    name = "bls12_381_fqx2",
+    hdrs = ["include/elliptic_curve/bls12_381/fqx2.h"],
+    deps = [
+        ":bls12_381_fq",
+        ":extension_field",
+    ],
 )
 
 cc_library(
