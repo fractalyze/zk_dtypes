@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_ALL_TYPES_H_
 #define ZK_DTYPES_INCLUDE_ALL_TYPES_H_
 
+#include "zk_dtypes/include/elliptic_curve/bls12_381/fqx2.h"
 #include "zk_dtypes/include/elliptic_curve/bls12_381/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
@@ -92,9 +93,10 @@ WITH_MONT(V, ::zk_dtypes::KoalabearX4, KoalabearX4, KOALABEARX4, koalabearx4) \
 V(::zk_dtypes::Mersenne31X2, Mersenne31X2, MERSENNE31X2, mersenne31x2)        \
 WITH_MONT(V, ::zk_dtypes::GoldilocksX3, GoldilocksX3, GOLDILOCKSX3, goldilocksx3)
 
-#define ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(V) \
-ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)      \
-WITH_MONT(V, ::zk_dtypes::bn254::FqX2, Bn254BfX2, BN254_BFX2, bn254_bfx2)
+#define ZK_DTYPES_ALL_EXT_FIELD_TYPE_LIST(V)                              \
+ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)                                   \
+WITH_MONT(V, ::zk_dtypes::bn254::FqX2, Bn254BfX2, BN254_BFX2, bn254_bfx2) \
+WITH_MONT(V, ::zk_dtypes::bls12_381::FqX2, Bls12381BfX2, BLS12_381_BFX2, bls12_381_bfx2)
 
 //===----------------------------------------------------------------------===//
 // Field Types
