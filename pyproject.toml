@@ -55,6 +55,7 @@ test-command = "pytest {project}/zk_dtypes/tests"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
+environment = { LDFLAGS = "-Wl,-s" }
 before-all = """
     ARCH="$(uname -m)"
     if [ "$ARCH" = "aarch64" ]; then
@@ -69,22 +70,8 @@ before-all = """
     chmod +x bazelisk
     mv bazelisk /usr/local/bin/bazel
 """
-repair-wheel-command = """
-    python -m wheel unpack {wheel} -d /tmp/whl-unpack && \
-    find /tmp/whl-unpack -name '*.so' -exec strip -s {} + && \
-    python -m wheel pack /tmp/whl-unpack/* -d /tmp/whl-stripped && \
-    auditwheel repair -w {dest_dir} /tmp/whl-stripped/*.whl && \
-    rm -rf /tmp/whl-unpack /tmp/whl-stripped
-"""
 
 [tool.cibuildwheel.macos]
 archs = ["arm64"]
 before-all = "brew install bazelisk"
-environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
-repair-wheel-command = """
-    python -m wheel unpack {wheel} -d /tmp/whl-unpack && \
-    find /tmp/whl-unpack -name '*.so' -exec strip -x {} + && \
-    python -m wheel pack /tmp/whl-unpack/* -d /tmp/whl-stripped && \
-    delocate-wheel --require-archs {delocate_archs} -w {dest_dir} /tmp/whl-stripped/*.whl && \
-    rm -rf /tmp/whl-unpack /tmp/whl-stripped
-"""
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0", LDFLAGS = "-Wl,-x" }
