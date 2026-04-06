@@ -1056,6 +1056,12 @@ int NPyField_ArgMinFunc(void* data, npy_intp n, npy_intp* min_ind, void* arr) {
   return 0;
 }
 
+// Converts a field or integer value to uint64_t.
+//
+// IMPORTANT: This function may be called without the GIL held (NumPy 2.x
+// contiguous cast path). Python C API calls require PyGILState_Ensure.
+// On overflow (BigInt field value > 64 bits), sets a Python OverflowError
+// and returns the low 64 bits.
 template <typename T>
 uint64_t NPyField_CastToInt(T value) {
   if constexpr (IsPrimeField<T> || IsBinaryField<T>) {
@@ -1072,12 +1078,16 @@ uint64_t NPyField_CastToInt(T value) {
       } else {
         v = value.value();
       }
+      // Check for overflow: any non-zero limb beyond the first means the
+      // value exceeds 64 bits.  Acquire the GIL to safely set the error.
       for (size_t i = 1; i < T::N; ++i) {
         if (v[i] != 0) {
+          PyGILState_STATE gstate = PyGILState_Ensure();
           PyErr_SetString(PyExc_OverflowError,
                           "Cannot cast field value to 64-bit integer without "
                           "loss of precision");
-          return -1;
+          PyGILState_Release(gstate);
+          break;
         }
       }
       return v[0];
@@ -1089,6 +1099,11 @@ uint64_t NPyField_CastToInt(T value) {
 }
 
 // Performs a NumPy array cast from type 'From' to 'To'.
+//
+// IMPORTANT: On NumPy 2.x, the legacy PyArray_RegisterCastFunc compatibility
+// layer may call this function WITHOUT the GIL held (via the contiguous cast
+// path _aligned_contig_to_contig_cast). Do NOT call any Python C API functions
+// (PyErr_Occurred, PyErr_SetString, etc.) inside this function.
 template <typename From, typename To>
 void NPyField_IntegerCast(void* from_void, void* to_void, npy_intp n,
                           void* fromarr, void* toarr) {
@@ -1098,15 +1113,16 @@ void NPyField_IntegerCast(void* from_void, void* to_void, npy_intp n,
   for (npy_intp i = 0; i < n; ++i) {
     to[i] = static_cast<typename TypeDescriptor<To>::T>(
         static_cast<To>(NPyField_CastToInt(from[i])));
-    if (PyErr_Occurred()) {
-      return;
-    }
   }
 }
 
 // Performs a one-way NumPy array cast from integer type to extension field.
 // The integer is embedded as the constant coefficient (via
 // ExtFieldType(uint64_t)).
+//
+// IMPORTANT: On NumPy 2.x, the legacy PyArray_RegisterCastFunc compatibility
+// layer may call this function WITHOUT the GIL held. Do NOT call any Python
+// C API functions here.
 template <typename IntType, typename ExtFieldType>
 void NPyField_IntegerToExtFieldCast(void* from_void, void* to_void, npy_intp n,
                                     void* /*fromarr*/, void* /*toarr*/) {
