@@ -531,5 +531,76 @@ class RawConversionTest(parameterized.TestCase):
       scalar_type.from_raw(1, 2)
 
 
+# Tests for large-array cast (NumPy 2.x legacy cast compatibility).
+# PyArray_RegisterCastFunc legacy casts previously segfaulted for arrays
+# with 501+ elements on NumPy 2.x because the cast loop called
+# PyErr_Occurred() without the GIL held.
+@multi_threaded(num_workers=3)
+class LargeArrayCastTest(parameterized.TestCase):
+
+  @parameterized.product(
+      scalar_type=FIELD_TYPES,
+      n=[1, 16, 500, 501, 1024, 4096],
+  )
+  def testAstypeFromUint32(self, scalar_type, n):
+    """astype(field) from uint32 must not segfault for any array size."""
+    src = np.ones(n, dtype=np.uint32)
+    result = src.astype(scalar_type)
+    self.assertEqual(result.shape, (n,))
+    self.assertEqual(result.dtype, scalar_type)
+    expected = scalar_type(1)
+    self.assertEqual(result[0], expected)
+    self.assertEqual(result[-1], expected)
+
+  @parameterized.product(
+      scalar_type=FIELD_TYPES,
+      n=[1, 16, 500, 501, 1024, 4096],
+  )
+  def testAstypeFromInt64(self, scalar_type, n):
+    """astype(field) from int64 must not segfault for any array size."""
+    src = np.full(n, 42, dtype=np.int64)
+    result = src.astype(scalar_type)
+    self.assertEqual(result.shape, (n,))
+    expected = scalar_type(42)
+    self.assertEqual(result[0], expected)
+    self.assertEqual(result[-1], expected)
+
+  @parameterized.product(
+      scalar_type=FIELD_TYPES,
+      shape=[(501,), (16, 33), (8, 8, 8)],
+  )
+  def testAstypeMultidimensional(self, scalar_type, shape):
+    """astype(field) preserves shape for multi-dimensional arrays."""
+    src = np.ones(shape, dtype=np.uint32)
+    result = src.astype(scalar_type)
+    self.assertEqual(result.shape, shape)
+    self.assertEqual(int(result.flat[0]), 1)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testAstypeRoundTrip(self, scalar_type):
+    """field → uint64 → field round-trip preserves values for small ints."""
+    if pfinfo(scalar_type).modulus > 2**64:
+      self.skipTest("Modulus too large for uint64 round-trip")
+    vals = np.array([0, 1, 2, 100, 1000], dtype=scalar_type)
+    as_int = vals.astype(np.uint64)
+    back = as_int.astype(scalar_type)
+    for i in range(len(vals)):
+      self.assertEqual(vals[i], back[i])
+
+  @parameterized.product(
+      scalar_type=FIELD_TYPES,
+      n=[501, 1024],
+  )
+  def testLargeArrayArithmeticAfterCast(self, scalar_type, n):
+    """Arithmetic on large cast arrays must produce correct results."""
+    a = np.ones(n, dtype=np.uint32).astype(scalar_type)
+    b = np.full(n, 2, dtype=np.uint32).astype(scalar_type)
+    result = a + b
+    self.assertEqual(result.shape, (n,))
+    expected = scalar_type(3)
+    self.assertEqual(result[0], expected)
+    self.assertEqual(result[-1], expected)
+
+
 if __name__ == "__main__":
   absltest.main()
