@@ -38,6 +38,7 @@ jobs:
         with:
           name: wheels-linux-x86_64
           path: wheelhouse/*.whl
+          retention-days: 3
 
   build-linux-aarch64:
     name: Build / Linux aarch64
@@ -55,6 +56,7 @@ jobs:
         with:
           name: wheels-linux-aarch64
           path: wheelhouse/*.whl
+          retention-days: 3
 
   build-macos-arm64:
     name: Build / macOS arm64
@@ -70,6 +72,7 @@ jobs:
         with:
           name: wheels-macos-arm64
           path: wheelhouse/*.whl
+          retention-days: 3
 
   publish:
     name: Publish
