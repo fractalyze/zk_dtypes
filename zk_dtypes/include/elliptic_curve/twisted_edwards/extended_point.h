@@ -115,7 +115,7 @@ class ExtendedPoint<
     } else {
       if (std::size(extended_points) != std::size(*affine_points)) {
         return absl::InvalidArgumentError(absl::Substitute(
-            "size do not match $0 vs $1", std::size(extended_points),
+            "sizes do not match $0 vs $1", std::size(extended_points),
             std::size(*affine_points)));
       }
     }

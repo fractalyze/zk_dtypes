@@ -952,7 +952,7 @@ cc_library(
 )
 
 ############################
-# Twisted Edwards Curves   #
+# Twisted Edwards Curves #
 ############################
 
 cc_library(
