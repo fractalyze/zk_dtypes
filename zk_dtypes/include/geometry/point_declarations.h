@@ -17,8 +17,10 @@ limitations under the License.
 #define ZK_DTYPES_INCLUDE_GEOMETRY_POINT_DECLARATIONS_H_
 
 #include <ostream>
+#include <type_traits>
 
 #include "zk_dtypes/include/comparable_traits.h"
+#include "zk_dtypes/include/geometry/curve_type.h"
 #include "zk_dtypes/include/group/group.h"
 
 namespace zk_dtypes {
@@ -32,6 +34,9 @@ class JacobianPoint;
 template <typename Curve, typename SFINAE = void>
 class PointXyzz;
 
+template <typename Curve, typename SFINAE = void>
+class ExtendedPoint;
+
 template <typename Derived, typename SFINAE = void>
 class AffinePointOperation;
 
@@ -40,6 +45,9 @@ class JacobianPointOperation;
 
 template <typename Derived, typename SFINAE = void>
 class PointXyzzOperation;
+
+template <typename Derived, typename SFINAE = void>
+class ExtendedPointOperation;
 
 template <typename T>
 struct IsAffinePointImpl {
@@ -81,8 +89,21 @@ template <typename T>
 constexpr bool IsPointXyzz = IsPointXyzzImpl<T>::value;
 
 template <typename T>
-constexpr bool IsEcPoint =
-    IsAffinePoint<T> || IsJacobianPoint<T> || IsPointXyzz<T>;
+struct IsExtendedPointImpl {
+  constexpr static bool value = false;
+};
+
+template <typename Curve>
+struct IsExtendedPointImpl<ExtendedPoint<Curve>> {
+  constexpr static bool value = true;
+};
+
+template <typename T>
+constexpr bool IsExtendedPoint = IsExtendedPointImpl<T>::value;
+
+template <typename T>
+constexpr bool IsEcPoint = IsAffinePoint<T> || IsJacobianPoint<T> ||
+                           IsPointXyzz<T> || IsExtendedPoint<T>;
 
 template <typename T>
 struct IsAdditiveGroupImpl<T, std::enable_if_t<IsEcPoint<T>>> {
@@ -94,14 +115,27 @@ struct IsComparableImpl<T, std::enable_if_t<IsEcPoint<T>>> {
   constexpr static bool value = false;
 };
 
-template <typename T>
+template <typename T, typename SFINAE = void>
 struct AddResult {
   using Type = T;
 };
 
 template <typename Curve>
-struct AddResult<AffinePoint<Curve>> {
+struct AddResult<
+    AffinePoint<Curve>,
+    std::enable_if_t<Curve::kType == CurveType::kShortWeierstrass>> {
   using Type = JacobianPoint<Curve>;
+};
+
+template <typename Curve>
+struct AddResult<AffinePoint<Curve>,
+                 std::enable_if_t<Curve::kType == CurveType::kTwistedEdwards>> {
+  using Type = ExtendedPoint<Curve>;
+};
+
+template <typename Curve>
+struct AddResult<ExtendedPoint<Curve>> {
+  using Type = ExtendedPoint<Curve>;
 };
 
 template <typename ScalarField, typename Curve,
@@ -125,6 +159,13 @@ auto operator*(const ScalarField& v, const PointXyzz<Curve>& point) {
   return point * v;
 }
 
+template <typename ScalarField, typename Curve,
+          std::enable_if_t<std::is_same_v<
+              ScalarField, typename Curve::ScalarField>>* = nullptr>
+auto operator*(const ScalarField& v, const ExtendedPoint<Curve>& point) {
+  return point * v;
+}
+
 template <typename Curve>
 std::ostream& operator<<(std::ostream& os, const AffinePoint<Curve>& point) {
   return os << point.ToString();
@@ -137,6 +178,11 @@ std::ostream& operator<<(std::ostream& os, const JacobianPoint<Curve>& point) {
 
 template <typename Curve>
 std::ostream& operator<<(std::ostream& os, const PointXyzz<Curve>& point) {
+  return os << point.ToString();
+}
+
+template <typename Curve>
+std::ostream& operator<<(std::ostream& os, const ExtendedPoint<Curve>& point) {
   return os << point.ToString();
 }
 

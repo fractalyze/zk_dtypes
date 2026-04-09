@@ -38,6 +38,7 @@ cc_library(
         ":bn254_fr",
         ":bn254_g1",
         ":bn254_g2",
+        ":ed25519_g1",
         ":goldilocks",
         ":goldilocksx3",
         ":koalabear",
@@ -606,6 +607,7 @@ cc_library(
     hdrs = ["include/geometry/point_declarations.h"],
     deps = [
         ":comparable_traits",
+        ":curve_type",
         ":group",
     ],
 )
@@ -949,6 +951,116 @@ cc_library(
     ],
 )
 
+############################
+# Twisted Edwards Curves   #
+############################
+
+cc_library(
+    name = "te_curve",
+    hdrs = ["include/elliptic_curve/twisted_edwards/te_curve.h"],
+    deps = [
+        ":curve_type",
+        ":point_declarations",
+    ],
+)
+
+cc_library(
+    name = "te_point_base",
+    hdrs = ["include/elliptic_curve/twisted_edwards/point_base.h"],
+    deps = [
+        ":control_flow_operation",
+        ":point_traits",
+        ":str_join",
+    ],
+)
+
+cc_library(
+    name = "te_affine_point_operation",
+    hdrs = ["include/elliptic_curve/twisted_edwards/affine_point_operation.h"],
+    deps = [
+        ":curve_type",
+        ":point_traits",
+    ],
+)
+
+cc_library(
+    name = "te_affine_point",
+    hdrs = ["include/elliptic_curve/twisted_edwards/affine_point.h"],
+    deps = [
+        ":curve_type",
+        ":point_declarations",
+        ":scalar_mul",
+        ":te_affine_point_operation",
+        ":te_curve",
+        ":te_point_base",
+    ],
+)
+
+cc_library(
+    name = "te_extended_point_operation",
+    hdrs = ["include/elliptic_curve/twisted_edwards/extended_point_operation.h"],
+    deps = [
+        ":curve_type",
+        ":point_traits",
+    ],
+)
+
+cc_library(
+    name = "te_extended_point",
+    hdrs = ["include/elliptic_curve/twisted_edwards/extended_point.h"],
+    deps = [
+        ":batch_inverse",
+        ":curve_type",
+        ":point_declarations",
+        ":scalar_mul",
+        ":te_curve",
+        ":te_extended_point_operation",
+        ":te_point_base",
+        ":template_util",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "te_test_curve_config",
+    hdrs = ["include/elliptic_curve/twisted_edwards/test/te_curve_config.h"],
+    deps = [
+        ":small_prime_field",
+        ":te_affine_point",
+        ":te_curve",
+        ":te_extended_point",
+    ],
+)
+
+##############
+# Curve25519 #
+##############
+
+cc_library(
+    name = "curve25519_fq",
+    hdrs = ["include/elliptic_curve/curve25519/fq.h"],
+    deps = [":big_prime_field"],
+)
+
+cc_library(
+    name = "curve25519_fr",
+    hdrs = ["include/elliptic_curve/curve25519/fr.h"],
+    deps = [":big_prime_field"],
+)
+
+cc_library(
+    name = "ed25519_g1",
+    hdrs = ["include/elliptic_curve/curve25519/ed25519/g1.h"],
+    deps = [
+        ":curve25519_fq",
+        ":curve25519_fr",
+        ":te_affine_point",
+        ":te_curve",
+        ":te_extended_point",
+    ],
+)
+
 cc_library(
     name = "twist_type",
     hdrs = ["include/elliptic_curve/pairing/twist_type.h"],
@@ -961,6 +1073,8 @@ cc_test(
         "tests/elliptic_curve/constexpr_curve_config_unittest.cc",
         "tests/elliptic_curve/jacobian_point_unittest.cc",
         "tests/elliptic_curve/point_xyzz_unittest.cc",
+        "tests/elliptic_curve/te_affine_point_unittest.cc",
+        "tests/elliptic_curve/te_extended_point_unittest.cc",
     ],
     deps = [
         ":bls12_381_g1",
@@ -970,6 +1084,19 @@ cc_test(
         ":secp256r1_fq",
         ":secp256r1_g1",
         ":sw_test_curve_config",
+        ":te_test_curve_config",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ed25519_unittests",
+    srcs = [
+        "tests/elliptic_curve/ed25519_unittest.cc",
+    ],
+    deps = [
+        ":ed25519_g1",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
     ],
