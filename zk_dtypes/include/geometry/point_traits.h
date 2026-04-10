@@ -16,16 +16,20 @@ limitations under the License.
 #ifndef ZK_DTYPES_INCLUDE_GEOMETRY_POINT_TRAITS_H_
 #define ZK_DTYPES_INCLUDE_GEOMETRY_POINT_TRAITS_H_
 
+#include <type_traits>
+
 #include "zk_dtypes/include/geometry/curve_type.h"
 #include "zk_dtypes/include/geometry/point_declarations.h"
 
 namespace zk_dtypes {
 
-template <typename Curve>
+template <typename Point, typename SFINAE = void>
 class PointTraits;
 
 template <typename _Curve>
-class PointTraits<AffinePoint<_Curve>> {
+class PointTraits<
+    AffinePoint<_Curve>,
+    std::enable_if_t<_Curve::kType == CurveType::kShortWeierstrass>> {
  public:
   using Curve = _Curve;
 
@@ -65,6 +69,36 @@ class PointTraits<PointXyzz<_Curve>> {
   using AffinePoint = zk_dtypes::AffinePoint<Curve>;
   using JacobianPoint = zk_dtypes::JacobianPoint<Curve>;
   using PointXyzz = zk_dtypes::PointXyzz<Curve>;
+  using BaseField = typename Curve::BaseField;
+  using ScalarField = typename Curve::ScalarField;
+};
+
+template <typename _Curve>
+class PointTraits<
+    AffinePoint<_Curve>,
+    std::enable_if_t<_Curve::kType == CurveType::kTwistedEdwards>> {
+ public:
+  using Curve = _Curve;
+
+  constexpr static CurveType kType = Curve::kType;
+  constexpr static size_t kNumCoords = 2;
+
+  using AffinePoint = zk_dtypes::AffinePoint<Curve>;
+  using ExtendedPoint = zk_dtypes::ExtendedPoint<Curve>;
+  using BaseField = typename Curve::BaseField;
+  using ScalarField = typename Curve::ScalarField;
+};
+
+template <typename _Curve>
+class PointTraits<ExtendedPoint<_Curve>> {
+ public:
+  using Curve = _Curve;
+
+  constexpr static CurveType kType = Curve::kType;
+  constexpr static size_t kNumCoords = 4;
+
+  using AffinePoint = zk_dtypes::AffinePoint<Curve>;
+  using ExtendedPoint = zk_dtypes::ExtendedPoint<Curve>;
   using BaseField = typename Curve::BaseField;
   using ScalarField = typename Curve::ScalarField;
 };

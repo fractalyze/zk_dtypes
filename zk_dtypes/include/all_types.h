@@ -21,6 +21,7 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
+#include "zk_dtypes/include/elliptic_curve/curve25519/ed25519/g1.h"
 #include "zk_dtypes/include/elliptic_curve/secp256k1/g1.h"
 #include "zk_dtypes/include/field/babybear/babybear.h"
 #include "zk_dtypes/include/field/babybear/babybearx4.h"
@@ -74,13 +75,15 @@ WITH_MONT(V, ::zk_dtypes::Goldilocks, Goldilocks, GOLDILOCKS, goldilocks) \
 WITH_MONT(V, ::zk_dtypes::Koalabear, Koalabear, KOALABEAR, koalabear)     \
 WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)
 
-#define ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V)                                    \
-ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)                                         \
-WITH_MONT(V, ::zk_dtypes::bn254::Fq, Bn254Bf, BN254_BF, bn254_bf)                 \
-WITH_MONT(V, ::zk_dtypes::secp256k1::Fq, Secp256k1Bf, SECP256K1_BF, secp256k1_bf) \
-WITH_MONT(V, ::zk_dtypes::secp256k1::Fr, Secp256k1Sf, SECP256K1_SF, secp256k1_sf) \
-WITH_MONT(V, ::zk_dtypes::bls12_381::Fq, Bls12381Bf, BLS12_381_BF, bls12_381_bf)  \
-WITH_MONT(V, ::zk_dtypes::bls12_381::Fr, Bls12381Sf, BLS12_381_SF, bls12_381_sf)
+#define ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V)                                        \
+ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)                                             \
+WITH_MONT(V, ::zk_dtypes::bn254::Fq, Bn254Bf, BN254_BF, bn254_bf)                     \
+WITH_MONT(V, ::zk_dtypes::secp256k1::Fq, Secp256k1Bf, SECP256K1_BF, secp256k1_bf)     \
+WITH_MONT(V, ::zk_dtypes::secp256k1::Fr, Secp256k1Sf, SECP256K1_SF, secp256k1_sf)     \
+WITH_MONT(V, ::zk_dtypes::bls12_381::Fq, Bls12381Bf, BLS12_381_BF, bls12_381_bf)      \
+WITH_MONT(V, ::zk_dtypes::bls12_381::Fr, Bls12381Sf, BLS12_381_SF, bls12_381_sf)      \
+WITH_MONT(V, ::zk_dtypes::curve25519::Fq, Curve25519Bf, CURVE25519_BF, curve25519_bf) \
+WITH_MONT(V, ::zk_dtypes::curve25519::Fr, Curve25519Sf, CURVE25519_SF, curve25519_sf)
 
 //===----------------------------------------------------------------------===//
 // ExtendedField Types
@@ -136,7 +139,8 @@ ZK_DTYPES_PUBLIC_R2_AFFINE_POINT_TYPE_LIST(V)
 #define ZK_DTYPES_ALL_R1_AFFINE_POINT_TYPE_LIST(V)                                                               \
 ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)                                                                    \
 WITH_MONT(V, ::zk_dtypes::secp256k1::G1AffinePoint, Secp256k1G1Affine, SECP256K1_G1_AFFINE, secp256k1_g1_affine) \
-WITH_MONT(V, ::zk_dtypes::bls12_381::G1AffinePoint, Bls12381G1Affine, BLS12_381_G1_AFFINE, bls12_381_g1_affine)
+WITH_MONT(V, ::zk_dtypes::bls12_381::G1AffinePoint, Bls12381G1Affine, BLS12_381_G1_AFFINE, bls12_381_g1_affine)  \
+WITH_MONT(V, ::zk_dtypes::ed25519::G1AffinePoint, Ed25519G1Affine, ED25519_G1_AFFINE, ed25519_g1_affine)
 
 #define ZK_DTYPES_ALL_R2_AFFINE_POINT_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_R2_AFFINE_POINT_TYPE_LIST(V)
@@ -198,6 +202,16 @@ ZK_DTYPES_ALL_R1_XYZZ_POINT_TYPE_LIST(V)      \
 ZK_DTYPES_ALL_R2_XYZZ_POINT_TYPE_LIST(V)
 
 //===----------------------------------------------------------------------===//
+// ExtendedPoint Types
+//===----------------------------------------------------------------------===//
+
+#define ZK_DTYPES_ALL_R1_EXTENDED_POINT_TYPE_LIST(V) \
+WITH_MONT(V, ::zk_dtypes::ed25519::G1ExtendedPoint, Ed25519G1Extended, ED25519_G1_EXTENDED, ed25519_g1_extended)
+
+#define ZK_DTYPES_ALL_EXTENDED_POINT_TYPE_LIST(V) \
+ZK_DTYPES_ALL_R1_EXTENDED_POINT_TYPE_LIST(V)
+
+//===----------------------------------------------------------------------===//
 // Elliptic Curve Point Types
 //===----------------------------------------------------------------------===//
 
@@ -216,7 +230,8 @@ ZK_DTYPES_PUBLIC_R1_EC_POINT_TYPE_LIST(V)      \
 ZK_DTYPES_PUBLIC_R2_EC_POINT_TYPE_LIST(V)
 
 #define ZK_DTYPES_ALL_R1_EC_POINT_TYPE_LIST(V) \
-ZK_DTYPES_PUBLIC_R1_EC_POINT_TYPE_LIST(V)
+ZK_DTYPES_PUBLIC_R1_EC_POINT_TYPE_LIST(V)      \
+ZK_DTYPES_ALL_R1_EXTENDED_POINT_TYPE_LIST(V)
 
 #define ZK_DTYPES_ALL_R2_EC_POINT_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_R2_EC_POINT_TYPE_LIST(V)

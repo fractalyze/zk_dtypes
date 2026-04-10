@@ -20,6 +20,7 @@ namespace zk_dtypes {
 
 enum class CurveType {
   kShortWeierstrass,
+  kTwistedEdwards,
 };
 
 }  // namespace zk_dtypes

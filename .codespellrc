@@ -4,4 +4,6 @@ skip =
 
 ignore-words-list =
   arithmetics,
+  Te,
+  TE,
   Toom,
