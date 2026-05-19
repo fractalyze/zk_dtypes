@@ -472,6 +472,31 @@ class ExtensionFieldIntegerCastTest(parameterized.TestCase):
     with self.assertRaises(TypeError):
       arr.astype(np.int64)
 
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testBaseFieldToExtFieldCast(self, scalar_type):
+    """BaseField arrays cast to ExtensionField via the constant-term embed.
+
+    Both PF and EF are 'V'-kind dtypes; without an explicit cast registration
+    numpy refuses with ``Cannot cast scalar from dtype(<pf>) to dtype(<ef>)
+    according to the rule 'unsafe'``. The embed is ``base → (base, 0, …, 0)``
+    via the ``ExtensionField(BaseField)`` ctor.
+    """
+    base_type = EXT_TO_BASE[scalar_type]
+    base_vals = [i + 1 for i in range(4)]
+    base_arr = np.array([base_type(v) for v in base_vals])
+    self.assertEqual(base_arr.dtype, base_type)
+    # The int-to-ext ctor is also the constant-term embed, so for any
+    # int ``v`` we have ``scalar_type(v) == cast(base_type(v))``.
+    ext_arr = base_arr.astype(scalar_type)
+    self.assertEqual(ext_arr.dtype, scalar_type)
+    for i, v in enumerate(base_vals):
+      self.assertEqual(ext_arr[i], scalar_type(v))
+    # Same via np.array(..., dtype=ext_type).
+    ext_arr2 = np.array(base_arr, dtype=scalar_type)
+    self.assertEqual(ext_arr2.dtype, scalar_type)
+    for i, v in enumerate(base_vals):
+      self.assertEqual(ext_arr2[i], scalar_type(v))
+
 
 EXT_TO_BASE = {
     babybearx4: zk_dtypes.babybear,
