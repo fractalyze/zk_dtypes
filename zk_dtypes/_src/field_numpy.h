@@ -1224,6 +1224,55 @@ bool RegisterExtFieldIntegerCast(int numpy_type) {
   return true;
 }
 
+// Casts a contiguous run of BaseField values into ExtensionField via the
+// constant-term embed ``base → (base, 0, …, 0)``. Mirrors the
+// ``ExtensionField(const BaseField&)`` constructor.
+//
+// IMPORTANT: On NumPy 2.x, the legacy PyArray_RegisterCastFunc compatibility
+// layer may call this function WITHOUT the GIL held. Do NOT call any Python
+// C API functions here.
+template <typename BaseField, typename ExtFieldType>
+void NPyField_BaseToExtFieldCast(void* from_void, void* to_void, npy_intp n,
+                                 void* /*fromarr*/, void* /*toarr*/) {
+  const auto* from = reinterpret_cast<const BaseField*>(from_void);
+  auto* to = reinterpret_cast<ExtFieldType*>(to_void);
+  for (npy_intp i = 0; i < n; ++i) {
+    to[i] = ExtFieldType(from[i]);
+  }
+}
+
+// Registers the constant-term-embed cast from ``ExtFieldType::BaseField``
+// to ``ExtFieldType``. Numpy refuses to cast between two 'V'-kind dtypes
+// without an explicit cast function; without this registration,
+// ``np.array(pf_arr, dtype=ef)`` raises "Cannot cast scalar from
+// dtype(<pf>) to dtype(<ef>)" and JAX's convert-element-type constant
+// folder hits the same path during trace.
+//
+// The cast is also marked safe (``NPY_NOSCALAR``) because the constant-term
+// embed is lossless. This lets ``np.result_type(base, ext)`` resolve to
+// the extension type and lets ``np.concatenate([base_arr, ext_arr])`` work.
+// Exact-match mixed ufunc loops (see ``RegisterMixedFieldUFuncs``) still
+// win over promotion-via-safe-cast at ufunc dispatch time, so the
+// dedicated ``ExtField op BaseField`` fast paths are not bypassed.
+template <typename ExtFieldType>
+bool RegisterBaseToExtFieldCast() {
+  using BaseField = typename ExtFieldType::BaseField;
+  if constexpr (!std::is_same_v<BaseField, ExtFieldType>) {
+    if (PyArray_RegisterCastFunc(
+            FieldTypeDescriptor<BaseField>::npy_descr,
+            TypeDescriptor<ExtFieldType>::Dtype(),
+            NPyField_BaseToExtFieldCast<BaseField, ExtFieldType>) < 0) {
+      return false;
+    }
+    if (PyArray_RegisterCanCast(FieldTypeDescriptor<BaseField>::npy_descr,
+                                TypeDescriptor<ExtFieldType>::Dtype(),
+                                NPY_NOSCALAR) < 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 template <typename T>
 bool RegisterExtFieldIntegerCasts() {
   return RegisterExtFieldIntegerCast<T, bool>(NPY_BOOL) &&
@@ -1383,7 +1432,8 @@ bool RegisterFieldDtype(PyObject* numpy) {
   if constexpr (T::ExtensionDegree() == 1 || IsBinaryField<T>) {
     return RegisterFieldCasts<T>() && RegisterFieldUFuncs<T>(numpy);
   } else {
-    return RegisterExtFieldIntegerCasts<T>() && RegisterFieldUFuncs<T>(numpy) &&
+    return RegisterExtFieldIntegerCasts<T>() &&
+           RegisterBaseToExtFieldCast<T>() && RegisterFieldUFuncs<T>(numpy) &&
            RegisterMixedFieldUFuncs<T, typename T::BaseField>(numpy);
   }
 }
