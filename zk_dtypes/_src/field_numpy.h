@@ -1247,6 +1247,13 @@ void NPyField_BaseToExtFieldCast(void* from_void, void* to_void, npy_intp n,
 // ``np.array(pf_arr, dtype=ef)`` raises "Cannot cast scalar from
 // dtype(<pf>) to dtype(<ef>)" and JAX's convert-element-type constant
 // folder hits the same path during trace.
+//
+// The cast is also marked safe (``NPY_NOSCALAR``) because the constant-term
+// embed is lossless. This lets ``np.result_type(base, ext)`` resolve to
+// the extension type and lets ``np.concatenate([base_arr, ext_arr])`` work.
+// Exact-match mixed ufunc loops (see ``RegisterMixedFieldUFuncs``) still
+// win over promotion-via-safe-cast at ufunc dispatch time, so the
+// dedicated ``ExtField op BaseField`` fast paths are not bypassed.
 template <typename ExtFieldType>
 bool RegisterBaseToExtFieldCast() {
   using BaseField = typename ExtFieldType::BaseField;
@@ -1255,6 +1262,11 @@ bool RegisterBaseToExtFieldCast() {
             FieldTypeDescriptor<BaseField>::npy_descr,
             TypeDescriptor<ExtFieldType>::Dtype(),
             NPyField_BaseToExtFieldCast<BaseField, ExtFieldType>) < 0) {
+      return false;
+    }
+    if (PyArray_RegisterCanCast(FieldTypeDescriptor<BaseField>::npy_descr,
+                                TypeDescriptor<ExtFieldType>::Dtype(),
+                                NPY_NOSCALAR) < 0) {
       return false;
     }
   }

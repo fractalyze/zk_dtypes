@@ -497,6 +497,25 @@ class ExtensionFieldIntegerCastTest(parameterized.TestCase):
     for i, v in enumerate(base_vals):
       self.assertEqual(ext_arr2[i], scalar_type(v))
 
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testBaseToExtFieldCastIsSafe(self, scalar_type):
+    """The base→ext embed is registered as a safe cast (NPY_NOSCALAR).
+
+    This unlocks numpy promotion paths the explicit mixed ufunc loops don't
+    cover: ``np.result_type``, ``np.concatenate``, and ``np.can_cast``.
+    The ext→base direction stays unsafe because it is lossy.
+    """
+    base_type = EXT_TO_BASE[scalar_type]
+    self.assertTrue(np.can_cast(base_type, scalar_type))
+    self.assertFalse(np.can_cast(scalar_type, base_type))
+    self.assertEqual(np.result_type(base_type, scalar_type), scalar_type)
+    base_arr = np.array([base_type(1), base_type(2)])
+    ext_arr = np.array([scalar_type(3), scalar_type(4)])
+    cat = np.concatenate([base_arr, ext_arr])
+    self.assertEqual(cat.dtype, scalar_type)
+    self.assertEqual(cat[0], scalar_type(1))
+    self.assertEqual(cat[2], scalar_type(3))
+
 
 EXT_TO_BASE = {
     babybearx4: zk_dtypes.babybear,
