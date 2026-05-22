@@ -341,6 +341,13 @@ PyObject* PyField_tp_new(PyTypeObject* type, PyObject* args, PyObject* kwds) {
   return nullptr;
 }
 
+// Python-int operands are coerced via the same value→field path that the
+// constructor uses (FieldIntCaster, which respects Montgomery form). For
+// extension fields the int is coerced to ``BaseField`` so the dedicated
+// ``ExtField op BaseField`` fast paths apply (constant-term-only add/sub,
+// per-coefficient scalar mul) — coercing to ``T`` would force a full
+// polynomial-mul path. Non-int operands fall through to ``NotImplemented``
+// so Python's normal reflected-op machinery can take over.
 template <typename T>
 PyObject* PyField_nb_add(PyObject* a, PyObject* b) {
   T x, y;
@@ -356,6 +363,23 @@ PyObject* PyField_nb_add(PyObject* a, PyObject* b) {
     }
     if (PyField_Value<BaseField>(a, &base_val) && PyField_Value(b, &ext_val)) {
       return PyField_FromValue(base_val + ext_val).release();
+    }
+    if (PyField_Value(a, &ext_val) && PyLong_Check(b)) {
+      if (!CastToField<BaseField>(b, &base_val)) return nullptr;
+      return PyField_FromValue(ext_val + base_val).release();
+    }
+    if (PyLong_Check(a) && PyField_Value(b, &ext_val)) {
+      if (!CastToField<BaseField>(a, &base_val)) return nullptr;
+      return PyField_FromValue(base_val + ext_val).release();
+    }
+  } else {
+    if (PyField_Value(a, &x) && PyLong_Check(b)) {
+      if (!CastToField<T>(b, &y)) return nullptr;
+      return PyField_FromValue(x + y).release();
+    }
+    if (PyLong_Check(a) && PyField_Value(b, &y)) {
+      if (!CastToField<T>(a, &x)) return nullptr;
+      return PyField_FromValue(x + y).release();
     }
   }
   Py_INCREF(Py_NotImplemented);
@@ -377,6 +401,23 @@ PyObject* PyField_nb_subtract(PyObject* a, PyObject* b) {
     }
     if (PyField_Value<BaseField>(a, &base_val) && PyField_Value(b, &ext_val)) {
       return PyField_FromValue(base_val - ext_val).release();
+    }
+    if (PyField_Value(a, &ext_val) && PyLong_Check(b)) {
+      if (!CastToField<BaseField>(b, &base_val)) return nullptr;
+      return PyField_FromValue(ext_val - base_val).release();
+    }
+    if (PyLong_Check(a) && PyField_Value(b, &ext_val)) {
+      if (!CastToField<BaseField>(a, &base_val)) return nullptr;
+      return PyField_FromValue(base_val - ext_val).release();
+    }
+  } else {
+    if (PyField_Value(a, &x) && PyLong_Check(b)) {
+      if (!CastToField<T>(b, &y)) return nullptr;
+      return PyField_FromValue(x - y).release();
+    }
+    if (PyLong_Check(a) && PyField_Value(b, &y)) {
+      if (!CastToField<T>(a, &x)) return nullptr;
+      return PyField_FromValue(x - y).release();
     }
   }
   Py_INCREF(Py_NotImplemented);
@@ -418,6 +459,27 @@ PyObject* PyField_nb_multiply(PyObject* a, PyObject* b) {
     }
     if (PyField_Value<BaseField>(a, &base_val) && PyField_Value(b, &ext_val)) {
       return PyField_FromValue(base_val * ext_val).release();
+    }
+    if (PyField_Value(a, &ext_val) && PyLong_Check(b)) {
+      if (!CastToField<BaseField>(b, &base_val)) return nullptr;
+      return PyField_FromValue(ext_val * base_val).release();
+    }
+    if (PyLong_Check(a) && PyField_Value(b, &ext_val)) {
+      if (!CastToField<BaseField>(a, &base_val)) return nullptr;
+      return PyField_FromValue(base_val * ext_val).release();
+    }
+  } else {
+    // Python int operand for prime/binary fields. Handled before the EC
+    // dispatch below so ``Fr(5) * 3`` resolves as field mul rather than
+    // tripping the "invalid argument for multiplication" path in
+    // ``PyField_nb_ec_multiply``.
+    if (PyField_Value(a, &x) && PyLong_Check(b)) {
+      if (!CastToField<T>(b, &y)) return nullptr;
+      return PyField_FromValue(x * y).release();
+    }
+    if (PyLong_Check(a) && PyField_Value(b, &y)) {
+      if (!CastToField<T>(a, &x)) return nullptr;
+      return PyField_FromValue(x * y).release();
     }
   }
   // EC point multiplication
@@ -469,6 +531,39 @@ PyObject* PyField_nb_true_divide(PyObject* a, PyObject* b) {
         return nullptr;
       }
       return PyField_FromValue(base_val / ext_val).release();
+    }
+    if (PyField_Value(a, &ext_val) && PyLong_Check(b)) {
+      if (!CastToField<BaseField>(b, &base_val)) return nullptr;
+      if (base_val.IsZero()) {
+        PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
+        return nullptr;
+      }
+      return PyField_FromValue(ext_val / base_val).release();
+    }
+    if (PyLong_Check(a) && PyField_Value(b, &ext_val)) {
+      if (!CastToField<BaseField>(a, &base_val)) return nullptr;
+      if (ext_val.IsZero()) {
+        PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
+        return nullptr;
+      }
+      return PyField_FromValue(base_val / ext_val).release();
+    }
+  } else {
+    if (PyField_Value(a, &x) && PyLong_Check(b)) {
+      if (!CastToField<T>(b, &y)) return nullptr;
+      if (y.IsZero()) {
+        PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
+        return nullptr;
+      }
+      return PyField_FromValue(x / y).release();
+    }
+    if (PyLong_Check(a) && PyField_Value(b, &y)) {
+      if (!CastToField<T>(a, &x)) return nullptr;
+      if (y.IsZero()) {
+        PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
+        return nullptr;
+      }
+      return PyField_FromValue(x / y).release();
     }
   }
   Py_INCREF(Py_NotImplemented);

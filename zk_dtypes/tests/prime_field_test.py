@@ -235,6 +235,45 @@ class ScalarTest(parameterized.TestCase):
           self.assertIsInstance(out, scalar_type)
           self.assertEqual(out * scalar_type(w), scalar_type(v), msg=(v, w))
 
+  @parameterized.product(
+      scalar_type=FIELD_TYPES,
+      op=[operator.add, operator.sub, operator.mul, operator.truediv],
+  )
+  def testPyIntCoercion(self, scalar_type, op):
+    """Binary ops accept a Python int on either side, equivalent to wrapping
+    the int with the field constructor first."""
+    for v in VALUES[scalar_type]:
+      if op is operator.truediv and v == 0:
+        # Skip — w / scalar_type(0) would raise ZeroDivisionError; covered
+        # separately in testPyIntDivByZeroRaises.
+        continue
+      for w in [1, 3, -1, 100]:
+        x = scalar_type(v)
+        out_r = op(x, w)
+        self.assertIsInstance(out_r, scalar_type)
+        self.assertEqual(out_r, op(x, scalar_type(w)), msg=(v, w, "right"))
+        out_l = op(w, x)
+        self.assertIsInstance(out_l, scalar_type)
+        self.assertEqual(out_l, op(scalar_type(w), x), msg=(v, w, "left"))
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testPyIntDivByZeroRaises(self, scalar_type):
+    with self.assertRaises(ZeroDivisionError):
+      scalar_type(1) / 0
+    with self.assertRaises(ZeroDivisionError):
+      1 / scalar_type(0)
+
+  @parameterized.product(scalar_type=FIELD_TYPES)
+  def testNonIntOperandReturnsNotImplemented(self, scalar_type):
+    """Non-int Python operands (e.g. float, str) fall through to Python's
+    standard reflected-op machinery, producing the canonical TypeError —
+    not a custom 'invalid argument' message from the field code."""
+    with self.assertRaises(TypeError) as cm:
+      _ = scalar_type(1) + 1.5
+    self.assertIn("unsupported operand", str(cm.exception))
+    with self.assertRaises(TypeError):
+      _ = "x" * scalar_type(1)
+
   @parameterized.product(scalar_type=FIELD_TYPES)
   def testPowerOp(self, scalar_type):
     if pfinfo(scalar_type).modulus > 2**64:
