@@ -212,6 +212,26 @@ class ScalarTest(parameterized.TestCase):
           # Verify: (v / w) * w = v
           self.assertEqual(out * scalar_type(w), scalar_type(v), msg=(v, w))
 
+  @parameterized.product(
+      scalar_type=BINARY_FIELD_TYPES,
+      op=[operator.add, operator.sub, operator.mul, operator.truediv],
+  )
+  def testPyIntCoercion(self, scalar_type, op):
+    """Binary ops accept a Python int on either side."""
+    mask = VALUE_MASKS[scalar_type]
+    int_values = [w for w in [1, 3, 7] if w <= mask]
+    for v in VALUES[scalar_type]:
+      if op is operator.truediv and v == 0:
+        continue
+      x = scalar_type(v)
+      for w in int_values:
+        out_r = op(x, w)
+        self.assertIsInstance(out_r, scalar_type)
+        self.assertEqual(out_r, op(x, scalar_type(w)), msg=(v, w, "right"))
+        out_l = op(w, x)
+        self.assertIsInstance(out_l, scalar_type)
+        self.assertEqual(out_l, op(scalar_type(w), x), msg=(v, w, "left"))
+
   @parameterized.product(scalar_type=BINARY_FIELD_TYPES)
   def testInverse(self, scalar_type):
     """Test multiplicative inverse: x * x^(-1) = 1."""

@@ -188,6 +188,39 @@ class ExtensionFieldScalarTest(parameterized.TestCase):
     self.assertEqual(dt.name, name)
     self.assertEqual(repr(dt), f"dtype({name})")
 
+  @parameterized.product(
+      scalar_type=EXT_FIELD_TYPES,
+      op=[operator.add, operator.sub, operator.mul, operator.truediv],
+  )
+  def testPyIntCoercion(self, scalar_type, op):
+    """Binary ops accept a Python int on either side. The int embeds as the
+    constant term (matching the BaseField → ExtensionField cast), which
+    routes through the dedicated ExtField·BaseField fast paths."""
+    for v in VALUES[scalar_type]:
+      x = scalar_type(v)
+      if op is operator.truediv and x == scalar_type(0):
+        continue  # int / 0 covered by testDivByZeroRaisesError analogue
+      for w in [1, 3, -1, 100]:
+        out_r = op(x, w)
+        self.assertIsInstance(out_r, scalar_type)
+        self.assertEqual(out_r, op(x, scalar_type(w)), msg=(v, w, "right"))
+        out_l = op(w, x)
+        self.assertIsInstance(out_l, scalar_type)
+        self.assertEqual(out_l, op(scalar_type(w), x), msg=(v, w, "left"))
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testPyIntCoercionConstantTermEmbed(self, scalar_type):
+    """A Python int on the additive side touches only the constant term —
+    confirms the int is coerced to BaseField (not to ExtF, which would
+    broadcast the value across all coefficients)."""
+    degree = efinfo(scalar_type).degree
+    coeffs = tuple(range(1, degree + 1))  # all-nonzero coeffs
+    x = scalar_type(coeffs)
+    out = x + 10
+    # Constant term shifted by 10; other coefficients unchanged.
+    expected = scalar_type((coeffs[0] + 10,) + coeffs[1:])
+    self.assertEqual(out, expected)
+
 
 @multi_threaded(num_workers=3)
 class ExtensionFieldArrayTest(parameterized.TestCase):
