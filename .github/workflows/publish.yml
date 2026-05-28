@@ -40,44 +40,10 @@ jobs:
           path: wheelhouse/*.whl
           retention-days: 3
 
-  build-linux-aarch64:
-    name: Build / Linux aarch64
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.22
-        env:
-          CIBW_ARCHS_LINUX: aarch64
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-linux-aarch64
-          path: wheelhouse/*.whl
-          retention-days: 3
-
-  build-macos-arm64:
-    name: Build / macOS arm64
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.22
-
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-macos-arm64
-          path: wheelhouse/*.whl
-          retention-days: 3
-
   publish:
     name: Publish
     if: inputs.target != 'build-only'
-    needs: [build-linux-x86_64, build-linux-aarch64, build-macos-arm64]
+    needs: [build-linux-x86_64]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
