@@ -347,8 +347,12 @@ class BYInverter {
       steps -= zeros;
       delta += zeros;
       g >>= zeros;
-      t[0][0] <<= zeros;
-      t[0][1] <<= zeros;
+      // t[0][*] can be negative (negated in the delta > 0 branch below);
+      // left-shifting a negative signed value is UB. Shift in the unsigned
+      // domain, which yields the identical two's-complement bit pattern
+      // (multiply by 2^zeros mod 2^64) the transition matrix expects.
+      t[0][0] = static_cast<int64_t>(static_cast<uint64_t>(t[0][0]) << zeros);
+      t[0][1] = static_cast<int64_t>(static_cast<uint64_t>(t[0][1]) << zeros);
 
       if (steps == 0) {
         break;
