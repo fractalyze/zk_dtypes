@@ -67,7 +67,8 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
                                       BinaryField<SubfieldConfig>>;
 
   constexpr BinaryField() = default;
-  template <typename T, std::enable_if_t<std::is_signed_v<T>>* = nullptr>
+  template <typename T, std::enable_if_t<std::is_signed_v<T> &&
+                                         std::is_integral_v<T>>* = nullptr>
   constexpr BinaryField(T value)
       : BinaryField(static_cast<std::make_unsigned_t<T>>(std::abs(value))) {}
   template <typename T, std::enable_if_t<std::is_unsigned_v<T>>* = nullptr>
