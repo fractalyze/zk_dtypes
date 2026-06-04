@@ -15,6 +15,9 @@ limitations under the License.
 
 #include "zk_dtypes/include/field/binary_field.h"
 
+#include <cstdint>
+#include <limits>
+
 #include "gtest/gtest.h"
 
 #include "zk_dtypes/include/field/big_binary_field.h"
@@ -85,6 +88,25 @@ TYPED_TEST(BinaryFieldTypedTest, Max) {
   } else {
     EXPECT_EQ(F::Max(), F(BigInt<2>::Max()));
   }
+}
+
+TYPED_TEST(BinaryFieldTypedTest, SignedConstructionUsesMagnitude) {
+  using F = TypeParam;
+  // In characteristic 2, -x == x, so signed values map to their magnitude.
+  EXPECT_EQ(F(-1), F(1));
+}
+
+TEST(BinaryFieldTest, SignedMinConstruction) {
+  // |int64_t min| is not representable in int64_t; the signed constructor
+  // must compute the magnitude without signed overflow.
+  constexpr uint64_t kMagnitude = uint64_t{1} << 63;
+  EXPECT_EQ(BinaryFieldT6(std::numeric_limits<int64_t>::min()),
+            BinaryFieldT6(kMagnitude));
+  EXPECT_EQ(BinaryFieldT7(std::numeric_limits<int64_t>::min()),
+            BinaryFieldT7(kMagnitude));
+  // Narrow types exercise integer promotion in the unsigned negation.
+  EXPECT_EQ(BinaryFieldT7(std::numeric_limits<int8_t>::min()),
+            BinaryFieldT7(uint64_t{128}));
 }
 
 TYPED_TEST(BinaryFieldTypedTest, AdditionIsXOR) {
