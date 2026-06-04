@@ -246,6 +246,7 @@ cc_library(
     name = "big_binary_field",
     hdrs = ["include/field/big_binary_field.h"],
     deps = [
+        ":arithmetics",
         ":big_int",
         ":binary_field_config",
         ":binary_field_multiplication",
@@ -503,6 +504,7 @@ cc_library(
     name = "small_binary_field",
     hdrs = ["include/field/small_binary_field.h"],
     deps = [
+        ":arithmetics",
         ":big_int",
         ":binary_field_config",
         ":binary_field_multiplication",

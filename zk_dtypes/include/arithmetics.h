@@ -18,6 +18,8 @@ limitations under the License.
 
 #include <stdint.h>
 
+#include <type_traits>
+
 namespace zk_dtypes::internal {
 
 template <typename T>
@@ -137,6 +139,17 @@ class PromotedTypeImpl<int8_t> {
 
 template <typename T>
 using make_promoted_t = typename PromotedTypeImpl<T>::type;
+
+// Returns |value| as the corresponding unsigned type. Unlike std::abs, this
+// is well-defined for the minimum value (whose magnitude is not representable
+// in T): negation in the unsigned domain wraps modularly. The outer cast
+// undoes integer promotion for types narrower than int.
+template <typename T>
+constexpr std::make_unsigned_t<T> UnsignedAbs(T value) {
+  using U = std::make_unsigned_t<T>;
+  return static_cast<U>(value < 0 ? -static_cast<U>(value)
+                                  : static_cast<U>(value));
+}
 
 // Calculates a + b + carry.
 #define ADD_WITH_CARRY_IMPL(T)                                 \

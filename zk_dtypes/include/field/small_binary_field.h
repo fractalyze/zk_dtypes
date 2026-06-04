@@ -25,6 +25,7 @@ limitations under the License.
 #include "absl/log/check.h"
 #include "absl/strings/str_cat.h"
 
+#include "zk_dtypes/include/arithmetics.h"
 #include "zk_dtypes/include/big_int.h"
 #include "zk_dtypes/include/field/binary_field_config.h"
 #include "zk_dtypes/include/field/binary_field_multiplication.h"
@@ -70,10 +71,7 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
                                          std::is_integral_v<T>>* = nullptr>
   constexpr BinaryField(T value)
       // In characteristic 2, -x == x, so a signed value maps to its magnitude.
-      // Negate in the unsigned domain: std::abs(min()) is UB.
-      : BinaryField(static_cast<std::make_unsigned_t<T>>(
-            value < 0 ? -static_cast<std::make_unsigned_t<T>>(value)
-                      : static_cast<std::make_unsigned_t<T>>(value))) {}
+      : BinaryField(internal::UnsignedAbs(value)) {}
   template <typename T, std::enable_if_t<std::is_unsigned_v<T>>* = nullptr>
   constexpr BinaryField(T value) : value_(value) {
     DCHECK_EQ(value_, static_cast<UnderlyingType>(value) & Config::kValueMask);
