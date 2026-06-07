@@ -157,7 +157,8 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
     }
   }
 
-  template <typename T, std::enable_if_t<std::is_signed_v<T>>* = nullptr>
+  template <typename T, std::enable_if_t<std::is_signed_v<T> &&
+                                         std::is_integral_v<T>>* = nullptr>
   constexpr ExtensionField(T value) {
     if (value == 0) return;
     if (value == 1) {
