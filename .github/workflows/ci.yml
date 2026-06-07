@@ -25,9 +25,19 @@ jobs:
 
       - name: Run `bazel test`
         run: |
+          # VERIFY-ONLY: run one small cpu test fresh (so a local test.log is
+          # written), then force the step to fail to trip the failure() gate.
           bazel --bazelrc=.bazelrc.ci test \
             --config=ci \
-            //...
+            --cache_test_results=no \
+            //zk_dtypes:binary_field_test
+          exit 1
+
+      - name: Upload bazel test logs
+        if: ${{ failure() }}
+        uses: fractalyze/.github/.github/actions/upload-bazel-testlogs@main
+        with:
+          name: bazel-test-logs
 
   pre-commit-style:
     runs-on: [self-hosted, cpu]
