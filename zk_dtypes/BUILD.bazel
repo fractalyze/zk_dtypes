@@ -46,6 +46,12 @@ cc_library(
         ":mersenne31",
         ":mersenne31x2",
         ":mersenne31x2x2",
+        ":ntt64_a",
+        ":ntt64_b",
+        ":ntt64_c",
+        ":ntt64_d",
+        ":ntt64_e",
+        ":ntt64_f",
         ":secp256k1_g1",
         ":secp256r1_g1",
     ],
@@ -458,6 +464,42 @@ cc_library(
         ":big_int",
         ":modular_operations",
     ],
+)
+
+cc_library(
+    name = "ntt64_a",
+    hdrs = ["include/field/ntt64_a/ntt64_a.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_b",
+    hdrs = ["include/field/ntt64_b/ntt64_b.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_c",
+    hdrs = ["include/field/ntt64_c/ntt64_c.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_d",
+    hdrs = ["include/field/ntt64_d/ntt64_d.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_e",
+    hdrs = ["include/field/ntt64_e/ntt64_e.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_f",
+    hdrs = ["include/field/ntt64_f/ntt64_f.h"],
+    deps = [":small_prime_field"],
 )
 
 cc_library(

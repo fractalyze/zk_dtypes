@@ -36,6 +36,18 @@ babybear = zk_dtypes.babybear
 babybear_mont = zk_dtypes.babybear_mont
 goldilocks = zk_dtypes.goldilocks
 goldilocks_mont = zk_dtypes.goldilocks_mont
+ntt64_a = zk_dtypes.ntt64_a
+ntt64_a_mont = zk_dtypes.ntt64_a_mont
+ntt64_b = zk_dtypes.ntt64_b
+ntt64_b_mont = zk_dtypes.ntt64_b_mont
+ntt64_c = zk_dtypes.ntt64_c
+ntt64_c_mont = zk_dtypes.ntt64_c_mont
+ntt64_d = zk_dtypes.ntt64_d
+ntt64_d_mont = zk_dtypes.ntt64_d_mont
+ntt64_e = zk_dtypes.ntt64_e
+ntt64_e_mont = zk_dtypes.ntt64_e_mont
+ntt64_f = zk_dtypes.ntt64_f
+ntt64_f_mont = zk_dtypes.ntt64_f_mont
 koalabear = zk_dtypes.koalabear
 koalabear_mont = zk_dtypes.koalabear_mont
 mersenne31 = zk_dtypes.mersenne31
@@ -47,6 +59,18 @@ FIELD_TYPES = [
     babybear_mont,
     goldilocks,
     goldilocks_mont,
+    ntt64_a,
+    ntt64_a_mont,
+    ntt64_b,
+    ntt64_b_mont,
+    ntt64_c,
+    ntt64_c_mont,
+    ntt64_d,
+    ntt64_d_mont,
+    ntt64_e,
+    ntt64_e_mont,
+    ntt64_f,
+    ntt64_f_mont,
     koalabear,
     koalabear_mont,
     mersenne31,
@@ -60,6 +84,18 @@ TWO_ADICITY = {
     babybear_mont: 27,
     goldilocks: 32,
     goldilocks_mont: 32,
+    ntt64_a: 34,
+    ntt64_a_mont: 34,
+    ntt64_b: 32,
+    ntt64_b_mont: 32,
+    ntt64_c: 33,
+    ntt64_c_mont: 33,
+    ntt64_d: 33,
+    ntt64_d_mont: 33,
+    ntt64_e: 32,
+    ntt64_e_mont: 32,
+    ntt64_f: 33,
+    ntt64_f_mont: 33,
     koalabear: 24,
     koalabear_mont: 24,
     mersenne31: 1,
@@ -78,6 +114,18 @@ VALUES = {
     babybear_mont: random.sample(range(-100, 100), 4),
     goldilocks: random.sample(range(-100, 100), 4),
     goldilocks_mont: random.sample(range(-100, 100), 4),
+    ntt64_a: random.sample(range(-100, 100), 4),
+    ntt64_a_mont: random.sample(range(-100, 100), 4),
+    ntt64_b: random.sample(range(-100, 100), 4),
+    ntt64_b_mont: random.sample(range(-100, 100), 4),
+    ntt64_c: random.sample(range(-100, 100), 4),
+    ntt64_c_mont: random.sample(range(-100, 100), 4),
+    ntt64_d: random.sample(range(-100, 100), 4),
+    ntt64_d_mont: random.sample(range(-100, 100), 4),
+    ntt64_e: random.sample(range(-100, 100), 4),
+    ntt64_e_mont: random.sample(range(-100, 100), 4),
+    ntt64_f: random.sample(range(-100, 100), 4),
+    ntt64_f_mont: random.sample(range(-100, 100), 4),
     koalabear: random.sample(range(-100, 100), 4),
     koalabear_mont: random.sample(range(-100, 100), 4),
     mersenne31: random.sample(range(-100, 100), 4),
@@ -464,6 +512,12 @@ class RawConversionTest(parameterized.TestCase):
   STD_FIELD_TYPES = [
       babybear,
       goldilocks,
+      ntt64_a,
+      ntt64_b,
+      ntt64_c,
+      ntt64_d,
+      ntt64_e,
+      ntt64_f,
       koalabear,
       bn254_sf,
   ]
@@ -472,6 +526,12 @@ class RawConversionTest(parameterized.TestCase):
   MONT_FIELD_TYPES = [
       babybear_mont,
       goldilocks_mont,
+      ntt64_a_mont,
+      ntt64_b_mont,
+      ntt64_c_mont,
+      ntt64_d_mont,
+      ntt64_e_mont,
+      ntt64_f_mont,
       koalabear_mont,
       bn254_sf_mont,
   ]

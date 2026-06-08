@@ -192,6 +192,90 @@ struct TypeDescriptorBase<GoldilocksMont>
 };
 
 template <>
+struct TypeDescriptorBase<Ntt64A> : FieldTypeDescriptor<Ntt64A> {
+  static constexpr const char* kTpDoc =
+      "ntt64_a field values on standard domain";
+  static constexpr char kNpyDescrType = 'v';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64AMont> : FieldTypeDescriptor<Ntt64AMont> {
+  static constexpr const char* kTpDoc =
+      "ntt64_a field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'y';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64B> : FieldTypeDescriptor<Ntt64B> {
+  static constexpr const char* kTpDoc =
+      "ntt64_b field values on standard domain";
+  static constexpr char kNpyDescrType = 'W';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64BMont> : FieldTypeDescriptor<Ntt64BMont> {
+  static constexpr const char* kTpDoc =
+      "ntt64_b field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'Y';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64C> : FieldTypeDescriptor<Ntt64C> {
+  static constexpr const char* kTpDoc =
+      "ntt64_c field values on standard domain";
+  static constexpr char kNpyDescrType = '!';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64CMont> : FieldTypeDescriptor<Ntt64CMont> {
+  static constexpr const char* kTpDoc =
+      "ntt64_c field values on montgomery domain";
+  static constexpr char kNpyDescrType = '#';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64D> : FieldTypeDescriptor<Ntt64D> {
+  static constexpr const char* kTpDoc =
+      "ntt64_d field values on standard domain";
+  static constexpr char kNpyDescrType = '$';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64DMont> : FieldTypeDescriptor<Ntt64DMont> {
+  static constexpr const char* kTpDoc =
+      "ntt64_d field values on montgomery domain";
+  static constexpr char kNpyDescrType = '%';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64E> : FieldTypeDescriptor<Ntt64E> {
+  static constexpr const char* kTpDoc =
+      "ntt64_e field values on standard domain";
+  static constexpr char kNpyDescrType = '&';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64EMont> : FieldTypeDescriptor<Ntt64EMont> {
+  static constexpr const char* kTpDoc =
+      "ntt64_e field values on montgomery domain";
+  static constexpr char kNpyDescrType = '*';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64F> : FieldTypeDescriptor<Ntt64F> {
+  static constexpr const char* kTpDoc =
+      "ntt64_f field values on standard domain";
+  static constexpr char kNpyDescrType = '+';
+};
+
+template <>
+struct TypeDescriptorBase<Ntt64FMont> : FieldTypeDescriptor<Ntt64FMont> {
+  static constexpr const char* kTpDoc =
+      "ntt64_f field values on montgomery domain";
+  static constexpr char kNpyDescrType = '-';
+};
+
+template <>
 struct TypeDescriptorBase<Koalabear> : FieldTypeDescriptor<Koalabear> {
   static constexpr const char* kTpDoc =
       "koalabear field values on standard domain";
