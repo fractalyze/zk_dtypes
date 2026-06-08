@@ -34,18 +34,18 @@ __all__ = [
     "babybear_mont",
     "goldilocks",
     "goldilocks_mont",
-    "goldilocks2",
-    "goldilocks2_mont",
-    "goldilocks3",
-    "goldilocks3_mont",
-    "goldilocks4",
-    "goldilocks4_mont",
-    "goldilocks5",
-    "goldilocks5_mont",
-    "goldilocks6",
-    "goldilocks6_mont",
-    "goldilocks7",
-    "goldilocks7_mont",
+    "ntt64_a",
+    "ntt64_a_mont",
+    "ntt64_b",
+    "ntt64_b_mont",
+    "ntt64_c",
+    "ntt64_c_mont",
+    "ntt64_d",
+    "ntt64_d_mont",
+    "ntt64_e",
+    "ntt64_e_mont",
+    "ntt64_f",
+    "ntt64_f_mont",
     "koalabear",
     "koalabear_mont",
     "mersenne31",
@@ -102,18 +102,18 @@ from zk_dtypes._zk_dtypes_ext import babybear
 from zk_dtypes._zk_dtypes_ext import babybear_mont
 from zk_dtypes._zk_dtypes_ext import goldilocks
 from zk_dtypes._zk_dtypes_ext import goldilocks_mont
-from zk_dtypes._zk_dtypes_ext import goldilocks2
-from zk_dtypes._zk_dtypes_ext import goldilocks2_mont
-from zk_dtypes._zk_dtypes_ext import goldilocks3
-from zk_dtypes._zk_dtypes_ext import goldilocks3_mont
-from zk_dtypes._zk_dtypes_ext import goldilocks4
-from zk_dtypes._zk_dtypes_ext import goldilocks4_mont
-from zk_dtypes._zk_dtypes_ext import goldilocks5
-from zk_dtypes._zk_dtypes_ext import goldilocks5_mont
-from zk_dtypes._zk_dtypes_ext import goldilocks6
-from zk_dtypes._zk_dtypes_ext import goldilocks6_mont
-from zk_dtypes._zk_dtypes_ext import goldilocks7
-from zk_dtypes._zk_dtypes_ext import goldilocks7_mont
+from zk_dtypes._zk_dtypes_ext import ntt64_a
+from zk_dtypes._zk_dtypes_ext import ntt64_a_mont
+from zk_dtypes._zk_dtypes_ext import ntt64_b
+from zk_dtypes._zk_dtypes_ext import ntt64_b_mont
+from zk_dtypes._zk_dtypes_ext import ntt64_c
+from zk_dtypes._zk_dtypes_ext import ntt64_c_mont
+from zk_dtypes._zk_dtypes_ext import ntt64_d
+from zk_dtypes._zk_dtypes_ext import ntt64_d_mont
+from zk_dtypes._zk_dtypes_ext import ntt64_e
+from zk_dtypes._zk_dtypes_ext import ntt64_e_mont
+from zk_dtypes._zk_dtypes_ext import ntt64_f
+from zk_dtypes._zk_dtypes_ext import ntt64_f_mont
 from zk_dtypes._zk_dtypes_ext import koalabear
 from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
@@ -161,18 +161,18 @@ babybear: Type[np.generic]
 babybear_mont: Type[np.generic]
 goldilocks: Type[np.generic]
 goldilocks_mont: Type[np.generic]
-goldilocks2: Type[np.generic]
-goldilocks2_mont: Type[np.generic]
-goldilocks3: Type[np.generic]
-goldilocks3_mont: Type[np.generic]
-goldilocks4: Type[np.generic]
-goldilocks4_mont: Type[np.generic]
-goldilocks5: Type[np.generic]
-goldilocks5_mont: Type[np.generic]
-goldilocks6: Type[np.generic]
-goldilocks6_mont: Type[np.generic]
-goldilocks7: Type[np.generic]
-goldilocks7_mont: Type[np.generic]
+ntt64_a: Type[np.generic]
+ntt64_a_mont: Type[np.generic]
+ntt64_b: Type[np.generic]
+ntt64_b_mont: Type[np.generic]
+ntt64_c: Type[np.generic]
+ntt64_c_mont: Type[np.generic]
+ntt64_d: Type[np.generic]
+ntt64_d_mont: Type[np.generic]
+ntt64_e: Type[np.generic]
+ntt64_e_mont: Type[np.generic]
+ntt64_f: Type[np.generic]
+ntt64_f_mont: Type[np.generic]
 koalabear: Type[np.generic]
 koalabear_mont: Type[np.generic]
 mersenne31: Type[np.generic]

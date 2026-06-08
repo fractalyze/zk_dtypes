@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS2_GOLDILOCKS2_H_
-#define ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS2_GOLDILOCKS2_H_
+#ifndef ZK_DTYPES_INCLUDE_FIELD_NTT64_A_NTT64_A_H_
+#define ZK_DTYPES_INCLUDE_FIELD_NTT64_A_NTT64_A_H_
 
 #include <cstdint>
 
@@ -22,34 +22,34 @@ limitations under the License.
 
 namespace zk_dtypes {
 
-struct Goldilocks2BaseConfig {
+struct Ntt64ABaseConfig {
   constexpr static size_t kStorageBits = 64;
   constexpr static size_t kModulusBits = 64;
   constexpr static uint64_t kModulus = UINT64_C(18446744056529682433);
 
   constexpr static uint32_t kTwoAdicity = 34;
 
-  constexpr static uint32_t kTrace = 1073741823;
+  constexpr static uint64_t kTrace = 1073741823;
 
   constexpr static bool kHasTwoAdicRootOfUnity = true;
   constexpr static bool kHasLargeSubgroupRootOfUnity = false;
 };
 
-struct Goldilocks2Config : public Goldilocks2BaseConfig {
+struct Ntt64AConfig : public Ntt64ABaseConfig {
   constexpr static bool kUseMontgomery = false;
   constexpr static bool kUseBarrett = false;
 
-  using StdConfig = Goldilocks2Config;
+  using StdConfig = Ntt64AConfig;
 
   constexpr static uint64_t kOne = 1;
 
   constexpr static uint64_t kTwoAdicRootOfUnity = UINT64_C(9045540773743215239);
 };
 
-struct Goldilocks2MontConfig : public Goldilocks2BaseConfig {
+struct Ntt64AMontConfig : public Ntt64ABaseConfig {
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = Goldilocks2Config;
+  using StdConfig = Ntt64AConfig;
 
   constexpr static uint64_t kRSquared = UINT64_C(240518168561);
   constexpr static uint64_t kNPrime = UINT64_C(17179869185);
@@ -60,9 +60,9 @@ struct Goldilocks2MontConfig : public Goldilocks2BaseConfig {
       UINT64_C(10094336246325731280);
 };
 
-using Goldilocks2 = PrimeField<Goldilocks2Config>;
-using Goldilocks2Mont = PrimeField<Goldilocks2MontConfig>;
+using Ntt64A = PrimeField<Ntt64AConfig>;
+using Ntt64AMont = PrimeField<Ntt64AMontConfig>;
 
 }  // namespace zk_dtypes
 
-#endif  // ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS2_GOLDILOCKS2_H_
+#endif  // ZK_DTYPES_INCLUDE_FIELD_NTT64_A_NTT64_A_H_

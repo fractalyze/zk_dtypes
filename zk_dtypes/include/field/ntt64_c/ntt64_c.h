@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS3_GOLDILOCKS3_H_
-#define ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS3_GOLDILOCKS3_H_
+#ifndef ZK_DTYPES_INCLUDE_FIELD_NTT64_C_NTT64_C_H_
+#define ZK_DTYPES_INCLUDE_FIELD_NTT64_C_NTT64_C_H_
 
 #include <cstdint>
 
@@ -22,47 +22,47 @@ limitations under the License.
 
 namespace zk_dtypes {
 
-struct Goldilocks3BaseConfig {
+struct Ntt64CBaseConfig {
   constexpr static size_t kStorageBits = 64;
   constexpr static size_t kModulusBits = 64;
-  constexpr static uint64_t kModulus = UINT64_C(18446743880436023297);
+  constexpr static uint64_t kModulus = UINT64_C(18446743841781317633);
 
-  constexpr static uint32_t kTwoAdicity = 32;
+  constexpr static uint32_t kTwoAdicity = 33;
 
-  constexpr static uint32_t kTrace = 4294967251;
+  constexpr static uint64_t kTrace = 2147483621;
 
   constexpr static bool kHasTwoAdicRootOfUnity = true;
   constexpr static bool kHasLargeSubgroupRootOfUnity = false;
 };
 
-struct Goldilocks3Config : public Goldilocks3BaseConfig {
+struct Ntt64CConfig : public Ntt64CBaseConfig {
   constexpr static bool kUseMontgomery = false;
   constexpr static bool kUseBarrett = false;
 
-  using StdConfig = Goldilocks3Config;
+  using StdConfig = Ntt64CConfig;
 
   constexpr static uint64_t kOne = 1;
 
-  constexpr static uint64_t kTwoAdicRootOfUnity = UINT64_C(8387321423513296549);
+  constexpr static uint64_t kTwoAdicRootOfUnity = UINT64_C(4222427707487412532);
 };
 
-struct Goldilocks3MontConfig : public Goldilocks3BaseConfig {
+struct Ntt64CMontConfig : public Ntt64CBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = Goldilocks3Config;
+  using StdConfig = Ntt64CConfig;
 
-  constexpr static uint64_t kRSquared = UINT64_C(390992347789336);
-  constexpr static uint64_t kNPrime = UINT64_C(193273528321);
+  constexpr static uint64_t kRSquared = UINT64_C(675838873826461);
+  constexpr static uint64_t kNPrime = UINT64_C(231928233985);
 
-  constexpr static uint64_t kOne = UINT64_C(193273528319);
+  constexpr static uint64_t kOne = UINT64_C(231928233983);
 
   constexpr static uint64_t kTwoAdicRootOfUnity =
-      UINT64_C(15671866519406808041);
+      UINT64_C(13184444944827807808);
 };
 
-using Goldilocks3 = PrimeField<Goldilocks3Config>;
-using Goldilocks3Mont = PrimeField<Goldilocks3MontConfig>;
+using Ntt64C = PrimeField<Ntt64CConfig>;
+using Ntt64CMont = PrimeField<Ntt64CMontConfig>;
 
 }  // namespace zk_dtypes
 
-#endif  // ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS3_GOLDILOCKS3_H_
+#endif  // ZK_DTYPES_INCLUDE_FIELD_NTT64_C_NTT64_C_H_

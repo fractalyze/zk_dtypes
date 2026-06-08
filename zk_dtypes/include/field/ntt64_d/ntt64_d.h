@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS5_GOLDILOCKS5_H_
-#define ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS5_GOLDILOCKS5_H_
+#ifndef ZK_DTYPES_INCLUDE_FIELD_NTT64_D_NTT64_D_H_
+#define ZK_DTYPES_INCLUDE_FIELD_NTT64_D_NTT64_D_H_
 
 #include <cstdint>
 
@@ -22,34 +22,34 @@ limitations under the License.
 
 namespace zk_dtypes {
 
-struct Goldilocks5BaseConfig {
+struct Ntt64DBaseConfig {
   constexpr static size_t kStorageBits = 64;
   constexpr static size_t kModulusBits = 64;
   constexpr static uint64_t kModulus = UINT64_C(18446743824601448449);
 
   constexpr static uint32_t kTwoAdicity = 33;
 
-  constexpr static uint32_t kTrace = 2147483619;
+  constexpr static uint64_t kTrace = 2147483619;
 
   constexpr static bool kHasTwoAdicRootOfUnity = true;
   constexpr static bool kHasLargeSubgroupRootOfUnity = false;
 };
 
-struct Goldilocks5Config : public Goldilocks5BaseConfig {
+struct Ntt64DConfig : public Ntt64DBaseConfig {
   constexpr static bool kUseMontgomery = false;
   constexpr static bool kUseBarrett = false;
 
-  using StdConfig = Goldilocks5Config;
+  using StdConfig = Ntt64DConfig;
 
   constexpr static uint64_t kOne = 1;
 
   constexpr static uint64_t kTwoAdicRootOfUnity = UINT64_C(8196056441320966731);
 };
 
-struct Goldilocks5MontConfig : public Goldilocks5BaseConfig {
+struct Ntt64DMontConfig : public Ntt64DBaseConfig {
   constexpr static bool kUseMontgomery = true;
 
-  using StdConfig = Goldilocks5Config;
+  using StdConfig = Ntt64DConfig;
 
   constexpr static uint64_t kRSquared = UINT64_C(837501442847453);
   constexpr static uint64_t kNPrime = UINT64_C(249108103169);
@@ -59,9 +59,9 @@ struct Goldilocks5MontConfig : public Goldilocks5BaseConfig {
   constexpr static uint64_t kTwoAdicRootOfUnity = UINT64_C(5007139340760443177);
 };
 
-using Goldilocks5 = PrimeField<Goldilocks5Config>;
-using Goldilocks5Mont = PrimeField<Goldilocks5MontConfig>;
+using Ntt64D = PrimeField<Ntt64DConfig>;
+using Ntt64DMont = PrimeField<Ntt64DMontConfig>;
 
 }  // namespace zk_dtypes
 
-#endif  // ZK_DTYPES_INCLUDE_FIELD_GOLDILOCKS5_GOLDILOCKS5_H_
+#endif  // ZK_DTYPES_INCLUDE_FIELD_NTT64_D_NTT64_D_H_

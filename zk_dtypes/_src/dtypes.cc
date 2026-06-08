@@ -192,93 +192,87 @@ struct TypeDescriptorBase<GoldilocksMont>
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks2> : FieldTypeDescriptor<Goldilocks2> {
+struct TypeDescriptorBase<Ntt64A> : FieldTypeDescriptor<Ntt64A> {
   static constexpr const char* kTpDoc =
-      "goldilocks2 field values on standard domain";
-  static constexpr char kNpyDescrType = 'H';
+      "ntt64_a field values on standard domain";
+  static constexpr char kNpyDescrType = 'v';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks2Mont>
-    : FieldTypeDescriptor<Goldilocks2Mont> {
+struct TypeDescriptorBase<Ntt64AMont> : FieldTypeDescriptor<Ntt64AMont> {
   static constexpr const char* kTpDoc =
-      "goldilocks2 field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'h';
+      "ntt64_a field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'y';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks3> : FieldTypeDescriptor<Goldilocks3> {
+struct TypeDescriptorBase<Ntt64B> : FieldTypeDescriptor<Ntt64B> {
   static constexpr const char* kTpDoc =
-      "goldilocks3 field values on standard domain";
-  static constexpr char kNpyDescrType = 'I';
+      "ntt64_b field values on standard domain";
+  static constexpr char kNpyDescrType = 'W';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks3Mont>
-    : FieldTypeDescriptor<Goldilocks3Mont> {
+struct TypeDescriptorBase<Ntt64BMont> : FieldTypeDescriptor<Ntt64BMont> {
   static constexpr const char* kTpDoc =
-      "goldilocks3 field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'i';
+      "ntt64_b field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'Y';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks4> : FieldTypeDescriptor<Goldilocks4> {
+struct TypeDescriptorBase<Ntt64C> : FieldTypeDescriptor<Ntt64C> {
   static constexpr const char* kTpDoc =
-      "goldilocks4 field values on standard domain";
-  static constexpr char kNpyDescrType = 'O';
+      "ntt64_c field values on standard domain";
+  static constexpr char kNpyDescrType = '!';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks4Mont>
-    : FieldTypeDescriptor<Goldilocks4Mont> {
+struct TypeDescriptorBase<Ntt64CMont> : FieldTypeDescriptor<Ntt64CMont> {
   static constexpr const char* kTpDoc =
-      "goldilocks4 field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'o';
+      "ntt64_c field values on montgomery domain";
+  static constexpr char kNpyDescrType = '#';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks5> : FieldTypeDescriptor<Goldilocks5> {
+struct TypeDescriptorBase<Ntt64D> : FieldTypeDescriptor<Ntt64D> {
   static constexpr const char* kTpDoc =
-      "goldilocks5 field values on standard domain";
-  static constexpr char kNpyDescrType = 'P';
+      "ntt64_d field values on standard domain";
+  static constexpr char kNpyDescrType = '$';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks5Mont>
-    : FieldTypeDescriptor<Goldilocks5Mont> {
+struct TypeDescriptorBase<Ntt64DMont> : FieldTypeDescriptor<Ntt64DMont> {
   static constexpr const char* kTpDoc =
-      "goldilocks5 field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'p';
+      "ntt64_d field values on montgomery domain";
+  static constexpr char kNpyDescrType = '%';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks6> : FieldTypeDescriptor<Goldilocks6> {
+struct TypeDescriptorBase<Ntt64E> : FieldTypeDescriptor<Ntt64E> {
   static constexpr const char* kTpDoc =
-      "goldilocks6 field values on standard domain";
-  static constexpr char kNpyDescrType = 'R';
+      "ntt64_e field values on standard domain";
+  static constexpr char kNpyDescrType = '&';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks6Mont>
-    : FieldTypeDescriptor<Goldilocks6Mont> {
+struct TypeDescriptorBase<Ntt64EMont> : FieldTypeDescriptor<Ntt64EMont> {
   static constexpr const char* kTpDoc =
-      "goldilocks6 field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'r';
+      "ntt64_e field values on montgomery domain";
+  static constexpr char kNpyDescrType = '*';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks7> : FieldTypeDescriptor<Goldilocks7> {
+struct TypeDescriptorBase<Ntt64F> : FieldTypeDescriptor<Ntt64F> {
   static constexpr const char* kTpDoc =
-      "goldilocks7 field values on standard domain";
-  static constexpr char kNpyDescrType = 'U';
+      "ntt64_f field values on standard domain";
+  static constexpr char kNpyDescrType = '+';
 };
 
 template <>
-struct TypeDescriptorBase<Goldilocks7Mont>
-    : FieldTypeDescriptor<Goldilocks7Mont> {
+struct TypeDescriptorBase<Ntt64FMont> : FieldTypeDescriptor<Ntt64FMont> {
   static constexpr const char* kTpDoc =
-      "goldilocks7 field values on montgomery domain";
-  static constexpr char kNpyDescrType = 'u';
+      "ntt64_f field values on montgomery domain";
+  static constexpr char kNpyDescrType = '-';
 };
 
 template <>

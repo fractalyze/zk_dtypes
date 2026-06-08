@@ -40,18 +40,18 @@ cc_library(
         ":bn254_g2",
         ":ed25519_g1",
         ":goldilocks",
-        ":goldilocks2",
-        ":goldilocks3",
-        ":goldilocks4",
-        ":goldilocks5",
-        ":goldilocks6",
-        ":goldilocks7",
         ":goldilocksx3",
         ":koalabear",
         ":koalabearx4",
         ":mersenne31",
         ":mersenne31x2",
         ":mersenne31x2x2",
+        ":ntt64_a",
+        ":ntt64_b",
+        ":ntt64_c",
+        ":ntt64_d",
+        ":ntt64_e",
+        ":ntt64_f",
         ":secp256k1_g1",
         ":secp256r1_g1",
     ],
@@ -399,42 +399,6 @@ cc_library(
 )
 
 cc_library(
-    name = "goldilocks2",
-    hdrs = ["include/field/goldilocks2/goldilocks2.h"],
-    deps = [":small_prime_field"],
-)
-
-cc_library(
-    name = "goldilocks3",
-    hdrs = ["include/field/goldilocks3/goldilocks3.h"],
-    deps = [":small_prime_field"],
-)
-
-cc_library(
-    name = "goldilocks4",
-    hdrs = ["include/field/goldilocks4/goldilocks4.h"],
-    deps = [":small_prime_field"],
-)
-
-cc_library(
-    name = "goldilocks5",
-    hdrs = ["include/field/goldilocks5/goldilocks5.h"],
-    deps = [":small_prime_field"],
-)
-
-cc_library(
-    name = "goldilocks6",
-    hdrs = ["include/field/goldilocks6/goldilocks6.h"],
-    deps = [":small_prime_field"],
-)
-
-cc_library(
-    name = "goldilocks7",
-    hdrs = ["include/field/goldilocks7/goldilocks7.h"],
-    deps = [":small_prime_field"],
-)
-
-cc_library(
     name = "goldilocksx3",
     hdrs = ["include/field/goldilocks/goldilocksx3.h"],
     deps = [
@@ -500,6 +464,42 @@ cc_library(
         ":big_int",
         ":modular_operations",
     ],
+)
+
+cc_library(
+    name = "ntt64_a",
+    hdrs = ["include/field/ntt64_a/ntt64_a.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_b",
+    hdrs = ["include/field/ntt64_b/ntt64_b.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_c",
+    hdrs = ["include/field/ntt64_c/ntt64_c.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_d",
+    hdrs = ["include/field/ntt64_d/ntt64_d.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_e",
+    hdrs = ["include/field/ntt64_e/ntt64_e.h"],
+    deps = [":small_prime_field"],
+)
+
+cc_library(
+    name = "ntt64_f",
+    hdrs = ["include/field/ntt64_f/ntt64_f.h"],
+    deps = [":small_prime_field"],
 )
 
 cc_library(

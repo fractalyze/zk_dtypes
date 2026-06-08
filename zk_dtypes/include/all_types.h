@@ -28,16 +28,16 @@ limitations under the License.
 #include "zk_dtypes/include/field/binary_field.h"
 #include "zk_dtypes/include/field/goldilocks/goldilocks.h"
 #include "zk_dtypes/include/field/goldilocks/goldilocksx3.h"
-#include "zk_dtypes/include/field/goldilocks2/goldilocks2.h"
-#include "zk_dtypes/include/field/goldilocks3/goldilocks3.h"
-#include "zk_dtypes/include/field/goldilocks4/goldilocks4.h"
-#include "zk_dtypes/include/field/goldilocks5/goldilocks5.h"
-#include "zk_dtypes/include/field/goldilocks6/goldilocks6.h"
-#include "zk_dtypes/include/field/goldilocks7/goldilocks7.h"
 #include "zk_dtypes/include/field/koalabear/koalabear.h"
 #include "zk_dtypes/include/field/koalabear/koalabearx4.h"
 #include "zk_dtypes/include/field/mersenne31/mersenne31.h"
 #include "zk_dtypes/include/field/mersenne31/mersenne31x2.h"
+#include "zk_dtypes/include/field/ntt64_a/ntt64_a.h"
+#include "zk_dtypes/include/field/ntt64_b/ntt64_b.h"
+#include "zk_dtypes/include/field/ntt64_c/ntt64_c.h"
+#include "zk_dtypes/include/field/ntt64_d/ntt64_d.h"
+#include "zk_dtypes/include/field/ntt64_e/ntt64_e.h"
+#include "zk_dtypes/include/field/ntt64_f/ntt64_f.h"
 
 // clang-format off
 // WITH_MONT generates entries for both Standard and Montgomery types.
@@ -78,12 +78,12 @@ ZK_DTYPES_PUBLIC_BINARY_FIELD_TYPE_LIST(V)      \
 WITH_MONT(V, ::zk_dtypes::Babybear, Babybear, BABYBEAR, babybear)         \
 V(::zk_dtypes::Mersenne31, Mersenne31, MERSENNE31, mersenne31)            \
 WITH_MONT(V, ::zk_dtypes::Goldilocks, Goldilocks, GOLDILOCKS, goldilocks) \
-WITH_MONT(V, ::zk_dtypes::Goldilocks2, Goldilocks2, GOLDILOCKS2, goldilocks2) \
-WITH_MONT(V, ::zk_dtypes::Goldilocks3, Goldilocks3, GOLDILOCKS3, goldilocks3) \
-WITH_MONT(V, ::zk_dtypes::Goldilocks4, Goldilocks4, GOLDILOCKS4, goldilocks4) \
-WITH_MONT(V, ::zk_dtypes::Goldilocks5, Goldilocks5, GOLDILOCKS5, goldilocks5) \
-WITH_MONT(V, ::zk_dtypes::Goldilocks6, Goldilocks6, GOLDILOCKS6, goldilocks6) \
-WITH_MONT(V, ::zk_dtypes::Goldilocks7, Goldilocks7, GOLDILOCKS7, goldilocks7) \
+WITH_MONT(V, ::zk_dtypes::Ntt64A, Ntt64A, NTT64_A, ntt64_a)              \
+WITH_MONT(V, ::zk_dtypes::Ntt64B, Ntt64B, NTT64_B, ntt64_b)              \
+WITH_MONT(V, ::zk_dtypes::Ntt64C, Ntt64C, NTT64_C, ntt64_c)              \
+WITH_MONT(V, ::zk_dtypes::Ntt64D, Ntt64D, NTT64_D, ntt64_d)              \
+WITH_MONT(V, ::zk_dtypes::Ntt64E, Ntt64E, NTT64_E, ntt64_e)              \
+WITH_MONT(V, ::zk_dtypes::Ntt64F, Ntt64F, NTT64_F, ntt64_f)              \
 WITH_MONT(V, ::zk_dtypes::Koalabear, Koalabear, KOALABEAR, koalabear)     \
 WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)
 
