@@ -19,6 +19,18 @@ from zk_dtypes._zk_dtypes_ext import babybear
 from zk_dtypes._zk_dtypes_ext import babybear_mont
 from zk_dtypes._zk_dtypes_ext import goldilocks
 from zk_dtypes._zk_dtypes_ext import goldilocks_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks2
+from zk_dtypes._zk_dtypes_ext import goldilocks2_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks3
+from zk_dtypes._zk_dtypes_ext import goldilocks3_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks4
+from zk_dtypes._zk_dtypes_ext import goldilocks4_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks5
+from zk_dtypes._zk_dtypes_ext import goldilocks5_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks6
+from zk_dtypes._zk_dtypes_ext import goldilocks6_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks7
+from zk_dtypes._zk_dtypes_ext import goldilocks7_mont
 from zk_dtypes._zk_dtypes_ext import koalabear
 from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
@@ -31,6 +43,18 @@ _babybear_dtype = np.dtype(babybear)
 _babybear_mont_dtype = np.dtype(babybear_mont)
 _goldilocks_dtype = np.dtype(goldilocks)
 _goldilocks_mont_dtype = np.dtype(goldilocks_mont)
+_goldilocks2_dtype = np.dtype(goldilocks2)
+_goldilocks2_mont_dtype = np.dtype(goldilocks2_mont)
+_goldilocks3_dtype = np.dtype(goldilocks3)
+_goldilocks3_mont_dtype = np.dtype(goldilocks3_mont)
+_goldilocks4_dtype = np.dtype(goldilocks4)
+_goldilocks4_mont_dtype = np.dtype(goldilocks4_mont)
+_goldilocks5_dtype = np.dtype(goldilocks5)
+_goldilocks5_mont_dtype = np.dtype(goldilocks5_mont)
+_goldilocks6_dtype = np.dtype(goldilocks6)
+_goldilocks6_mont_dtype = np.dtype(goldilocks6_mont)
+_goldilocks7_dtype = np.dtype(goldilocks7)
+_goldilocks7_mont_dtype = np.dtype(goldilocks7_mont)
 _koalabear_dtype = np.dtype(koalabear)
 _koalabear_mont_dtype = np.dtype(koalabear_mont)
 _mersenne31_dtype = np.dtype(mersenne31)
@@ -66,6 +90,42 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.modulus_bits = 64
       self.modulus = 2**64 - 2**32 + 1
       self.is_montgomery = pf_type == _goldilocks_mont_dtype
+    elif pf_type == _goldilocks2_dtype or pf_type == _goldilocks2_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 64
+      self.modulus_bits = 64
+      self.modulus = 18446744056529682433
+      self.is_montgomery = pf_type == _goldilocks2_mont_dtype
+    elif pf_type == _goldilocks3_dtype or pf_type == _goldilocks3_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 64
+      self.modulus_bits = 64
+      self.modulus = 18446743880436023297
+      self.is_montgomery = pf_type == _goldilocks3_mont_dtype
+    elif pf_type == _goldilocks4_dtype or pf_type == _goldilocks4_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 64
+      self.modulus_bits = 64
+      self.modulus = 18446743841781317633
+      self.is_montgomery = pf_type == _goldilocks4_mont_dtype
+    elif pf_type == _goldilocks5_dtype or pf_type == _goldilocks5_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 64
+      self.modulus_bits = 64
+      self.modulus = 18446743824601448449
+      self.is_montgomery = pf_type == _goldilocks5_mont_dtype
+    elif pf_type == _goldilocks6_dtype or pf_type == _goldilocks6_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 64
+      self.modulus_bits = 64
+      self.modulus = 18446743751587004417
+      self.is_montgomery = pf_type == _goldilocks6_mont_dtype
+    elif pf_type == _goldilocks7_dtype or pf_type == _goldilocks7_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 64
+      self.modulus_bits = 64
+      self.modulus = 18446743738702102529
+      self.is_montgomery = pf_type == _goldilocks7_mont_dtype
     elif pf_type == _koalabear_dtype or pf_type == _koalabear_mont_dtype:
       self.dtype = pf_type
       self.storage_bits = 32

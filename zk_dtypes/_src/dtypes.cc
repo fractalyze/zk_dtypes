@@ -192,6 +192,96 @@ struct TypeDescriptorBase<GoldilocksMont>
 };
 
 template <>
+struct TypeDescriptorBase<Goldilocks2> : FieldTypeDescriptor<Goldilocks2> {
+  static constexpr const char* kTpDoc =
+      "goldilocks2 field values on standard domain";
+  static constexpr char kNpyDescrType = 'H';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks2Mont>
+    : FieldTypeDescriptor<Goldilocks2Mont> {
+  static constexpr const char* kTpDoc =
+      "goldilocks2 field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'h';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks3> : FieldTypeDescriptor<Goldilocks3> {
+  static constexpr const char* kTpDoc =
+      "goldilocks3 field values on standard domain";
+  static constexpr char kNpyDescrType = 'I';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks3Mont>
+    : FieldTypeDescriptor<Goldilocks3Mont> {
+  static constexpr const char* kTpDoc =
+      "goldilocks3 field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'i';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks4> : FieldTypeDescriptor<Goldilocks4> {
+  static constexpr const char* kTpDoc =
+      "goldilocks4 field values on standard domain";
+  static constexpr char kNpyDescrType = 'O';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks4Mont>
+    : FieldTypeDescriptor<Goldilocks4Mont> {
+  static constexpr const char* kTpDoc =
+      "goldilocks4 field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'o';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks5> : FieldTypeDescriptor<Goldilocks5> {
+  static constexpr const char* kTpDoc =
+      "goldilocks5 field values on standard domain";
+  static constexpr char kNpyDescrType = 'P';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks5Mont>
+    : FieldTypeDescriptor<Goldilocks5Mont> {
+  static constexpr const char* kTpDoc =
+      "goldilocks5 field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'p';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks6> : FieldTypeDescriptor<Goldilocks6> {
+  static constexpr const char* kTpDoc =
+      "goldilocks6 field values on standard domain";
+  static constexpr char kNpyDescrType = 'R';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks6Mont>
+    : FieldTypeDescriptor<Goldilocks6Mont> {
+  static constexpr const char* kTpDoc =
+      "goldilocks6 field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'r';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks7> : FieldTypeDescriptor<Goldilocks7> {
+  static constexpr const char* kTpDoc =
+      "goldilocks7 field values on standard domain";
+  static constexpr char kNpyDescrType = 'U';
+};
+
+template <>
+struct TypeDescriptorBase<Goldilocks7Mont>
+    : FieldTypeDescriptor<Goldilocks7Mont> {
+  static constexpr const char* kTpDoc =
+      "goldilocks7 field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'u';
+};
+
+template <>
 struct TypeDescriptorBase<Koalabear> : FieldTypeDescriptor<Koalabear> {
   static constexpr const char* kTpDoc =
       "koalabear field values on standard domain";

@@ -36,6 +36,18 @@ babybear = zk_dtypes.babybear
 babybear_mont = zk_dtypes.babybear_mont
 goldilocks = zk_dtypes.goldilocks
 goldilocks_mont = zk_dtypes.goldilocks_mont
+goldilocks2 = zk_dtypes.goldilocks2
+goldilocks2_mont = zk_dtypes.goldilocks2_mont
+goldilocks3 = zk_dtypes.goldilocks3
+goldilocks3_mont = zk_dtypes.goldilocks3_mont
+goldilocks4 = zk_dtypes.goldilocks4
+goldilocks4_mont = zk_dtypes.goldilocks4_mont
+goldilocks5 = zk_dtypes.goldilocks5
+goldilocks5_mont = zk_dtypes.goldilocks5_mont
+goldilocks6 = zk_dtypes.goldilocks6
+goldilocks6_mont = zk_dtypes.goldilocks6_mont
+goldilocks7 = zk_dtypes.goldilocks7
+goldilocks7_mont = zk_dtypes.goldilocks7_mont
 koalabear = zk_dtypes.koalabear
 koalabear_mont = zk_dtypes.koalabear_mont
 mersenne31 = zk_dtypes.mersenne31
@@ -47,6 +59,18 @@ FIELD_TYPES = [
     babybear_mont,
     goldilocks,
     goldilocks_mont,
+    goldilocks2,
+    goldilocks2_mont,
+    goldilocks3,
+    goldilocks3_mont,
+    goldilocks4,
+    goldilocks4_mont,
+    goldilocks5,
+    goldilocks5_mont,
+    goldilocks6,
+    goldilocks6_mont,
+    goldilocks7,
+    goldilocks7_mont,
     koalabear,
     koalabear_mont,
     mersenne31,
@@ -60,6 +84,18 @@ TWO_ADICITY = {
     babybear_mont: 27,
     goldilocks: 32,
     goldilocks_mont: 32,
+    goldilocks2: 34,
+    goldilocks2_mont: 34,
+    goldilocks3: 32,
+    goldilocks3_mont: 32,
+    goldilocks4: 33,
+    goldilocks4_mont: 33,
+    goldilocks5: 33,
+    goldilocks5_mont: 33,
+    goldilocks6: 32,
+    goldilocks6_mont: 32,
+    goldilocks7: 33,
+    goldilocks7_mont: 33,
     koalabear: 24,
     koalabear_mont: 24,
     mersenne31: 1,
@@ -78,6 +114,18 @@ VALUES = {
     babybear_mont: random.sample(range(-100, 100), 4),
     goldilocks: random.sample(range(-100, 100), 4),
     goldilocks_mont: random.sample(range(-100, 100), 4),
+    goldilocks2: random.sample(range(-100, 100), 4),
+    goldilocks2_mont: random.sample(range(-100, 100), 4),
+    goldilocks3: random.sample(range(-100, 100), 4),
+    goldilocks3_mont: random.sample(range(-100, 100), 4),
+    goldilocks4: random.sample(range(-100, 100), 4),
+    goldilocks4_mont: random.sample(range(-100, 100), 4),
+    goldilocks5: random.sample(range(-100, 100), 4),
+    goldilocks5_mont: random.sample(range(-100, 100), 4),
+    goldilocks6: random.sample(range(-100, 100), 4),
+    goldilocks6_mont: random.sample(range(-100, 100), 4),
+    goldilocks7: random.sample(range(-100, 100), 4),
+    goldilocks7_mont: random.sample(range(-100, 100), 4),
     koalabear: random.sample(range(-100, 100), 4),
     koalabear_mont: random.sample(range(-100, 100), 4),
     mersenne31: random.sample(range(-100, 100), 4),

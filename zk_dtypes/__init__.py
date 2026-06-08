@@ -34,6 +34,18 @@ __all__ = [
     "babybear_mont",
     "goldilocks",
     "goldilocks_mont",
+    "goldilocks2",
+    "goldilocks2_mont",
+    "goldilocks3",
+    "goldilocks3_mont",
+    "goldilocks4",
+    "goldilocks4_mont",
+    "goldilocks5",
+    "goldilocks5_mont",
+    "goldilocks6",
+    "goldilocks6_mont",
+    "goldilocks7",
+    "goldilocks7_mont",
     "koalabear",
     "koalabear_mont",
     "mersenne31",
@@ -90,6 +102,18 @@ from zk_dtypes._zk_dtypes_ext import babybear
 from zk_dtypes._zk_dtypes_ext import babybear_mont
 from zk_dtypes._zk_dtypes_ext import goldilocks
 from zk_dtypes._zk_dtypes_ext import goldilocks_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks2
+from zk_dtypes._zk_dtypes_ext import goldilocks2_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks3
+from zk_dtypes._zk_dtypes_ext import goldilocks3_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks4
+from zk_dtypes._zk_dtypes_ext import goldilocks4_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks5
+from zk_dtypes._zk_dtypes_ext import goldilocks5_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks6
+from zk_dtypes._zk_dtypes_ext import goldilocks6_mont
+from zk_dtypes._zk_dtypes_ext import goldilocks7
+from zk_dtypes._zk_dtypes_ext import goldilocks7_mont
 from zk_dtypes._zk_dtypes_ext import koalabear
 from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
@@ -137,6 +161,18 @@ babybear: Type[np.generic]
 babybear_mont: Type[np.generic]
 goldilocks: Type[np.generic]
 goldilocks_mont: Type[np.generic]
+goldilocks2: Type[np.generic]
+goldilocks2_mont: Type[np.generic]
+goldilocks3: Type[np.generic]
+goldilocks3_mont: Type[np.generic]
+goldilocks4: Type[np.generic]
+goldilocks4_mont: Type[np.generic]
+goldilocks5: Type[np.generic]
+goldilocks5_mont: Type[np.generic]
+goldilocks6: Type[np.generic]
+goldilocks6_mont: Type[np.generic]
+goldilocks7: Type[np.generic]
+goldilocks7_mont: Type[np.generic]
 koalabear: Type[np.generic]
 koalabear_mont: Type[np.generic]
 mersenne31: Type[np.generic]
