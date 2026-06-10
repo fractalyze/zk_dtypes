@@ -30,8 +30,7 @@ constexpr uint64_t B[3] = {UINT64_C(987654321), UINT64_C(0xFFFFFFFEFFFFFFFF),
                            UINT64_C(0xDEADBEEFCAFEBABE)};
 
 Goldilocks3Pil FromU64(const uint64_t (&v)[3]) {
-  return Goldilocks3Pil(
-      {Goldilocks(v[0]), Goldilocks(v[1]), Goldilocks(v[2])});
+  return Goldilocks3Pil({Goldilocks(v[0]), Goldilocks(v[1]), Goldilocks(v[2])});
 }
 
 Goldilocks3PilMont FromU64Mont(const uint64_t (&v)[3]) {
@@ -52,8 +51,7 @@ TEST(Goldilocks3PilTest, MulMatchesPil2) {
                                      UINT64_C(11556631869400146760),
                                      UINT64_C(13619946544752105600)};
   EXPECT_EQ(FromU64(A) * FromU64(B), FromU64(kExpected));
-  EXPECT_EQ((FromU64Mont(A) * FromU64Mont(B)).MontReduce(),
-            FromU64(kExpected));
+  EXPECT_EQ((FromU64Mont(A) * FromU64Mont(B)).MontReduce(), FromU64(kExpected));
 }
 
 TEST(Goldilocks3PilTest, SquareMatchesPil2) {

@@ -38,12 +38,11 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
     if constexpr (internal::HasModulusLowCoeffs<Derived>::value) {
       // The CH-SQR2 branch below is specific to the binomial modulus u³ = ξ;
       // a general monic modulus squares through Karatsuba's generic fold.
-      // (`if constexpr` + return keeps the ξ code below uninstantiated —
-      // NonResidue() does not exist on a modulus-registered field.)
+      // (The `else` keeps the ξ code uninstantiated — NonResidue() does not
+      // exist on a modulus-registered field.)
       return this->KaratsubaSquare();
-    } else if (ExtensionFieldMulAlgorithm algorithm =
-                   static_cast<const Derived&>(*this).GetSquareAlgorithm();
-               algorithm == ExtensionFieldMulAlgorithm::kCustom) {
+    } else if (static_cast<const Derived&>(*this).GetSquareAlgorithm() ==
+               ExtensionFieldMulAlgorithm::kCustom) {
       // [Comparison]
       // Custom Algorithm (Chung-Hasan):
       // - square: 3, mul: 2, mul by non-residue: 2, add: 5, sub: 3, double: 2
