@@ -322,7 +322,7 @@ ExtF SchoolbookMul(const ExtF& a, const ExtF& b) {
     }
   }
   if constexpr (internal::HasModulusLowCoeffs<ExtF>::value) {
-    const std::array<F, kDegree> &m = ExtF::Config::kModulusLowCoeffs;
+    const std::array<F, kDegree>& m = ExtF::Config::kModulusLowCoeffs;
     for (size_t i = 2 * kDegree - 2; i >= kDegree; --i) {
       for (size_t j = 0; j < kDegree; ++j) {
         raw[i - kDegree + j] += m[j] * raw[i];
@@ -412,16 +412,16 @@ TYPED_TEST(ExtensionFieldTypedTest, FrobeniusInverse) {
                     "form needs u^N = xi (see the modulus registration "
                     "macro's comment).";
   } else {  // NOLINT(readability/braces)
-  ExtF a = ExtF::Random();
-  while (a.IsZero()) {
-    a = ExtF::Random();
-  }
+    ExtF a = ExtF::Random();
+    while (a.IsZero()) {
+      a = ExtF::Random();
+    }
 
-  ExtF a_inverse = a.FrobeniusInverse();
-  EXPECT_TRUE((a * a_inverse).IsOne());
+    ExtF a_inverse = a.FrobeniusInverse();
+    EXPECT_TRUE((a * a_inverse).IsOne());
 
-  // FrobeniusInverse of zero returns zero.
-  EXPECT_TRUE(ExtF::Zero().FrobeniusInverse().IsZero());
+    // FrobeniusInverse of zero returns zero.
+    EXPECT_TRUE(ExtF::Zero().FrobeniusInverse().IsZero());
   }
 }
 
