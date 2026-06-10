@@ -308,21 +308,35 @@ ExtF SchoolbookMul(const ExtF& a, const ExtF& b) {
   using F = typename ExtF::BaseField;
   constexpr size_t kDegree = ExtF::Config::kDegreeOverBaseField;
 
-  // Schoolbook multiplication in Fp[u] / (uⁿ - ξ)
-  // c = Σᵢ Σⱼ aᵢbⱼu^(i+j) mod (uⁿ - ξ)
-  // When i + j >= n, u^(i+j) = u^(i+j-n) · ξ
-  F non_residue = ExtF::Config::kNonResidue;
-  ExtF ret;
+  // Schoolbook multiplication: accumulate the raw degree-(2n-2) product,
+  // then reduce modulo the field's monic modulus — by uⁿ = ξ for binomial
+  // fields, or uⁿ = Σⱼ mⱼ·uʲ for modulus-registered fields (folding the
+  // overflow coefficients highest-degree-first, so a fold that lands on
+  // another overflow slot is folded again). An independent reference for
+  // both reduction paths in the production code.
+  std::array<F, 2 * kDegree - 1> raw;
+  raw.fill(F::Zero());
   for (size_t i = 0; i < kDegree; ++i) {
     for (size_t j = 0; j < kDegree; ++j) {
-      size_t idx = i + j;
-      if (idx < kDegree) {
-        ret[idx] += a[i] * b[j];
-      } else {
-        // u^(i+j) = ξ · u^(i+j-n)
-        ret[idx - kDegree] += a[i] * b[j] * non_residue;
+      raw[i + j] += a[i] * b[j];
+    }
+  }
+  if constexpr (internal::HasModulusLowCoeffs<ExtF>::value) {
+    const std::array<F, kDegree> &m = ExtF::Config::kModulusLowCoeffs;
+    for (size_t i = 2 * kDegree - 2; i >= kDegree; --i) {
+      for (size_t j = 0; j < kDegree; ++j) {
+        raw[i - kDegree + j] += m[j] * raw[i];
       }
     }
+  } else {
+    F non_residue = ExtF::Config::kNonResidue;
+    for (size_t i = 2 * kDegree - 2; i >= kDegree; --i) {
+      raw[i - kDegree] += raw[i] * non_residue;
+    }
+  }
+  ExtF ret;
+  for (size_t i = 0; i < kDegree; ++i) {
+    ret[i] = raw[i];
   }
   return ret;
 }
@@ -393,6 +407,11 @@ TYPED_TEST(ExtensionFieldTypedTest, Inverse) {
 TYPED_TEST(ExtensionFieldTypedTest, FrobeniusInverse) {
   using ExtF = TypeParam;
 
+  if constexpr (internal::HasModulusLowCoeffs<ExtF>::value) {
+    GTEST_SKIP() << "Frobenius is binomial-only: its diagonal-coefficient "
+                    "form needs u^N = xi (see the modulus registration "
+                    "macro's comment).";
+  } else {  // NOLINT(readability/braces)
   ExtF a = ExtF::Random();
   while (a.IsZero()) {
     a = ExtF::Random();
@@ -403,6 +422,7 @@ TYPED_TEST(ExtensionFieldTypedTest, FrobeniusInverse) {
 
   // FrobeniusInverse of zero returns zero.
   EXPECT_TRUE(ExtF::Zero().FrobeniusInverse().IsZero());
+  }
 }
 
 TYPED_TEST(ExtensionFieldTypedTest, MontReduce) {
