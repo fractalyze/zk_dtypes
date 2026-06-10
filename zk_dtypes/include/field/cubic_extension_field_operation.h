@@ -35,9 +35,15 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
   }
 
   Derived Square() const {
-    ExtensionFieldMulAlgorithm algorithm =
-        static_cast<const Derived&>(*this).GetSquareAlgorithm();
-    if (algorithm == ExtensionFieldMulAlgorithm::kCustom) {
+    if constexpr (internal::HasModulusLowCoeffs<Derived>::value) {
+      // The CH-SQR2 branch below is specific to the binomial modulus u³ = ξ;
+      // a general monic modulus squares through Karatsuba's generic fold.
+      // (`if constexpr` + return keeps the ξ code below uninstantiated —
+      // NonResidue() does not exist on a modulus-registered field.)
+      return this->KaratsubaSquare();
+    } else if (ExtensionFieldMulAlgorithm algorithm =
+                   static_cast<const Derived&>(*this).GetSquareAlgorithm();
+               algorithm == ExtensionFieldMulAlgorithm::kCustom) {
       // [Comparison]
       // Custom Algorithm (Chung-Hasan):
       // - square: 3, mul: 2, mul by non-residue: 2, add: 5, sub: 3, double: 2
@@ -136,52 +142,83 @@ class CubicExtensionFieldOperation : public ExtensionFieldOperation<Derived>,
 
   // Returns the multiplicative inverse. Returns Zero() if not invertible.
   Derived Inverse() const {
-    // [Comparison]
-    // This Algorithm (Matrix Method / Cramer's Rule):
-    // - square: 3, mul: 9, inv: 1 (base field ops)
-    // Standard Itoh-Tsujii:
-    // - square: 3, mul: 12, inv: 1 (approx. 1 Full Fp3-Mul + Dot Product)
-    //
-    // Conclusion:
-    // This algorithm saves ~3 Multiplications. The Matrix Method computes
-    // the first column of the inverse directly, avoiding the overhead of
-    // a full extension field multiplication required by Itoh-Tsujii.
-    const std::array<BaseField, 3>& x =
-        static_cast<const Derived&>(*this).ToCoeffs();
-    BaseField xi = static_cast<const Derived&>(*this)
-                       .NonResidue();  // ξ: Irreducible polynomial constant
-                                       // [Comparison]
+    if constexpr (internal::HasModulusLowCoeffs<Derived>::value) {
+      // General monic modulus u³ ≡ m₀ + m₁u + m₂u²: y = x⁻¹ is the first
+      // column of M⁻¹, where M's columns are x·u⁰, x·u¹, x·u² (the
+      // multiplication-by-x matrix; each ·u is a coefficient shift plus the
+      // modulus fold of the overflowing slot). Expand by the first row's
+      // cofactors — the ξ-matrix method below is exactly this M at
+      // m = (ξ, 0, 0).
+      const std::array<BaseField, 3>& x =
+          static_cast<const Derived&>(*this).ToCoeffs();
+      const std::array<BaseField, 3>& m =
+          static_cast<const Derived&>(*this).ModulusLowCoeffs();
 
-    // Representing an element (x₀ + x₁w + x₂w²) as a 3×3 Matrix:
-    //   [ x₀  ξx₂  ξx₁ ]
-    //   [ x₁  x₀   ξx₂ ]
-    //   [ x₂  x₁   x₀  ]
-    // The inverse is (1 / det) * Adjugate(M).
+      std::array<BaseField, 3> xu = {m[0] * x[2], x[0] + m[1] * x[2],
+                                     x[1] + m[2] * x[2]};
+      std::array<BaseField, 3> xu2 = {m[0] * xu[2], xu[0] + m[1] * xu[2],
+                                      xu[1] + m[2] * xu[2]};
 
-    // 1. Calculate the first column of the Adjugate Matrix (Cofactors)
-    // t₀, t₁, t₂ are the cofactors of the first column of the representation
-    // matrix.
-    // t₀ = x₀² - ξx₁x₂
-    BaseField t0 = x[0].Square() - xi * (x[1] * x[2]);
-    // t₁ = ξx₂² - x₀x₁
-    BaseField t1 = xi * x[2].Square() - x[0] * x[1];
-    // t₂ = x₁² - x₀x₂
-    BaseField t2 = x[1].Square() - x[0] * x[2];
+      // First-row cofactors of M = [x | xu | xu2].
+      BaseField t0 = xu[1] * xu2[2] - xu2[1] * xu[2];
+      BaseField t1 = xu2[1] * x[2] - x[1] * xu2[2];
+      BaseField t2 = x[1] * xu[2] - xu[1] * x[2];
 
-    // 2. Calculate the Determinant (t₃)
-    // Using Laplace expansion along the first column: det = x₀*t₀ + ξx₂*t₁ +
-    // ξx₁*t₂
-    BaseField t3 = x[0] * t0 + xi * (x[2] * t1 + x[1] * t2);
+      // Laplace expansion along the first row. Inverse() returns Zero() if
+      // not invertible, preserving the Zero-for-non-invertible contract.
+      BaseField det_inv = (x[0] * t0 + xu[0] * t1 + xu2[0] * t2).Inverse();
 
-    // 3. Invert the determinant. Inverse() returns Zero() if not invertible.
-    BaseField t3_inv = t3.Inverse();
+      return static_cast<const Derived&>(*this).FromCoeffs(
+          {t0 * det_inv, t1 * det_inv, t2 * det_inv});
+    } else {
+      // [Comparison]
+      // This Algorithm (Matrix Method / Cramer's Rule):
+      // - square: 3, mul: 9, inv: 1 (base field ops)
+      // Standard Itoh-Tsujii:
+      // - square: 3, mul: 12, inv: 1 (approx. 1 Full Fp3-Mul + Dot Product)
+      //
+      // Conclusion:
+      // This algorithm saves ~3 Multiplications. The Matrix Method computes
+      // the first column of the inverse directly, avoiding the overhead of
+      // a full extension field multiplication required by Itoh-Tsujii.
+      const std::array<BaseField, 3>& x =
+          static_cast<const Derived&>(*this).ToCoeffs();
+      BaseField xi = static_cast<const Derived&>(*this)
+                         .NonResidue();  // ξ: Irreducible polynomial constant
+                                         // [Comparison]
 
-    // 4. Final Inverse result: (t₀, t₁, t₂) / det
-    // Since the field is commutative, we only need the first column of the
-    // adjugate.
-    std::array<BaseField, 3> y{t0 * t3_inv, t1 * t3_inv, t2 * t3_inv};
+      // Representing an element (x₀ + x₁w + x₂w²) as a 3×3 Matrix:
+      //   [ x₀  ξx₂  ξx₁ ]
+      //   [ x₁  x₀   ξx₂ ]
+      //   [ x₂  x₁   x₀  ]
+      // The inverse is (1 / det) * Adjugate(M).
 
-    return static_cast<const Derived&>(*this).FromCoeffs(y);
+      // 1. Calculate the first column of the Adjugate Matrix (Cofactors)
+      // t₀, t₁, t₂ are the cofactors of the first column of the
+      // representation matrix.
+      // t₀ = x₀² - ξx₁x₂
+      BaseField t0 = x[0].Square() - xi * (x[1] * x[2]);
+      // t₁ = ξx₂² - x₀x₁
+      BaseField t1 = xi * x[2].Square() - x[0] * x[1];
+      // t₂ = x₁² - x₀x₂
+      BaseField t2 = x[1].Square() - x[0] * x[2];
+
+      // 2. Calculate the Determinant (t₃)
+      // Using Laplace expansion along the first column: det = x₀*t₀ + ξx₂*t₁
+      // + ξx₁*t₂
+      BaseField t3 = x[0] * t0 + xi * (x[2] * t1 + x[1] * t2);
+
+      // 3. Invert the determinant. Inverse() returns Zero() if not
+      // invertible.
+      BaseField t3_inv = t3.Inverse();
+
+      // 4. Final Inverse result: (t₀, t₁, t₂) / det
+      // Since the field is commutative, we only need the first column of the
+      // adjugate.
+      std::array<BaseField, 3> y{t0 * t3_inv, t1 * t3_inv, t2 * t3_inv};
+
+      return static_cast<const Derived&>(*this).FromCoeffs(y);
+    }
   }
 };
 

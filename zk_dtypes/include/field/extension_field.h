@@ -103,11 +103,69 @@ limitations under the License.
   REGISTER_EXTENSION_FIELD_CONFIGS(Name, BaseFieldIn, BasePrimeFieldIn,     \
                                    Degree, __VA_ARGS__)
 
+// Registration for a general monic modulus uᴰᵉᵍʳᵉᵉ = Σⱼ mⱼ·uʲ — the variadic
+// tail is the modulus's low coefficients m₀, m₁, ... (Degree of them). Used
+// when the modulus is not a binomial uᴰᵉᵍʳᵉᵉ - ξ (e.g. pil2-stark's
+// x³ - x - 1, registered as m = 1, 1, 0). The config carries
+// kModulusLowCoeffs INSTEAD of kNonResidue; the operation mixins detect the
+// member and route reduction/inverse through the general fold, so binomial
+// fields keep their closed forms untouched. Frobenius stays binomial-only
+// (its diagonal-coefficient form needs uᴺ = ξ); a modulus-registered field
+// has no kNonResidue, so a Frobenius call fails to compile rather than
+// silently miscomputing.
+#define REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT_MODULUS(              \
+    Name, BaseFieldIn, BasePrimeFieldIn, Degree, ...)                    \
+  template <typename BaseField>                                          \
+  class Name##BaseConfig {                                               \
+   public:                                                               \
+    constexpr static uint32_t kDegreeOverBaseField = Degree;             \
+    constexpr static std::array<BaseField, Degree> kModulusLowCoeffs = { \
+        __VA_ARGS__};                                                    \
+  };                                                                     \
+                                                                         \
+  class Name##Config : public Name##BaseConfig<BaseFieldIn> {            \
+   public:                                                               \
+    constexpr static bool kUseMontgomery = false;                        \
+    using StdConfig = Name##Config;                                      \
+    using BaseField = BaseFieldIn;                                       \
+    using BasePrimeField = BasePrimeFieldIn;                             \
+  };                                                                     \
+                                                                         \
+  class Name##MontConfig : public Name##BaseConfig<BaseFieldIn##Mont> {  \
+   public:                                                               \
+    constexpr static bool kUseMontgomery = true;                         \
+    using StdConfig = Name##Config;                                      \
+    using BaseField = BaseFieldIn##Mont;                                 \
+    using BasePrimeField = BasePrimeFieldIn##Mont;                       \
+  };                                                                     \
+                                                                         \
+  using Name = ExtensionField<Name##Config>;                             \
+  using Name##Mont = ExtensionField<Name##MontConfig>
+
+#define REGISTER_EXTENSION_FIELD_WITH_MONT_MODULUS(Name, BaseFieldIn, Degree, \
+                                                   ...)                       \
+  REGISTER_EXTENSION_FIELD_CONFIGS_WITH_MONT_MODULUS(                         \
+      Name, BaseFieldIn, BaseFieldIn, Degree, __VA_ARGS__)
+
 namespace zk_dtypes {
 
 // Forward declaration
 template <typename _Config>
 class ExtensionField;
+
+namespace internal {
+
+// Detects a config registered with a general monic modulus
+// (REGISTER_EXTENSION_FIELD_*_WITH_MONT_MODULUS) rather than a binomial
+// non-residue.
+template <typename C, typename = void>
+struct ConfigHasModulusLowCoeffs : std::false_type {};
+
+template <typename C>
+struct ConfigHasModulusLowCoeffs<C, std::void_t<decltype(C::kModulusLowCoeffs)>>
+    : std::true_type {};
+
+}  // namespace internal
 
 // Selects the appropriate extension field operation based on degree.
 template <typename Config, size_t Degree>
@@ -532,6 +590,15 @@ class ExtensionField : public FiniteField<ExtensionField<_Config>>,
     return BaseField(value);
   }
   constexpr const BaseField& NonResidue() const { return Config::kNonResidue; }
+  // Present only on a modulus-registered field (uᴺ ≡ Σⱼ mⱼ·uʲ); the operation
+  // mixins detect this member to pick the general fold over the ξ closed
+  // forms.
+  template <typename C = Config,
+            std::enable_if_t<internal::ConfigHasModulusLowCoeffs<C>::value>* =
+                nullptr>
+  constexpr const std::array<BaseField, N>& ModulusLowCoeffs() const {
+    return C::kModulusLowCoeffs;
+  }
   ExtensionFieldMulAlgorithm GetMulAlgorithm() const {
     if (mul_algorithm_.has_value()) {
       return mul_algorithm_.value();

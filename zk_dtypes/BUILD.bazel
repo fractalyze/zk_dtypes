@@ -402,6 +402,15 @@ cc_library(
 )
 
 cc_library(
+    name = "goldilocks3_pil",
+    hdrs = ["include/field/goldilocks/goldilocks3_pil.h"],
+    deps = [
+        ":extension_field",
+        ":goldilocks",
+    ],
+)
+
+cc_library(
     name = "goldilocks_multiplication",
     hdrs = ["include/field/goldilocks_multiplication.h"],
     deps = [":arithmetics"],
@@ -575,12 +584,14 @@ cc_test(
     srcs = [
         "tests/field/binary_field_unittest.cc",
         "tests/field/extension_field_unittest.cc",
+        "tests/field/goldilocks3_pil_unittest.cc",
         "tests/field/prime_field_unittest.cc",
         "tests/field/root_of_unity_unittest.cc",
         "tests/field/square_root_algorithms_unittest.cc",
     ],
     deps = [
         ":all_types",
+        ":goldilocks3_pil",
         # TODO(chokobole33): Remove this.
         ":mersenne31x2x2",
         ":random",
