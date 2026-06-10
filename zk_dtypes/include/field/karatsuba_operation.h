@@ -18,10 +18,27 @@ limitations under the License.
 
 #include <array>
 #include <cstddef>
+#include <type_traits>
+#include <utility>
 
 #include "zk_dtypes/include/field/extension_field_operation_traits_forward.h"
 
 namespace zk_dtypes {
+namespace internal {
+
+// Detects whether `Derived` carries a non-binomial monic modulus by exposing
+// `ModulusLowCoeffs()` (uᴺ ≡ Σⱼ mⱼ·uʲ, registered via
+// REGISTER_EXTENSION_FIELD_WITH_MONT_MODULUS). Binomial fields keep the
+// scalar `NonResidue()` hook and never define it.
+template <typename T, typename = void>
+struct HasModulusLowCoeffs : std::false_type {};
+
+template <typename T>
+struct HasModulusLowCoeffs<
+    T, std::void_t<decltype(std::declval<const T&>().ModulusLowCoeffs())>>
+    : std::true_type {};
+
+}  // namespace internal
 
 // clang-format off
 // Generalized Karatsuba Multiplication and Squaring for Extension Fields.
@@ -203,17 +220,38 @@ class KaratsubaOperation {
   // 3. Reduction Step (Modulo uᴺ - ξ)
   // ----------------------------------------------------------------------
 
-  // Reduces the product polynomial C(u) modulo (uⁿ - ξ).
-  // Since uⁿ ≡ ξ, we have uⁱ⁺ⁿ ≡ ξ·uⁱ.
-  // The resulting coefficients are zᵢ = cᵢ + ξ·cᵢ₊ₙ.
+  // Reduces the product polynomial C(u) modulo the field's monic modulus.
+  //
+  // Binomial uⁿ - ξ: uⁱ⁺ⁿ ≡ ξ·uⁱ, so zᵢ = cᵢ + ξ·cᵢ₊ₙ.
+  //
+  // General monic modulus (Derived exposes ModulusLowCoeffs; uⁿ ≡ Σⱼ mⱼ·uʲ):
+  // fold each overflow coefficient downward, highest degree first — a fold
+  // landing on another overflow slot (mⱼ ≠ 0 for j > 0) is itself folded
+  // when the descending loop reaches that slot.
   Derived Reduce(const std::array<BaseField, kNumEvaluation>& c) const {
-    BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
-    std::array<BaseField, kDegree> ret;
-    for (size_t i = 0; i < kDegree - 1; ++i) {
-      ret[i] = c[i] + non_residue * c[i + kDegree];
+    if constexpr (internal::HasModulusLowCoeffs<Derived>::value) {
+      const std::array<BaseField, kDegree>& m =
+          static_cast<const Derived&>(*this).ModulusLowCoeffs();
+      std::array<BaseField, kNumEvaluation> folded = c;
+      for (size_t i = kNumEvaluation - 1; i >= kDegree; --i) {
+        for (size_t j = 0; j < kDegree; ++j) {
+          folded[i - kDegree + j] += m[j] * folded[i];
+        }
+      }
+      std::array<BaseField, kDegree> ret;
+      for (size_t i = 0; i < kDegree; ++i) {
+        ret[i] = folded[i];
+      }
+      return static_cast<const Derived&>(*this).FromCoeffs(ret);
+    } else {
+      BaseField non_residue = static_cast<const Derived&>(*this).NonResidue();
+      std::array<BaseField, kDegree> ret;
+      for (size_t i = 0; i < kDegree - 1; ++i) {
+        ret[i] = c[i] + non_residue * c[i + kDegree];
+      }
+      ret[kDegree - 1] = c[kDegree - 1];
+      return static_cast<const Derived&>(*this).FromCoeffs(ret);
     }
-    ret[kDegree - 1] = c[kDegree - 1];
-    return static_cast<const Derived&>(*this).FromCoeffs(ret);
   }
 };
 
