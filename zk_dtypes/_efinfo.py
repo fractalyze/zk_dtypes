@@ -55,7 +55,12 @@ class efinfo:  # pylint: disable=invalid-name,missing-class-docstring
   base_field_dtype: np.dtype
   degree: int
   degree_over_prime: int
-  non_residue: int
+  # Binomial extensions: u^degree = non_residue (modulus_low_coeffs is None).
+  # General monic modulus: u^degree = sum(modulus_low_coeffs[j] * u^j) and
+  # non_residue is None — consumers lowering the type (e.g. jax's MLIR
+  # bridge) must emit the dense coefficients, never a scalar.
+  non_residue: int | None
+  modulus_low_coeffs: list[int] | None = None
   storage_bits: int
   is_montgomery: bool
   dtype: np.dtype
@@ -81,7 +86,10 @@ class efinfo:  # pylint: disable=invalid-name,missing-class-docstring
           else _goldilocks_dtype
       )
       self.degree = 3
-      self.non_residue = 7
+      # pil2-stark's Goldilocks3: x^3 - x - 1 (u^3 = 1 + u). Trinomial, so
+      # there is no scalar non-residue.
+      self.non_residue = None
+      self.modulus_low_coeffs = [1, 1, 0]
       self.storage_bits = 64
       self.is_montgomery = ef_type == _goldilocksx3_mont_dtype
     elif ef_type == _koalabearx4_dtype or ef_type == _koalabearx4_mont_dtype:

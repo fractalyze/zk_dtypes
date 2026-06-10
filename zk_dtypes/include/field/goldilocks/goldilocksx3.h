@@ -21,9 +21,16 @@ limitations under the License.
 
 namespace zk_dtypes {
 
-// Cubic extension field over Goldilocks: Goldilocks³ = Goldilocks[u] / (u³ - 7)
-// W = 7 is a cubic non-residue in Goldilocks field.
-REGISTER_EXTENSION_FIELD_WITH_MONT(GoldilocksX3, Goldilocks, 3, 7);
+// Cubic extension field over Goldilocks: Goldilocks[u] / (u³ - u - 1),
+// elements [c₀, c₁, c₂] = c₀ + c₁·u + c₂·u² — pil2-stark's `Goldilocks3`,
+// the extension ZisK draws FRI challenges in. A trinomial modulus, so it
+// registers through the monic-modulus path (u³ ≡ 1 + u → m = 1, 1, 0).
+// (Until 2026-06 this dtype was the binomial u³ - 7; no holder of that
+// representation existed, so the modulus was swapped in place rather than
+// shipping two Goldilocks cubics — see fractalyze/zk_dtypes#133.)
+// https://github.com/0xPolygonHermez/pil2-proofman/blob/v0.18.0/pil2-stark/src/goldilocks/src/goldilocks_cubic_extension.hpp
+REGISTER_EXTENSION_FIELD_WITH_MONT_MODULUS(GoldilocksX3, Goldilocks, 3, 1, 1,
+                                           0);
 
 }  // namespace zk_dtypes
 
