@@ -47,6 +47,9 @@ for _curve in _CURVES:
     _std_list = EC_STD_POINT_TYPES if _suffix == "" else EC_MONT_POINT_TYPES
     _sf = getattr(zk_dtypes, f"{_curve}_sf{_suffix}")
     for _group in _GROUPS:
+      # Skip a group the curve does not define (e.g. G1-only curves have no G2).
+      if not hasattr(zk_dtypes, f"{_curve}_{_group}_affine{_suffix}"):
+        continue
       _aff = getattr(zk_dtypes, f"{_curve}_{_group}_affine{_suffix}")
       _jac = getattr(zk_dtypes, f"{_curve}_{_group}_jacobian{_suffix}")
       _xyzz = getattr(zk_dtypes, f"{_curve}_{_group}_xyzz{_suffix}")

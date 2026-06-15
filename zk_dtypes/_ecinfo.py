@@ -157,7 +157,10 @@ def _build_meta(
   for group, repr_, num_coords, ext_degree in _EC_LAYOUT:
     storage_bits = num_coords * ext_degree * field_bits
     for is_mont in (False, True):
-      point_dtype = dtype_table[(group, repr_, is_mont)]
+      # A curve may omit a group/repr (e.g. G1-only curves have no G2).
+      point_dtype = dtype_table.get((group, repr_, is_mont))
+      if point_dtype is None:
+        continue
       base_field_dtype = scalar_mont_dtype if is_mont else scalar_std_dtype
       meta[np.dtype(point_dtype)] = (
           curve,
