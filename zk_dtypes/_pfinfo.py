@@ -26,6 +26,8 @@ from zk_dtypes._zk_dtypes_ext import bn254_sf
 from zk_dtypes._zk_dtypes_ext import bn254_sf_mont
 from zk_dtypes._zk_dtypes_ext import mnt4_298_sf
 from zk_dtypes._zk_dtypes_ext import mnt4_298_sf_mont
+from zk_dtypes._zk_dtypes_ext import mnt6_298_sf
+from zk_dtypes._zk_dtypes_ext import mnt6_298_sf_mont
 
 import numpy as np
 
@@ -40,6 +42,8 @@ _bn254_sf_dtype = np.dtype(bn254_sf)
 _bn254_sf_mont_dtype = np.dtype(bn254_sf_mont)
 _mnt4_298_sf_dtype = np.dtype(mnt4_298_sf)
 _mnt4_298_sf_mont_dtype = np.dtype(mnt4_298_sf_mont)
+_mnt6_298_sf_dtype = np.dtype(mnt6_298_sf)
+_mnt6_298_sf_mont_dtype = np.dtype(mnt6_298_sf_mont)
 
 
 _BN254_PARAM = 4965661367192848881
@@ -94,6 +98,12 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.modulus_bits = 298
       self.modulus = 475922286169261325753349249653048451545124878552823515553267735739164647307408490559963137
       self.is_montgomery = pf_type == _mnt4_298_sf_mont_dtype
+    elif pf_type == _mnt6_298_sf_dtype or pf_type == _mnt6_298_sf_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 320
+      self.modulus_bits = 298
+      self.modulus = 475922286169261325753349249653048451545124879242694725395555128576210262817955800483758081
+      self.is_montgomery = pf_type == _mnt6_298_sf_mont_dtype
     else:
       raise ValueError(f"Unknown prime field type: {pf_type}")
     # Calculate the 2-adicity of `modulus - 1`, which is the number of

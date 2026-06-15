@@ -42,6 +42,8 @@ __all__ = [
     "bn254_sf_mont",
     "mnt4_298_sf",
     "mnt4_298_sf_mont",
+    "mnt6_298_sf",
+    "mnt6_298_sf_mont",
     # Extension field types
     "babybearx4",
     "babybearx4_mont",
@@ -84,6 +86,18 @@ __all__ = [
     "mnt4_298_g2_jacobian_mont",
     "mnt4_298_g2_xyzz",
     "mnt4_298_g2_xyzz_mont",
+    "mnt6_298_g1_affine",
+    "mnt6_298_g1_affine_mont",
+    "mnt6_298_g1_jacobian",
+    "mnt6_298_g1_jacobian_mont",
+    "mnt6_298_g1_xyzz",
+    "mnt6_298_g1_xyzz_mont",
+    "mnt6_298_g2_affine",
+    "mnt6_298_g2_affine_mont",
+    "mnt6_298_g2_jacobian",
+    "mnt6_298_g2_jacobian_mont",
+    "mnt6_298_g2_xyzz",
+    "mnt6_298_g2_xyzz_mont",
 ]
 
 from typing import Type
@@ -111,6 +125,8 @@ from zk_dtypes._zk_dtypes_ext import bn254_sf
 from zk_dtypes._zk_dtypes_ext import bn254_sf_mont
 from zk_dtypes._zk_dtypes_ext import mnt4_298_sf
 from zk_dtypes._zk_dtypes_ext import mnt4_298_sf_mont
+from zk_dtypes._zk_dtypes_ext import mnt6_298_sf
+from zk_dtypes._zk_dtypes_ext import mnt6_298_sf_mont
 from zk_dtypes._zk_dtypes_ext import babybearx4
 from zk_dtypes._zk_dtypes_ext import babybearx4_mont
 from zk_dtypes._zk_dtypes_ext import goldilocksx3
@@ -150,6 +166,18 @@ from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_jacobian
 from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_jacobian_mont
 from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_xyzz
 from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g1_affine
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g1_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g2_affine
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g2_affine_mont
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g2_jacobian
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g2_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g2_xyzz
+from zk_dtypes._zk_dtypes_ext import mnt6_298_g2_xyzz_mont
 
 import numpy as np
 
@@ -172,6 +200,8 @@ bn254_sf: Type[np.generic]
 bn254_sf_mont: Type[np.generic]
 mnt4_298_sf: Type[np.generic]
 mnt4_298_sf_mont: Type[np.generic]
+mnt6_298_sf: Type[np.generic]
+mnt6_298_sf_mont: Type[np.generic]
 babybearx4: Type[np.generic]
 babybearx4_mont: Type[np.generic]
 goldilocksx3: Type[np.generic]
@@ -211,5 +241,17 @@ mnt4_298_g2_jacobian: Type[np.generic]
 mnt4_298_g2_jacobian_mont: Type[np.generic]
 mnt4_298_g2_xyzz: Type[np.generic]
 mnt4_298_g2_xyzz_mont: Type[np.generic]
+mnt6_298_g1_affine: Type[np.generic]
+mnt6_298_g1_affine_mont: Type[np.generic]
+mnt6_298_g1_jacobian: Type[np.generic]
+mnt6_298_g1_jacobian_mont: Type[np.generic]
+mnt6_298_g1_xyzz: Type[np.generic]
+mnt6_298_g1_xyzz_mont: Type[np.generic]
+mnt6_298_g2_affine: Type[np.generic]
+mnt6_298_g2_affine_mont: Type[np.generic]
+mnt6_298_g2_jacobian: Type[np.generic]
+mnt6_298_g2_jacobian_mont: Type[np.generic]
+mnt6_298_g2_xyzz: Type[np.generic]
+mnt6_298_g2_xyzz_mont: Type[np.generic]
 
 del np, Type

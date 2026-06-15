@@ -241,6 +241,21 @@ struct TypeDescriptorBase<mnt4_298::FrMont>
   static constexpr char kNpyDescrType = 'b';
 };
 
+template <>
+struct TypeDescriptorBase<mnt6_298::Fr> : FieldTypeDescriptor<mnt6_298::Fr> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 scalar field values on standard domain";
+  static constexpr char kNpyDescrType = 'B';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::FrMont>
+    : FieldTypeDescriptor<mnt6_298::FrMont> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 scalar field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'b';
+};
+
 //===----------------------------------------------------------------------===//
 // ExtendedField TypeDescriptorBase
 //===----------------------------------------------------------------------===//
@@ -538,6 +553,102 @@ struct TypeDescriptorBase<mnt4_298::G2PointXyzzMont>
     : EcPointTypeDescriptor<mnt4_298::G2PointXyzzMont> {
   static constexpr const char* kTpDoc =
       "mnt4_298 G2 elliptic curve xyzz point on montgomery domain";
+  static constexpr char kNpyDescrType = 'x';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G1AffinePoint>
+    : EcPointTypeDescriptor<mnt6_298::G1AffinePoint> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G1 elliptic curve affine point on standard domain";
+  static constexpr char kNpyDescrType = 'A';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G1AffinePointMont>
+    : EcPointTypeDescriptor<mnt6_298::G1AffinePointMont> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G1 elliptic curve affine point on montgomery domain";
+  static constexpr char kNpyDescrType = 'a';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G1JacobianPoint>
+    : EcPointTypeDescriptor<mnt6_298::G1JacobianPoint> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G1 elliptic curve jacobian point on standard domain";
+  static constexpr char kNpyDescrType = 'J';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G1JacobianPointMont>
+    : EcPointTypeDescriptor<mnt6_298::G1JacobianPointMont> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G1 elliptic curve jacobian point on montgomery domain";
+  static constexpr char kNpyDescrType = 'j';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G1PointXyzz>
+    : EcPointTypeDescriptor<mnt6_298::G1PointXyzz> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G1 elliptic curve xyzz point on standard domain";
+  static constexpr char kNpyDescrType = 'X';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G1PointXyzzMont>
+    : EcPointTypeDescriptor<mnt6_298::G1PointXyzzMont> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G1 elliptic curve xyzz point on montgomery domain";
+  static constexpr char kNpyDescrType = 'x';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G2AffinePoint>
+    : EcPointTypeDescriptor<mnt6_298::G2AffinePoint> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G2 elliptic curve affine point on standard domain";
+  static constexpr char kNpyDescrType = 'A';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G2AffinePointMont>
+    : EcPointTypeDescriptor<mnt6_298::G2AffinePointMont> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G2 elliptic curve affine point on montgomery domain";
+  static constexpr char kNpyDescrType = 'a';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G2JacobianPoint>
+    : EcPointTypeDescriptor<mnt6_298::G2JacobianPoint> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G2 elliptic curve jacobian point on standard domain";
+  static constexpr char kNpyDescrType = 'J';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G2JacobianPointMont>
+    : EcPointTypeDescriptor<mnt6_298::G2JacobianPointMont> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G2 elliptic curve jacobian point on montgomery domain";
+  static constexpr char kNpyDescrType = 'j';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G2PointXyzz>
+    : EcPointTypeDescriptor<mnt6_298::G2PointXyzz> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G2 elliptic curve xyzz point on standard domain";
+  static constexpr char kNpyDescrType = 'X';
+};
+
+template <>
+struct TypeDescriptorBase<mnt6_298::G2PointXyzzMont>
+    : EcPointTypeDescriptor<mnt6_298::G2PointXyzzMont> {
+  static constexpr const char* kTpDoc =
+      "mnt6_298 G2 elliptic curve xyzz point on montgomery domain";
   static constexpr char kNpyDescrType = 'x';
 };
 

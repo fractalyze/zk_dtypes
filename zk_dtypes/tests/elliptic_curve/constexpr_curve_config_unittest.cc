@@ -29,6 +29,9 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/mnt4_298/fqx4.h"
 #include "zk_dtypes/include/elliptic_curve/mnt4_298/g1.h"
 #include "zk_dtypes/include/elliptic_curve/mnt4_298/g2.h"
+#include "zk_dtypes/include/elliptic_curve/mnt6_298/fqx6.h"
+#include "zk_dtypes/include/elliptic_curve/mnt6_298/g1.h"
+#include "zk_dtypes/include/elliptic_curve/mnt6_298/g2.h"
 #include "zk_dtypes/include/elliptic_curve/secp256k1/g1.h"
 #include "zk_dtypes/include/elliptic_curve/secp256r1/fq.h"
 #include "zk_dtypes/include/elliptic_curve/secp256r1/g1.h"
@@ -54,6 +57,8 @@ static_assert(VerifyConstexpr<bn254::G1SwCurveMontConfig>());
 static_assert(VerifyConstexpr<bn254::G2SwCurveMontConfig>());
 static_assert(VerifyConstexpr<mnt4_298::G1SwCurveMontConfig>());
 static_assert(VerifyConstexpr<mnt4_298::G2SwCurveMontConfig>());
+static_assert(VerifyConstexpr<mnt6_298::G1SwCurveMontConfig>());
+static_assert(VerifyConstexpr<mnt6_298::G2SwCurveMontConfig>());
 static_assert(VerifyConstexpr<secp256k1::G1SwCurveMontConfig>());
 static_assert(VerifyConstexpr<secp256r1::G1SwCurveMontConfig>());
 static_assert(VerifyConstexpr<bls12_381::G1SwCurveMontConfig>());
@@ -65,6 +70,7 @@ static_assert(VerifyConstexpr<bls12_381::G1SwCurveMontConfig>());
 using MontConfigs = ::testing::Types<
     bn254::G1SwCurveMontConfig, bn254::G2SwCurveMontConfig,
     mnt4_298::G1SwCurveMontConfig, mnt4_298::G2SwCurveMontConfig,
+    mnt6_298::G1SwCurveMontConfig, mnt6_298::G2SwCurveMontConfig,
     secp256k1::G1SwCurveMontConfig, secp256r1::G1SwCurveMontConfig,
     bls12_381::G1SwCurveMontConfig>;
 
@@ -102,6 +108,14 @@ TEST(Mnt4Fq4Test, BasicTowerOps) {
   using mnt4_298::FqX4;
   EXPECT_EQ(FqX4::One() * FqX4::One(), FqX4::One());
   EXPECT_EQ(FqX4::Zero() + FqX4::One(), FqX4::One());
+}
+
+// Smoke-test the MNT6-298 Fq6 tower (Fq -> Fq3 -> Fq6) compiles and supports
+// basic arithmetic. GT of the MNT6 pairing lives in Fq6.
+TEST(Mnt6Fq6Test, BasicTowerOps) {
+  using mnt6_298::FqX6;
+  EXPECT_EQ(FqX6::One() * FqX6::One(), FqX6::One());
+  EXPECT_EQ(FqX6::Zero() + FqX6::One(), FqX6::One());
 }
 
 }  // namespace

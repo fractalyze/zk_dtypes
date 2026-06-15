@@ -25,6 +25,9 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/mnt4_298/fr.h"
 #include "zk_dtypes/include/elliptic_curve/mnt4_298/g1.h"
 #include "zk_dtypes/include/elliptic_curve/mnt4_298/g2.h"
+#include "zk_dtypes/include/elliptic_curve/mnt6_298/fr.h"
+#include "zk_dtypes/include/elliptic_curve/mnt6_298/g1.h"
+#include "zk_dtypes/include/elliptic_curve/mnt6_298/g2.h"
 #include "zk_dtypes/include/elliptic_curve/secp256k1/g1.h"
 #include "zk_dtypes/include/field/babybear/babybear.h"
 #include "zk_dtypes/include/field/babybear/babybearx4.h"
@@ -77,12 +80,14 @@ V(::zk_dtypes::Mersenne31, Mersenne31, MERSENNE31, mersenne31)            \
 WITH_MONT(V, ::zk_dtypes::Goldilocks, Goldilocks, GOLDILOCKS, goldilocks) \
 WITH_MONT(V, ::zk_dtypes::Koalabear, Koalabear, KOALABEAR, koalabear)     \
 WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)         \
-WITH_MONT(V, ::zk_dtypes::mnt4_298::Fr, Mnt4298Sf, MNT4_298_SF, mnt4_298_sf)
+WITH_MONT(V, ::zk_dtypes::mnt4_298::Fr, Mnt4298Sf, MNT4_298_SF, mnt4_298_sf) \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::Fr, Mnt6298Sf, MNT6_298_SF, mnt6_298_sf)
 
 #define ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V)                                        \
 ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)                                             \
 WITH_MONT(V, ::zk_dtypes::bn254::Fq, Bn254Bf, BN254_BF, bn254_bf)                     \
 WITH_MONT(V, ::zk_dtypes::mnt4_298::Fq, Mnt4298Bf, MNT4_298_BF, mnt4_298_bf)          \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::Fq, Mnt6298Bf, MNT6_298_BF, mnt6_298_bf)          \
 WITH_MONT(V, ::zk_dtypes::secp256k1::Fq, Secp256k1Bf, SECP256K1_BF, secp256k1_bf)     \
 WITH_MONT(V, ::zk_dtypes::secp256k1::Fr, Secp256k1Sf, SECP256K1_SF, secp256k1_sf)     \
 WITH_MONT(V, ::zk_dtypes::bls12_381::Fq, Bls12381Bf, BLS12_381_BF, bls12_381_bf)      \
@@ -105,6 +110,7 @@ WITH_MONT(V, ::zk_dtypes::GoldilocksX3, GoldilocksX3, GOLDILOCKSX3, goldilocksx3
 ZK_DTYPES_PUBLIC_EXT_FIELD_TYPE_LIST(V)                                   \
 WITH_MONT(V, ::zk_dtypes::bn254::FqX2, Bn254BfX2, BN254_BFX2, bn254_bfx2) \
 WITH_MONT(V, ::zk_dtypes::mnt4_298::FqX2, Mnt4298BfX2, MNT4_298_BFX2, mnt4_298_bfx2) \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::FqX3, Mnt6298BfX3, MNT6_298_BFX3, mnt6_298_bfx3) \
 WITH_MONT(V, ::zk_dtypes::bls12_381::FqX2, Bls12381BfX2, BLS12_381_BFX2, bls12_381_bfx2)
 
 //===----------------------------------------------------------------------===//
@@ -127,7 +133,8 @@ ZK_DTYPES_ALL_BINARY_FIELD_TYPE_LIST(V)
 
 #define ZK_DTYPES_SCALAR_FIELD_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf) \
-WITH_MONT(V, ::zk_dtypes::mnt4_298::Fr, Mnt4298Sf, MNT4_298_SF, mnt4_298_sf)
+WITH_MONT(V, ::zk_dtypes::mnt4_298::Fr, Mnt4298Sf, MNT4_298_SF, mnt4_298_sf) \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::Fr, Mnt6298Sf, MNT6_298_SF, mnt6_298_sf)
 
 //===----------------------------------------------------------------------===//
 // AffinePoint Types
@@ -135,11 +142,13 @@ WITH_MONT(V, ::zk_dtypes::mnt4_298::Fr, Mnt4298Sf, MNT4_298_SF, mnt4_298_sf)
 
 #define ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::G1AffinePoint, Bn254G1Affine, BN254_G1_AFFINE, bn254_g1_affine) \
-WITH_MONT(V, ::zk_dtypes::mnt4_298::G1AffinePoint, Mnt4298G1Affine, MNT4_298_G1_AFFINE, mnt4_298_g1_affine)
+WITH_MONT(V, ::zk_dtypes::mnt4_298::G1AffinePoint, Mnt4298G1Affine, MNT4_298_G1_AFFINE, mnt4_298_g1_affine) \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::G1AffinePoint, Mnt6298G1Affine, MNT6_298_G1_AFFINE, mnt6_298_g1_affine)
 
 #define ZK_DTYPES_PUBLIC_R2_AFFINE_POINT_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::G2AffinePoint, Bn254G2Affine, BN254_G2_AFFINE, bn254_g2_affine) \
-WITH_MONT(V, ::zk_dtypes::mnt4_298::G2AffinePoint, Mnt4298G2Affine, MNT4_298_G2_AFFINE, mnt4_298_g2_affine)
+WITH_MONT(V, ::zk_dtypes::mnt4_298::G2AffinePoint, Mnt4298G2Affine, MNT4_298_G2_AFFINE, mnt4_298_g2_affine) \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::G2AffinePoint, Mnt6298G2Affine, MNT6_298_G2_AFFINE, mnt6_298_g2_affine)
 
 #define ZK_DTYPES_PUBLIC_AFFINE_POINT_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)      \
@@ -164,11 +173,13 @@ ZK_DTYPES_ALL_R2_AFFINE_POINT_TYPE_LIST(V)
 
 #define ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::G1JacobianPoint, Bn254G1Jacobian, BN254_G1_JACOBIAN, bn254_g1_jacobian) \
-WITH_MONT(V, ::zk_dtypes::mnt4_298::G1JacobianPoint, Mnt4298G1Jacobian, MNT4_298_G1_JACOBIAN, mnt4_298_g1_jacobian)
+WITH_MONT(V, ::zk_dtypes::mnt4_298::G1JacobianPoint, Mnt4298G1Jacobian, MNT4_298_G1_JACOBIAN, mnt4_298_g1_jacobian) \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::G1JacobianPoint, Mnt6298G1Jacobian, MNT6_298_G1_JACOBIAN, mnt6_298_g1_jacobian)
 
 #define ZK_DTYPES_PUBLIC_R2_JACOBIAN_POINT_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::G2JacobianPoint, Bn254G2Jacobian, BN254_G2_JACOBIAN, bn254_g2_jacobian) \
-WITH_MONT(V, ::zk_dtypes::mnt4_298::G2JacobianPoint, Mnt4298G2Jacobian, MNT4_298_G2_JACOBIAN, mnt4_298_g2_jacobian)
+WITH_MONT(V, ::zk_dtypes::mnt4_298::G2JacobianPoint, Mnt4298G2Jacobian, MNT4_298_G2_JACOBIAN, mnt4_298_g2_jacobian) \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::G2JacobianPoint, Mnt6298G2Jacobian, MNT6_298_G2_JACOBIAN, mnt6_298_g2_jacobian)
 
 #define ZK_DTYPES_PUBLIC_JACOBIAN_POINT_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)      \
@@ -192,11 +203,13 @@ ZK_DTYPES_ALL_R2_JACOBIAN_POINT_TYPE_LIST(V)
 
 #define ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::G1PointXyzz, Bn254G1Xyzz, BN254_G1_XYZZ, bn254_g1_xyzz) \
-WITH_MONT(V, ::zk_dtypes::mnt4_298::G1PointXyzz, Mnt4298G1Xyzz, MNT4_298_G1_XYZZ, mnt4_298_g1_xyzz)
+WITH_MONT(V, ::zk_dtypes::mnt4_298::G1PointXyzz, Mnt4298G1Xyzz, MNT4_298_G1_XYZZ, mnt4_298_g1_xyzz) \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::G1PointXyzz, Mnt6298G1Xyzz, MNT6_298_G1_XYZZ, mnt6_298_g1_xyzz)
 
 #define ZK_DTYPES_PUBLIC_R2_XYZZ_POINT_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::G2PointXyzz, Bn254G2Xyzz, BN254_G2_XYZZ, bn254_g2_xyzz) \
-WITH_MONT(V, ::zk_dtypes::mnt4_298::G2PointXyzz, Mnt4298G2Xyzz, MNT4_298_G2_XYZZ, mnt4_298_g2_xyzz)
+WITH_MONT(V, ::zk_dtypes::mnt4_298::G2PointXyzz, Mnt4298G2Xyzz, MNT4_298_G2_XYZZ, mnt4_298_g2_xyzz) \
+WITH_MONT(V, ::zk_dtypes::mnt6_298::G2PointXyzz, Mnt6298G2Xyzz, MNT6_298_G2_XYZZ, mnt6_298_g2_xyzz)
 
 #define ZK_DTYPES_PUBLIC_XYZZ_POINT_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)      \

@@ -33,6 +33,8 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
 #include "zk_dtypes/include/elliptic_curve/mnt4_298/g1.h"
 #include "zk_dtypes/include/elliptic_curve/mnt4_298/g2.h"
+#include "zk_dtypes/include/elliptic_curve/mnt6_298/g1.h"
+#include "zk_dtypes/include/elliptic_curve/mnt6_298/g2.h"
 #include "zk_dtypes/include/geometry/point_declarations.h"
 
 namespace zk_dtypes {
@@ -875,6 +877,17 @@ bool RegisterEcPointMultiplyUFunc(PyObject* numpy) {
         mnt4_298::G1JacobianPointMont, mnt4_298::G1PointXyzzMont,
         mnt4_298::G2AffinePointMont, mnt4_298::G2JacobianPointMont,
         mnt4_298::G2PointXyzzMont>(numpy);
+  } else if constexpr (std::is_same_v<ScalarField, mnt6_298::Fr>) {
+    return RegisterEcPointMul_Impl<
+        mnt6_298::Fr, mnt6_298::G1AffinePoint, mnt6_298::G1JacobianPoint,
+        mnt6_298::G1PointXyzz, mnt6_298::G2AffinePoint,
+        mnt6_298::G2JacobianPoint, mnt6_298::G2PointXyzz>(numpy);
+  } else if constexpr (std::is_same_v<ScalarField, mnt6_298::FrMont>) {
+    return RegisterEcPointMul_Impl<
+        mnt6_298::FrMont, mnt6_298::G1AffinePointMont,
+        mnt6_298::G1JacobianPointMont, mnt6_298::G1PointXyzzMont,
+        mnt6_298::G2AffinePointMont, mnt6_298::G2JacobianPointMont,
+        mnt6_298::G2PointXyzzMont>(numpy);
   } else {
     return false;
   }
