@@ -114,6 +114,21 @@ using curve25519::FqMont;
    appropriate type list macros in `all_types.h`.
 1. **Tests**: On-curve check, identity addition, inverse, double=add(self),
    Mont/non-Mont consistency.
+1. **numpy exposure** (only if the curve is used from Python, like bn254): only
+   the **PUBLIC** `all_types.h` lists become numpy dtypes — expose the scalar
+   field + G1/G2 point types there; the base field and G2 extension field stay
+   in the `ALL` lists (C++-only, no dtype, no `TypeDescriptorBase`). Then add
+   `TypeDescriptorBase` specializations in `_src/dtypes.cc` and the
+   imports/dtypes/dispatch in `_ecinfo.py` / `_pfinfo.py` / `__init__.py`, plus
+   a python test. **Gotcha — two hardcoded per-scalar-field `if constexpr`
+   dispatches need an arm for the new `Fr`, or the extension module fails to
+   load (or `scalar * point` silently no-ops):** `RegisterEcPointMultiplyUFunc`
+   in `_src/ec_point_numpy.h` (its `else { return false; }` aborts module init)
+   and `PyField_nb_multiply` in `_src/field_numpy.h`. Both `#include` curve
+   headers directly (not `all_types.h`), so add the new curve's includes there
+   too. A curve with G2 over a non-quadratic extension (e.g. MNT6's Fp³) also
+   needs the G2 extension degree threaded into the `_ecinfo.py` storage-size
+   computation.
 
 ## Downstream Integration
 
