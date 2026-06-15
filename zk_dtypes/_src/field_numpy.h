@@ -33,6 +33,9 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
+#include "zk_dtypes/include/elliptic_curve/mnt4_298/fr.h"
+#include "zk_dtypes/include/elliptic_curve/mnt4_298/g1.h"
+#include "zk_dtypes/include/elliptic_curve/mnt4_298/g2.h"
 #include "zk_dtypes/include/field/extension_field.h"
 #include "zk_dtypes/include/field/prime_field.h"
 
@@ -495,6 +498,17 @@ PyObject* PyField_nb_multiply(PyObject* a, PyObject* b) {
           bn254::FrMont, bn254::G1AffinePointMont, bn254::G1JacobianPointMont,
           bn254::G1PointXyzzMont, bn254::G2AffinePointMont,
           bn254::G2JacobianPointMont, bn254::G2PointXyzzMont>(x, b);
+    } else if constexpr (std::is_same_v<T, mnt4_298::Fr>) {
+      return PyField_nb_ec_multiply<
+          mnt4_298::Fr, mnt4_298::G1AffinePoint, mnt4_298::G1JacobianPoint,
+          mnt4_298::G1PointXyzz, mnt4_298::G2AffinePoint,
+          mnt4_298::G2JacobianPoint, mnt4_298::G2PointXyzz>(x, b);
+    } else if constexpr (std::is_same_v<T, mnt4_298::FrMont>) {
+      return PyField_nb_ec_multiply<
+          mnt4_298::FrMont, mnt4_298::G1AffinePointMont,
+          mnt4_298::G1JacobianPointMont, mnt4_298::G1PointXyzzMont,
+          mnt4_298::G2AffinePointMont, mnt4_298::G2JacobianPointMont,
+          mnt4_298::G2PointXyzzMont>(x, b);
     }
   }
 

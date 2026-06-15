@@ -26,6 +26,9 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/bls12_381/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
+#include "zk_dtypes/include/elliptic_curve/mnt4_298/fqx4.h"
+#include "zk_dtypes/include/elliptic_curve/mnt4_298/g1.h"
+#include "zk_dtypes/include/elliptic_curve/mnt4_298/g2.h"
 #include "zk_dtypes/include/elliptic_curve/secp256k1/g1.h"
 #include "zk_dtypes/include/elliptic_curve/secp256r1/fq.h"
 #include "zk_dtypes/include/elliptic_curve/secp256r1/g1.h"
@@ -49,6 +52,8 @@ constexpr bool VerifyConstexpr() {
 // Montgomery configs.
 static_assert(VerifyConstexpr<bn254::G1SwCurveMontConfig>());
 static_assert(VerifyConstexpr<bn254::G2SwCurveMontConfig>());
+static_assert(VerifyConstexpr<mnt4_298::G1SwCurveMontConfig>());
+static_assert(VerifyConstexpr<mnt4_298::G2SwCurveMontConfig>());
 static_assert(VerifyConstexpr<secp256k1::G1SwCurveMontConfig>());
 static_assert(VerifyConstexpr<secp256r1::G1SwCurveMontConfig>());
 static_assert(VerifyConstexpr<bls12_381::G1SwCurveMontConfig>());
@@ -57,11 +62,11 @@ static_assert(VerifyConstexpr<bls12_381::G1SwCurveMontConfig>());
 // Runtime correctness via TYPED_TEST on MontConfig.
 // =========================================================================
 
-using MontConfigs =
-    ::testing::Types<bn254::G1SwCurveMontConfig, bn254::G2SwCurveMontConfig,
-                     secp256k1::G1SwCurveMontConfig,
-                     secp256r1::G1SwCurveMontConfig,
-                     bls12_381::G1SwCurveMontConfig>;
+using MontConfigs = ::testing::Types<
+    bn254::G1SwCurveMontConfig, bn254::G2SwCurveMontConfig,
+    mnt4_298::G1SwCurveMontConfig, mnt4_298::G2SwCurveMontConfig,
+    secp256k1::G1SwCurveMontConfig, secp256r1::G1SwCurveMontConfig,
+    bls12_381::G1SwCurveMontConfig>;
 
 template <typename T>
 class CurveConfigTest : public ::testing::Test {};
@@ -89,6 +94,14 @@ TYPED_TEST(CurveConfigTest, MontReduceMatchesStandard) {
   EXPECT_EQ(Mont::kB.MontReduce(), Std::kB) << "kB MontReduce mismatch";
   EXPECT_EQ(Mont::kX.MontReduce(), Std::kX) << "kX MontReduce mismatch";
   EXPECT_EQ(Mont::kY.MontReduce(), Std::kY) << "kY MontReduce mismatch";
+}
+
+// Smoke-test the MNT4-298 Fq4 tower (Fq -> Fq2 -> Fq4) compiles and supports
+// basic arithmetic. GT of the MNT4 pairing lives in Fq4.
+TEST(Mnt4Fq4Test, BasicTowerOps) {
+  using mnt4_298::FqX4;
+  EXPECT_EQ(FqX4::One() * FqX4::One(), FqX4::One());
+  EXPECT_EQ(FqX4::Zero() + FqX4::One(), FqX4::One());
 }
 
 }  // namespace

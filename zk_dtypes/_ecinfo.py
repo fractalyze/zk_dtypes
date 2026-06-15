@@ -29,30 +29,38 @@ from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian
 from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian_mont
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import mnt4_298_sf
+from zk_dtypes._zk_dtypes_ext import mnt4_298_sf_mont
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g1_affine
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g1_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_affine
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_affine_mont
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_jacobian
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_xyzz
+from zk_dtypes._zk_dtypes_ext import mnt4_298_g2_xyzz_mont
 
 import numpy as np
 
 _bn254_sf_dtype = np.dtype(bn254_sf)
 _bn254_sf_mont_dtype = np.dtype(bn254_sf_mont)
-_bn254_g1_affine_dtype = np.dtype(bn254_g1_affine)
-_bn254_g1_affine_mont_dtype = np.dtype(bn254_g1_affine_mont)
-_bn254_g1_jacobian_dtype = np.dtype(bn254_g1_jacobian)
-_bn254_g1_jacobian_mont_dtype = np.dtype(bn254_g1_jacobian_mont)
-_bn254_g1_xyzz_dtype = np.dtype(bn254_g1_xyzz)
-_bn254_g1_xyzz_mont_dtype = np.dtype(bn254_g1_xyzz_mont)
-_bn254_g2_affine_dtype = np.dtype(bn254_g2_affine)
-_bn254_g2_affine_mont_dtype = np.dtype(bn254_g2_affine_mont)
-_bn254_g2_jacobian_dtype = np.dtype(bn254_g2_jacobian)
-_bn254_g2_jacobian_mont_dtype = np.dtype(bn254_g2_jacobian_mont)
-_bn254_g2_xyzz_dtype = np.dtype(bn254_g2_xyzz)
-_bn254_g2_xyzz_mont_dtype = np.dtype(bn254_g2_xyzz_mont)
+_mnt4_298_sf_dtype = np.dtype(mnt4_298_sf)
+_mnt4_298_sf_mont_dtype = np.dtype(mnt4_298_sf_mont)
 
-_BN254_A = 0
-_BN254_B = 3
+# ---------------------------------------------------------------------------
+# bn254 curve parameters (y² = x³ + ax + b). G2 lives over Fp² = Fq[u]/(u²-β).
+# ---------------------------------------------------------------------------
+_BN254_G1_A = 0
+_BN254_G1_B = 3
 _BN254_G1_GX = 1
 _BN254_G1_GY = 2
 
 # G1 Montgomery form: each value * R mod Fq
+_BN254_G1_A_MONT = 0
 _BN254_G1_B_MONT = 19052624634359457937016868847204597229365286637454337178037183604060995791063
 _BN254_G1_GX_MONT = (
     6350874878119819312338956282401532409788428879151445726012394534686998597021
@@ -60,6 +68,7 @@ _BN254_G1_GX_MONT = (
 _BN254_G1_GY_MONT = 12701749756239638624677912564803064819576857758302891452024789069373997194042
 
 # G2 standard form: Fp2 elements [c₀, c₁] where val = c₀ + c₁ * u
+_BN254_G2_A = [0, 0]
 _BN254_G2_B = [
     19485874751759354771024239261021720505790618469301721065564631296452457478373,
     266929791119991161246907387137283842545076965332900288569378510910307636690,
@@ -75,6 +84,7 @@ _BN254_G2_GY = [
 _BN254_G2_NON_RESIDUE = 21888242871839275222246405745257275088696311157297823662689037894645226208582
 
 # G2 Montgomery form: each Fp² component * R mod Fq
+_BN254_G2_A_MONT = [0, 0]
 _BN254_G2_B_MONT = [
     16772280239760917788496391897731603718812008455956943122563801666366297604776,
     568440292453150825972223760836185707764922522371208948902804025364325400423,
@@ -88,6 +98,184 @@ _BN254_G2_GY_MONT = [
     6170940445994484564222204938066213705353407449799250191249554538140978927342,
 ]
 _BN254_G2_NON_RESIDUE_MONT = 15537367993719455909907449462855742678907882278146377936676643359958227611562
+
+# ---------------------------------------------------------------------------
+# MNT4-298 curve parameters (ark-mnt4-298). G1: y² = x³ + 2x + b over Fq.
+# G2 over Fp² = Fq[u]/(u²-17); twist a = (34, 0), b = (0, b·17). 320-bit field.
+# Montgomery form = value * R mod p, R = 2³²⁰.
+# ---------------------------------------------------------------------------
+_MNT4_298_G1_A = 2
+_MNT4_298_G1_B = 423894536526684178289416011533888240029318103673896002803341544124054745019340795360841685
+_MNT4_298_G1_GX = 60760244141852568949126569781626075788424196370144486719385562369396875346601926534016838
+_MNT4_298_G1_GY = 363732850702582978263902770815145784459747722357071843971107674179038674942891694705904306
+
+_MNT4_298_G1_A_MONT = 446729296652562829877603410718446059103655029145798501270518660890454746243743614887200952
+_MNT4_298_G1_B_MONT = 179877917358261777753314219897940120444991346955733434661847233718565124864239546371263281
+_MNT4_298_G1_GX_MONT = 354680644509934968175469258381357629814402639583090735032750513901318014671205221931808948
+_MNT4_298_G1_GY_MONT = 445280841095252623635668290173967960852066584341969329684246826090979024898521426833907837
+
+_MNT4_298_G2_A = [34, 0]
+_MNT4_298_G2_B = [
+    0,
+    67372828414711144619833451280373307321534573815811166723479321465776723059456513877937430,
+]
+_MNT4_298_G2_GX = [
+    438374926219350099854919100077809681842783509163790991847867546339851681564223481322252708,
+    37620953615500480110935514360923278605464476459712393277679280819942849043649216370485641,
+]
+_MNT4_298_G2_GY = [
+    37437409008528968268352521034936931842973546441370663118543015118291998305624025037512482,
+    424621479598893882672393190337420680597584695892317197646113820787463109735345923009077489,
+]
+_MNT4_298_G2_NON_RESIDUE = 17
+
+_MNT4_298_G2_A_MONT = [
+    455563750554648221619019237417856231585262306838153640665490306494576743874304445826044969,
+    0,
+]
+_MNT4_298_G2_B_MONT = [
+    0,
+    202390878074882267286246240346691338294103622791300036878072201758345545784337485408927291,
+]
+_MNT4_298_G2_GX_MONT = [
+    187432131579426194088031088405014791977840906396261280983391303286363730912415292160457714,
+    266760376307210572592346313524809001086973414552101896394659348925629059473236215626936176,
+]
+_MNT4_298_G2_GY_MONT = [
+    306057346885993003434071827587844987524397598107209712539417326681795274602240783738183828,
+    250975396713672639336952031314618276534945250112062301003586398268356393471632083123571796,
+]
+_MNT4_298_G2_NON_RESIDUE_MONT = 465743018361954773686184243535452341565193593040424183030522717535393503346130123154901525
+
+# Per-(curve, group, is_montgomery) curve coefficient + generator tables.
+_CURVE_PARAMS = {
+    ('bn254', 'g1', False): dict(
+        a=_BN254_G1_A,
+        b=_BN254_G1_B,
+        gx=_BN254_G1_GX,
+        gy=_BN254_G1_GY,
+        non_residue=None,
+    ),
+    ('bn254', 'g1', True): dict(
+        a=_BN254_G1_A_MONT,
+        b=_BN254_G1_B_MONT,
+        gx=_BN254_G1_GX_MONT,
+        gy=_BN254_G1_GY_MONT,
+        non_residue=None,
+    ),
+    ('bn254', 'g2', False): dict(
+        a=_BN254_G2_A,
+        b=_BN254_G2_B,
+        gx=_BN254_G2_GX,
+        gy=_BN254_G2_GY,
+        non_residue=_BN254_G2_NON_RESIDUE,
+    ),
+    ('bn254', 'g2', True): dict(
+        a=_BN254_G2_A_MONT,
+        b=_BN254_G2_B_MONT,
+        gx=_BN254_G2_GX_MONT,
+        gy=_BN254_G2_GY_MONT,
+        non_residue=_BN254_G2_NON_RESIDUE_MONT,
+    ),
+    ('mnt4_298', 'g1', False): dict(
+        a=_MNT4_298_G1_A,
+        b=_MNT4_298_G1_B,
+        gx=_MNT4_298_G1_GX,
+        gy=_MNT4_298_G1_GY,
+        non_residue=None,
+    ),
+    ('mnt4_298', 'g1', True): dict(
+        a=_MNT4_298_G1_A_MONT,
+        b=_MNT4_298_G1_B_MONT,
+        gx=_MNT4_298_G1_GX_MONT,
+        gy=_MNT4_298_G1_GY_MONT,
+        non_residue=None,
+    ),
+    ('mnt4_298', 'g2', False): dict(
+        a=_MNT4_298_G2_A,
+        b=_MNT4_298_G2_B,
+        gx=_MNT4_298_G2_GX,
+        gy=_MNT4_298_G2_GY,
+        non_residue=_MNT4_298_G2_NON_RESIDUE,
+    ),
+    ('mnt4_298', 'g2', True): dict(
+        a=_MNT4_298_G2_A_MONT,
+        b=_MNT4_298_G2_B_MONT,
+        gx=_MNT4_298_G2_GX_MONT,
+        gy=_MNT4_298_G2_GY_MONT,
+        non_residue=_MNT4_298_G2_NON_RESIDUE_MONT,
+    ),
+}
+
+# (group, repr, num_coords, ext_degree): storage = num_coords * ext * field_bits.
+_EC_LAYOUT = [
+    ('g1', 'affine', 2, 1),
+    ('g1', 'jacobian', 3, 1),
+    ('g1', 'xyzz', 4, 1),
+    ('g2', 'affine', 2, 2),
+    ('g2', 'jacobian', 3, 2),
+    ('g2', 'xyzz', 4, 2),
+]
+
+
+def _build_meta(curve, field_bits, scalar_std, scalar_mont, dtype_table):
+  """Maps each registered point dtype -> (curve, group, repr, is_mont,
+  storage_bits, base_field_dtype)."""
+  meta = {}
+  for group, repr_, num_coords, ext in _EC_LAYOUT:
+    bits = num_coords * ext * field_bits
+    for is_mont in (False, True):
+      dt = np.dtype(dtype_table[(group, repr_, is_mont)])
+      base = scalar_mont if is_mont else scalar_std
+      meta[dt] = (curve, group, repr_, is_mont, bits, base)
+  return meta
+
+
+_EC_DTYPE_META = {}
+_EC_DTYPE_META.update(
+    _build_meta(
+        'bn254',
+        256,
+        _bn254_sf_dtype,
+        _bn254_sf_mont_dtype,
+        {
+            ('g1', 'affine', False): bn254_g1_affine,
+            ('g1', 'affine', True): bn254_g1_affine_mont,
+            ('g1', 'jacobian', False): bn254_g1_jacobian,
+            ('g1', 'jacobian', True): bn254_g1_jacobian_mont,
+            ('g1', 'xyzz', False): bn254_g1_xyzz,
+            ('g1', 'xyzz', True): bn254_g1_xyzz_mont,
+            ('g2', 'affine', False): bn254_g2_affine,
+            ('g2', 'affine', True): bn254_g2_affine_mont,
+            ('g2', 'jacobian', False): bn254_g2_jacobian,
+            ('g2', 'jacobian', True): bn254_g2_jacobian_mont,
+            ('g2', 'xyzz', False): bn254_g2_xyzz,
+            ('g2', 'xyzz', True): bn254_g2_xyzz_mont,
+        },
+    )
+)
+_EC_DTYPE_META.update(
+    _build_meta(
+        'mnt4_298',
+        320,
+        _mnt4_298_sf_dtype,
+        _mnt4_298_sf_mont_dtype,
+        {
+            ('g1', 'affine', False): mnt4_298_g1_affine,
+            ('g1', 'affine', True): mnt4_298_g1_affine_mont,
+            ('g1', 'jacobian', False): mnt4_298_g1_jacobian,
+            ('g1', 'jacobian', True): mnt4_298_g1_jacobian_mont,
+            ('g1', 'xyzz', False): mnt4_298_g1_xyzz,
+            ('g1', 'xyzz', True): mnt4_298_g1_xyzz_mont,
+            ('g2', 'affine', False): mnt4_298_g2_affine,
+            ('g2', 'affine', True): mnt4_298_g2_affine_mont,
+            ('g2', 'jacobian', False): mnt4_298_g2_jacobian,
+            ('g2', 'jacobian', True): mnt4_298_g2_jacobian_mont,
+            ('g2', 'xyzz', False): mnt4_298_g2_xyzz,
+            ('g2', 'xyzz', True): mnt4_298_g2_xyzz_mont,
+        },
+    )
+)
 
 
 class ecinfo:  # pylint: disable=invalid-name,missing-class-docstring
@@ -105,111 +293,26 @@ class ecinfo:  # pylint: disable=invalid-name,missing-class-docstring
 
   def __init__(self, ec_type):
     ec_type = np.dtype(ec_type)
-    self.dtype = ec_type
-    self.a = _BN254_A
-
-    # G1 types (base field is bn254_sf)
-    if ec_type == _bn254_g1_affine_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 512  # 2 × 256 bits (x, y)
-      self.point_repr = 'affine'
-      self.curve_group = 'g1'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g1_affine_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 512
-      self.point_repr = 'affine'
-      self.curve_group = 'g1'
-      self.is_montgomery = True
-    elif ec_type == _bn254_g1_jacobian_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 768  # 3 × 256 bits (x, y, z)
-      self.point_repr = 'jacobian'
-      self.curve_group = 'g1'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g1_jacobian_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 768
-      self.point_repr = 'jacobian'
-      self.curve_group = 'g1'
-      self.is_montgomery = True
-    elif ec_type == _bn254_g1_xyzz_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 1024  # 4 × 256 bits (x, y, zz, zzz)
-      self.point_repr = 'xyzz'
-      self.curve_group = 'g1'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g1_xyzz_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 1024
-      self.point_repr = 'xyzz'
-      self.curve_group = 'g1'
-      self.is_montgomery = True
-    # G2 types (base field is Fp2 extension field, but we use bn254_sf for now)
-    # NOTE: G2 points use extension field Fp2 as their base field.
-    # For MLIR lowering, this will require creating an ExtensionFieldType.
-    elif ec_type == _bn254_g2_affine_dtype:
-      self.base_field_dtype = _bn254_sf_dtype  # Will be Fp2 in MLIR
-      self.storage_bits = 1024  # 2 × 2 × 256 bits (Fp2 has 2 elements)
-      self.point_repr = 'affine'
-      self.curve_group = 'g2'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g2_affine_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 1024
-      self.point_repr = 'affine'
-      self.curve_group = 'g2'
-      self.is_montgomery = True
-    elif ec_type == _bn254_g2_jacobian_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 1536  # 3 × 2 × 256 bits
-      self.point_repr = 'jacobian'
-      self.curve_group = 'g2'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g2_jacobian_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 1536
-      self.point_repr = 'jacobian'
-      self.curve_group = 'g2'
-      self.is_montgomery = True
-    elif ec_type == _bn254_g2_xyzz_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 2048  # 4 × 2 × 256 bits
-      self.point_repr = 'xyzz'
-      self.curve_group = 'g2'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g2_xyzz_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 2048
-      self.point_repr = 'xyzz'
-      self.curve_group = 'g2'
-      self.is_montgomery = True
-    else:
+    meta = _EC_DTYPE_META.get(ec_type)
+    if meta is None:
       raise ValueError(f'Unknown elliptic curve point type: {ec_type}')
+    curve, group, point_repr, is_montgomery, storage_bits, base_field_dtype = (
+        meta
+    )
 
-    # Set curve parameters based on group and Montgomery form
-    if self.curve_group == 'g1':
-      if self.is_montgomery:
-        self.b = _BN254_G1_B_MONT
-        self.gx = _BN254_G1_GX_MONT
-        self.gy = _BN254_G1_GY_MONT
-      else:
-        self.b = _BN254_B
-        self.gx = _BN254_G1_GX
-        self.gy = _BN254_G1_GY
-      self.non_residue = None
-    else:
-      self.a = [0, 0]
-      if self.is_montgomery:
-        self.b = _BN254_G2_B_MONT
-        self.gx = _BN254_G2_GX_MONT
-        self.gy = _BN254_G2_GY_MONT
-        self.non_residue = _BN254_G2_NON_RESIDUE_MONT
-      else:
-        self.b = _BN254_G2_B
-        self.gx = _BN254_G2_GX
-        self.gy = _BN254_G2_GY
-        self.non_residue = _BN254_G2_NON_RESIDUE
+    self.dtype = ec_type
+    self.curve_group = group
+    self.point_repr = point_repr
+    self.is_montgomery = is_montgomery
+    self.storage_bits = storage_bits
+    self.base_field_dtype = base_field_dtype
+
+    params = _CURVE_PARAMS[(curve, group, is_montgomery)]
+    self.a = params['a']
+    self.b = params['b']
+    self.gx = params['gx']
+    self.gy = params['gy']
+    self.non_residue = params['non_residue']
 
   def __repr__(self):
     return f'ecinfo(curve_group={self.curve_group}, point_repr={self.point_repr}, dtype={self.dtype})'

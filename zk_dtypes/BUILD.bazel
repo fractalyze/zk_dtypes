@@ -46,6 +46,11 @@ cc_library(
         ":mersenne31",
         ":mersenne31x2",
         ":mersenne31x2x2",
+        ":mnt4_298_fq",
+        ":mnt4_298_fqx2",
+        ":mnt4_298_fr",
+        ":mnt4_298_g1",
+        ":mnt4_298_g2",
         ":secp256k1_g1",
         ":secp256r1_g1",
     ],
@@ -712,6 +717,62 @@ cc_library(
 )
 
 cc_library(
+    name = "mnt4_298_fq",
+    hdrs = ["include/elliptic_curve/mnt4_298/fq.h"],
+    deps = [":big_prime_field"],
+)
+
+cc_library(
+    name = "mnt4_298_fr",
+    hdrs = ["include/elliptic_curve/mnt4_298/fr.h"],
+    deps = [":big_prime_field"],
+)
+
+cc_library(
+    name = "mnt4_298_fqx2",
+    hdrs = ["include/elliptic_curve/mnt4_298/fqx2.h"],
+    deps = [
+        ":extension_field",
+        ":mnt4_298_fq",
+    ],
+)
+
+cc_library(
+    name = "mnt4_298_fqx4",
+    hdrs = ["include/elliptic_curve/mnt4_298/fqx4.h"],
+    deps = [
+        ":extension_field",
+        ":mnt4_298_fqx2",
+    ],
+)
+
+cc_library(
+    name = "mnt4_298_g1",
+    hdrs = ["include/elliptic_curve/mnt4_298/g1.h"],
+    deps = [
+        ":mnt4_298_fq",
+        ":mnt4_298_fr",
+        ":sw_affine_point",
+        ":sw_curve",
+        ":sw_jacobian_point",
+        ":sw_point_xyzz",
+    ],
+)
+
+cc_library(
+    name = "mnt4_298_g2",
+    hdrs = ["include/elliptic_curve/mnt4_298/g2.h"],
+    deps = [
+        ":mnt4_298_fqx2",
+        ":mnt4_298_fr",
+        ":sw_affine_point",
+        ":sw_curve",
+        ":sw_jacobian_point",
+        ":sw_point_xyzz",
+    ],
+)
+
+cc_library(
     name = "secp256k1_fq",
     hdrs = ["include/elliptic_curve/secp256k1/fq.h"],
     deps = [":big_prime_field"],
@@ -1083,6 +1144,9 @@ cc_test(
         ":bls12_381_g1",
         ":bn254_g1",
         ":bn254_g2",
+        ":mnt4_298_fqx4",
+        ":mnt4_298_g1",
+        ":mnt4_298_g2",
         ":secp256k1_g1",
         ":secp256r1_fq",
         ":secp256r1_g1",
@@ -1196,6 +1260,17 @@ py_test(
     main = "tests/ec_point_test.py",
     deps = [
         ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "mnt4_298_test",
+    srcs = ["tests/mnt4_298_test.py"],
+    main = "tests/mnt4_298_test.py",
+    deps = [
         ":zk_dtypes_py",
         "@pypi//absl_py",
         "@pypi//numpy",
