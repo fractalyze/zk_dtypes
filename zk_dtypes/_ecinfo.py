@@ -90,6 +90,112 @@ _BN254_G2_GY_MONT = [
 _BN254_G2_NON_RESIDUE_MONT = 15537367993719455909907449462855742678907882278146377936676643359958227611562
 
 
+# Curve parameters keyed by (curve, group, is_montgomery). Each entry holds the
+# curve coefficients and generator for that group/representation. Adding a new
+# curve is a matter of adding its g1/g2 std+mont entries here.
+_CURVE_PARAMS = {
+    ('bn254', 'g1', False): dict(
+        a=_BN254_A,
+        b=_BN254_B,
+        gx=_BN254_G1_GX,
+        gy=_BN254_G1_GY,
+        non_residue=None,
+    ),
+    ('bn254', 'g1', True): dict(
+        a=_BN254_A,
+        b=_BN254_G1_B_MONT,
+        gx=_BN254_G1_GX_MONT,
+        gy=_BN254_G1_GY_MONT,
+        non_residue=None,
+    ),
+    ('bn254', 'g2', False): dict(
+        a=[0, 0],
+        b=_BN254_G2_B,
+        gx=_BN254_G2_GX,
+        gy=_BN254_G2_GY,
+        non_residue=_BN254_G2_NON_RESIDUE,
+    ),
+    ('bn254', 'g2', True): dict(
+        a=[0, 0],
+        b=_BN254_G2_B_MONT,
+        gx=_BN254_G2_GX_MONT,
+        gy=_BN254_G2_GY_MONT,
+        non_residue=_BN254_G2_NON_RESIDUE_MONT,
+    ),
+}
+
+# Point layout shared by every curve: (group, repr, num_coords, ext_degree).
+# storage_bits = num_coords * ext_degree * field_bits. G1 lives in the base
+# field (ext_degree 1); G2 lives in the Fp² extension field (ext_degree 2).
+_EC_LAYOUT = [
+    ('g1', 'affine', 2, 1),
+    ('g1', 'jacobian', 3, 1),
+    ('g1', 'xyzz', 4, 1),
+    ('g2', 'affine', 2, 2),
+    ('g2', 'jacobian', 3, 2),
+    ('g2', 'xyzz', 4, 2),
+]
+
+
+def _build_meta(
+    curve, field_bits, scalar_std_dtype, scalar_mont_dtype, dtype_table
+):
+  """Builds the dtype -> point metadata map for one curve.
+
+  Args:
+    curve: Curve name, e.g. 'bn254'.
+    field_bits: Base field width in bits (e.g. 256 for bn254).
+    scalar_std_dtype: np.dtype of the standard-form scalar/base field.
+    scalar_mont_dtype: np.dtype of the Montgomery-form scalar/base field.
+    dtype_table: Map of (group, repr, is_montgomery) -> point scalar type.
+
+  Returns:
+    Map of np.dtype(point) -> (curve, group, repr, is_montgomery,
+    storage_bits, base_field_dtype).
+  """
+  meta = {}
+  for group, repr_, num_coords, ext_degree in _EC_LAYOUT:
+    storage_bits = num_coords * ext_degree * field_bits
+    for is_mont in (False, True):
+      # A curve may omit a group/repr (e.g. G1-only curves have no G2).
+      point_dtype = dtype_table.get((group, repr_, is_mont))
+      if point_dtype is None:
+        continue
+      base_field_dtype = scalar_mont_dtype if is_mont else scalar_std_dtype
+      meta[np.dtype(point_dtype)] = (
+          curve,
+          group,
+          repr_,
+          is_mont,
+          storage_bits,
+          base_field_dtype,
+      )
+  return meta
+
+
+# Curve-list-driven dtype metadata. Each curve contributes one _build_meta call.
+_EC_DTYPE_META = _build_meta(
+    'bn254',
+    256,
+    _bn254_sf_dtype,
+    _bn254_sf_mont_dtype,
+    {
+        ('g1', 'affine', False): bn254_g1_affine,
+        ('g1', 'affine', True): bn254_g1_affine_mont,
+        ('g1', 'jacobian', False): bn254_g1_jacobian,
+        ('g1', 'jacobian', True): bn254_g1_jacobian_mont,
+        ('g1', 'xyzz', False): bn254_g1_xyzz,
+        ('g1', 'xyzz', True): bn254_g1_xyzz_mont,
+        ('g2', 'affine', False): bn254_g2_affine,
+        ('g2', 'affine', True): bn254_g2_affine_mont,
+        ('g2', 'jacobian', False): bn254_g2_jacobian,
+        ('g2', 'jacobian', True): bn254_g2_jacobian_mont,
+        ('g2', 'xyzz', False): bn254_g2_xyzz,
+        ('g2', 'xyzz', True): bn254_g2_xyzz_mont,
+    },
+)
+
+
 class ecinfo:  # pylint: disable=invalid-name,missing-class-docstring
   base_field_dtype: np.dtype
   storage_bits: int
@@ -106,110 +212,23 @@ class ecinfo:  # pylint: disable=invalid-name,missing-class-docstring
   def __init__(self, ec_type):
     ec_type = np.dtype(ec_type)
     self.dtype = ec_type
-    self.a = _BN254_A
 
-    # G1 types (base field is bn254_sf)
-    if ec_type == _bn254_g1_affine_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 512  # 2 × 256 bits (x, y)
-      self.point_repr = 'affine'
-      self.curve_group = 'g1'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g1_affine_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 512
-      self.point_repr = 'affine'
-      self.curve_group = 'g1'
-      self.is_montgomery = True
-    elif ec_type == _bn254_g1_jacobian_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 768  # 3 × 256 bits (x, y, z)
-      self.point_repr = 'jacobian'
-      self.curve_group = 'g1'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g1_jacobian_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 768
-      self.point_repr = 'jacobian'
-      self.curve_group = 'g1'
-      self.is_montgomery = True
-    elif ec_type == _bn254_g1_xyzz_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 1024  # 4 × 256 bits (x, y, zz, zzz)
-      self.point_repr = 'xyzz'
-      self.curve_group = 'g1'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g1_xyzz_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 1024
-      self.point_repr = 'xyzz'
-      self.curve_group = 'g1'
-      self.is_montgomery = True
-    # G2 types (base field is Fp2 extension field, but we use bn254_sf for now)
-    # NOTE: G2 points use extension field Fp2 as their base field.
-    # For MLIR lowering, this will require creating an ExtensionFieldType.
-    elif ec_type == _bn254_g2_affine_dtype:
-      self.base_field_dtype = _bn254_sf_dtype  # Will be Fp2 in MLIR
-      self.storage_bits = 1024  # 2 × 2 × 256 bits (Fp2 has 2 elements)
-      self.point_repr = 'affine'
-      self.curve_group = 'g2'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g2_affine_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 1024
-      self.point_repr = 'affine'
-      self.curve_group = 'g2'
-      self.is_montgomery = True
-    elif ec_type == _bn254_g2_jacobian_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 1536  # 3 × 2 × 256 bits
-      self.point_repr = 'jacobian'
-      self.curve_group = 'g2'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g2_jacobian_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 1536
-      self.point_repr = 'jacobian'
-      self.curve_group = 'g2'
-      self.is_montgomery = True
-    elif ec_type == _bn254_g2_xyzz_dtype:
-      self.base_field_dtype = _bn254_sf_dtype
-      self.storage_bits = 2048  # 4 × 2 × 256 bits
-      self.point_repr = 'xyzz'
-      self.curve_group = 'g2'
-      self.is_montgomery = False
-    elif ec_type == _bn254_g2_xyzz_mont_dtype:
-      self.base_field_dtype = _bn254_sf_mont_dtype
-      self.storage_bits = 2048
-      self.point_repr = 'xyzz'
-      self.curve_group = 'g2'
-      self.is_montgomery = True
-    else:
+    meta = _EC_DTYPE_META.get(ec_type)
+    if meta is None:
       raise ValueError(f'Unknown elliptic curve point type: {ec_type}')
+    curve, group, repr_, is_mont, storage_bits, base_field_dtype = meta
+    self.curve_group = group
+    self.point_repr = repr_
+    self.is_montgomery = is_mont
+    self.storage_bits = storage_bits
+    self.base_field_dtype = base_field_dtype
 
-    # Set curve parameters based on group and Montgomery form
-    if self.curve_group == 'g1':
-      if self.is_montgomery:
-        self.b = _BN254_G1_B_MONT
-        self.gx = _BN254_G1_GX_MONT
-        self.gy = _BN254_G1_GY_MONT
-      else:
-        self.b = _BN254_B
-        self.gx = _BN254_G1_GX
-        self.gy = _BN254_G1_GY
-      self.non_residue = None
-    else:
-      self.a = [0, 0]
-      if self.is_montgomery:
-        self.b = _BN254_G2_B_MONT
-        self.gx = _BN254_G2_GX_MONT
-        self.gy = _BN254_G2_GY_MONT
-        self.non_residue = _BN254_G2_NON_RESIDUE_MONT
-      else:
-        self.b = _BN254_G2_B
-        self.gx = _BN254_G2_GX
-        self.gy = _BN254_G2_GY
-        self.non_residue = _BN254_G2_NON_RESIDUE
+    params = _CURVE_PARAMS[(curve, group, is_mont)]
+    self.a = params['a']
+    self.b = params['b']
+    self.gx = params['gx']
+    self.gy = params['gy']
+    self.non_residue = params['non_residue']
 
   def __repr__(self):
     return f'ecinfo(curve_group={self.curve_group}, point_repr={self.point_repr}, dtype={self.dtype})'

@@ -26,38 +26,56 @@ import zk_dtypes
 from multi_thread_utils import multi_threaded
 import numpy as np
 
-bn254_sf = zk_dtypes.bn254_sf
-bn254_sf_mont = zk_dtypes.bn254_sf_mont
-bn254_g1_affine = zk_dtypes.bn254_g1_affine
-bn254_g1_affine_mont = zk_dtypes.bn254_g1_affine_mont
-bn254_g1_jacobian = zk_dtypes.bn254_g1_jacobian
-bn254_g1_jacobian_mont = zk_dtypes.bn254_g1_jacobian_mont
-bn254_g1_xyzz = zk_dtypes.bn254_g1_xyzz
-bn254_g1_xyzz_mont = zk_dtypes.bn254_g1_xyzz_mont
-bn254_g2_affine = zk_dtypes.bn254_g2_affine
-bn254_g2_affine_mont = zk_dtypes.bn254_g2_affine_mont
-bn254_g2_jacobian = zk_dtypes.bn254_g2_jacobian
-bn254_g2_jacobian_mont = zk_dtypes.bn254_g2_jacobian_mont
-bn254_g2_xyzz = zk_dtypes.bn254_g2_xyzz
-bn254_g2_xyzz_mont = zk_dtypes.bn254_g2_xyzz_mont
+# Curve-list-driven fixtures. Adding a curve here (and to _GROUPS, if a curve
+# lacks g2) regenerates every per-type fixture below.
+_CURVES = ["bn254"]
+_GROUPS = ["g1", "g2"]
 
-EC_STD_POINT_TYPES = [
-    bn254_g1_affine,
-    bn254_g1_jacobian,
-    bn254_g1_xyzz,
-    bn254_g2_affine,
-    bn254_g2_jacobian,
-    bn254_g2_xyzz,
-]
+EC_STD_POINT_TYPES = []
+EC_MONT_POINT_TYPES = []
+AFFINE_TYPES = []
+JACOBIAN_TYPES = []
+XYZZ_TYPES = []
+VALUES = {}
+ADD_OP_RESULT_TYPES = {}
+SCALAR_FIELD_TYPES = {}
+_MIXED_ADD_PARAMS = []
+_ALLOWED_CASTS = []
 
-EC_MONT_POINT_TYPES = [
-    bn254_g1_affine_mont,
-    bn254_g1_jacobian_mont,
-    bn254_g1_xyzz_mont,
-    bn254_g2_affine_mont,
-    bn254_g2_jacobian_mont,
-    bn254_g2_xyzz_mont,
-]
+for _curve in _CURVES:
+  for _suffix in ("", "_mont"):
+    _std_list = EC_STD_POINT_TYPES if _suffix == "" else EC_MONT_POINT_TYPES
+    _sf = getattr(zk_dtypes, f"{_curve}_sf{_suffix}")
+    for _group in _GROUPS:
+      # Skip a group the curve does not define (e.g. G1-only curves have no G2).
+      if not hasattr(zk_dtypes, f"{_curve}_{_group}_affine{_suffix}"):
+        continue
+      _aff = getattr(zk_dtypes, f"{_curve}_{_group}_affine{_suffix}")
+      _jac = getattr(zk_dtypes, f"{_curve}_{_group}_jacobian{_suffix}")
+      _xyzz = getattr(zk_dtypes, f"{_curve}_{_group}_xyzz{_suffix}")
+
+      _std_list += [_aff, _jac, _xyzz]
+      AFFINE_TYPES.append(_aff)
+      JACOBIAN_TYPES.append(_jac)
+      XYZZ_TYPES.append(_xyzz)
+
+      for _t in (_aff, _jac, _xyzz):
+        VALUES[_t] = [_t(3), _t(4)]
+        SCALAR_FIELD_TYPES[_t] = _sf
+      ADD_OP_RESULT_TYPES[_aff] = _jac
+      ADD_OP_RESULT_TYPES[_jac] = _jac
+      ADD_OP_RESULT_TYPES[_xyzz] = _xyzz
+
+      _MIXED_ADD_PARAMS += [(_aff, _jac), (_aff, _xyzz)]
+      _ALLOWED_CASTS += [
+          (_aff, _aff),
+          (_aff, _jac),
+          (_aff, _xyzz),
+          (_jac, _aff),
+          (_jac, _jac),
+          (_xyzz, _aff),
+          (_xyzz, _xyzz),
+      ]
 
 EC_POINT_TYPES = EC_STD_POINT_TYPES + EC_MONT_POINT_TYPES
 
@@ -71,57 +89,6 @@ INT_CAST_DTYPES = [
     np.uint32,
     np.uint64,
 ]
-
-VALUES = {
-    bn254_g1_affine: [bn254_g1_affine(3), bn254_g1_affine(4)],
-    bn254_g1_affine_mont: [bn254_g1_affine_mont(3), bn254_g1_affine_mont(4)],
-    bn254_g1_jacobian: [bn254_g1_jacobian(3), bn254_g1_jacobian(4)],
-    bn254_g1_jacobian_mont: [
-        bn254_g1_jacobian_mont(3),
-        bn254_g1_jacobian_mont(4),
-    ],
-    bn254_g1_xyzz: [bn254_g1_xyzz(3), bn254_g1_xyzz(4)],
-    bn254_g1_xyzz_mont: [bn254_g1_xyzz_mont(3), bn254_g1_xyzz_mont(4)],
-    bn254_g2_affine: [bn254_g2_affine(3), bn254_g2_affine(4)],
-    bn254_g2_affine_mont: [bn254_g2_affine_mont(3), bn254_g2_affine_mont(4)],
-    bn254_g2_jacobian: [bn254_g2_jacobian(3), bn254_g2_jacobian(4)],
-    bn254_g2_jacobian_mont: [
-        bn254_g2_jacobian_mont(3),
-        bn254_g2_jacobian_mont(4),
-    ],
-    bn254_g2_xyzz: [bn254_g2_xyzz(3), bn254_g2_xyzz(4)],
-    bn254_g2_xyzz_mont: [bn254_g2_xyzz_mont(3), bn254_g2_xyzz_mont(4)],
-}
-
-ADD_OP_RESULT_TYPES = {
-    bn254_g1_affine: bn254_g1_jacobian,
-    bn254_g1_affine_mont: bn254_g1_jacobian_mont,
-    bn254_g1_jacobian: bn254_g1_jacobian,
-    bn254_g1_jacobian_mont: bn254_g1_jacobian_mont,
-    bn254_g1_xyzz: bn254_g1_xyzz,
-    bn254_g1_xyzz_mont: bn254_g1_xyzz_mont,
-    bn254_g2_affine: bn254_g2_jacobian,
-    bn254_g2_affine_mont: bn254_g2_jacobian_mont,
-    bn254_g2_jacobian: bn254_g2_jacobian,
-    bn254_g2_jacobian_mont: bn254_g2_jacobian_mont,
-    bn254_g2_xyzz: bn254_g2_xyzz,
-    bn254_g2_xyzz_mont: bn254_g2_xyzz_mont,
-}
-
-SCALAR_FIELD_TYPES = {
-    bn254_g1_affine: bn254_sf,
-    bn254_g1_affine_mont: bn254_sf_mont,
-    bn254_g1_jacobian: bn254_sf,
-    bn254_g1_jacobian_mont: bn254_sf_mont,
-    bn254_g1_xyzz: bn254_sf,
-    bn254_g1_xyzz_mont: bn254_sf_mont,
-    bn254_g2_affine: bn254_sf,
-    bn254_g2_affine_mont: bn254_sf_mont,
-    bn254_g2_jacobian: bn254_sf,
-    bn254_g2_jacobian_mont: bn254_sf_mont,
-    bn254_g2_xyzz: bn254_sf,
-    bn254_g2_xyzz_mont: bn254_sf_mont,
-}
 
 
 # Tests for the Python scalar type
@@ -148,18 +115,7 @@ class ScalarTest(parameterized.TestCase):
     self.assertIsInstance(out, ADD_OP_RESULT_TYPES[scalar_type])
     self.assertEqual(out, scalar_type(7))
 
-  @parameterized.product(
-      param=[
-          (bn254_g1_affine, bn254_g1_jacobian),
-          (bn254_g1_affine, bn254_g1_xyzz),
-          (bn254_g1_affine_mont, bn254_g1_jacobian_mont),
-          (bn254_g1_affine_mont, bn254_g1_xyzz_mont),
-          (bn254_g2_affine, bn254_g2_jacobian),
-          (bn254_g2_affine, bn254_g2_xyzz),
-          (bn254_g2_affine_mont, bn254_g2_jacobian_mont),
-          (bn254_g2_affine_mont, bn254_g2_xyzz_mont),
-      ]
-  )
+  @parameterized.product(param=_MIXED_ADD_PARAMS)
   def testAffineMixedAddop(self, param):
     a, b = param
     out = VALUES[a][0] + VALUES[b][1]
@@ -180,36 +136,7 @@ class ScalarTest(parameterized.TestCase):
 
   @parameterized.product(a=EC_POINT_TYPES, b=EC_POINT_TYPES)
   def testCanCast(self, a, b):
-    allowed_casts = [
-        (bn254_g1_affine, bn254_g1_affine),
-        (bn254_g1_affine, bn254_g1_jacobian),
-        (bn254_g1_affine, bn254_g1_xyzz),
-        (bn254_g1_affine_mont, bn254_g1_affine_mont),
-        (bn254_g1_affine_mont, bn254_g1_jacobian_mont),
-        (bn254_g1_affine_mont, bn254_g1_xyzz_mont),
-        (bn254_g1_jacobian, bn254_g1_affine),
-        (bn254_g1_jacobian, bn254_g1_jacobian),
-        (bn254_g1_jacobian_mont, bn254_g1_affine_mont),
-        (bn254_g1_jacobian_mont, bn254_g1_jacobian_mont),
-        (bn254_g1_xyzz, bn254_g1_affine),
-        (bn254_g1_xyzz, bn254_g1_xyzz),
-        (bn254_g1_xyzz_mont, bn254_g1_affine_mont),
-        (bn254_g1_xyzz_mont, bn254_g1_xyzz_mont),
-        (bn254_g2_affine, bn254_g2_affine),
-        (bn254_g2_affine, bn254_g2_jacobian),
-        (bn254_g2_affine, bn254_g2_xyzz),
-        (bn254_g2_affine_mont, bn254_g2_affine_mont),
-        (bn254_g2_affine_mont, bn254_g2_jacobian_mont),
-        (bn254_g2_affine_mont, bn254_g2_xyzz_mont),
-        (bn254_g2_jacobian, bn254_g2_affine),
-        (bn254_g2_jacobian, bn254_g2_jacobian),
-        (bn254_g2_jacobian_mont, bn254_g2_affine_mont),
-        (bn254_g2_jacobian_mont, bn254_g2_jacobian_mont),
-        (bn254_g2_xyzz, bn254_g2_affine),
-        (bn254_g2_xyzz, bn254_g2_xyzz),
-        (bn254_g2_xyzz_mont, bn254_g2_affine_mont),
-        (bn254_g2_xyzz_mont, bn254_g2_xyzz_mont),
-    ]
+    allowed_casts = _ALLOWED_CASTS
     self.assertEqual(
         ((a, b) in allowed_casts), np.can_cast(a, b, casting="safe")
     )
@@ -316,29 +243,6 @@ class ArrayTest(parameterized.TestCase):
     x = np.asarray(1, dtype=int_dtype).astype(scalar_type)
     self.assertEqual(x.dtype, np.dtype(scalar_type))
     self.assertEqual(x, scalar_type(1))
-
-
-# Expected tuple lengths for each point type
-AFFINE_TYPES = [
-    bn254_g1_affine,
-    bn254_g1_affine_mont,
-    bn254_g2_affine,
-    bn254_g2_affine_mont,
-]
-
-JACOBIAN_TYPES = [
-    bn254_g1_jacobian,
-    bn254_g1_jacobian_mont,
-    bn254_g2_jacobian,
-    bn254_g2_jacobian_mont,
-]
-
-XYZZ_TYPES = [
-    bn254_g1_xyzz,
-    bn254_g1_xyzz_mont,
-    bn254_g2_xyzz,
-    bn254_g2_xyzz_mont,
-]
 
 
 # Tests for raw/from_raw Montgomery conversion helpers for EC points
