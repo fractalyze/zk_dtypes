@@ -40,6 +40,10 @@ __all__ = [
     # Big prime field types
     "bn254_sf",
     "bn254_sf_mont",
+    "pallas_sf",
+    "pallas_sf_mont",
+    "vesta_sf",
+    "vesta_sf_mont",
     # Extension field types
     "babybearx4",
     "babybearx4_mont",
@@ -70,6 +74,18 @@ __all__ = [
     "bn254_g2_jacobian_mont",
     "bn254_g2_xyzz",
     "bn254_g2_xyzz_mont",
+    "pallas_g1_affine",
+    "pallas_g1_affine_mont",
+    "pallas_g1_jacobian",
+    "pallas_g1_jacobian_mont",
+    "pallas_g1_xyzz",
+    "pallas_g1_xyzz_mont",
+    "vesta_g1_affine",
+    "vesta_g1_affine_mont",
+    "vesta_g1_jacobian",
+    "vesta_g1_jacobian_mont",
+    "vesta_g1_xyzz",
+    "vesta_g1_xyzz_mont",
 ]
 
 from typing import Type
@@ -95,6 +111,10 @@ from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
 from zk_dtypes._zk_dtypes_ext import bn254_sf
 from zk_dtypes._zk_dtypes_ext import bn254_sf_mont
+from zk_dtypes._zk_dtypes_ext import pallas_sf
+from zk_dtypes._zk_dtypes_ext import pallas_sf_mont
+from zk_dtypes._zk_dtypes_ext import vesta_sf
+from zk_dtypes._zk_dtypes_ext import vesta_sf_mont
 from zk_dtypes._zk_dtypes_ext import babybearx4
 from zk_dtypes._zk_dtypes_ext import babybearx4_mont
 from zk_dtypes._zk_dtypes_ext import goldilocksx3
@@ -122,6 +142,18 @@ from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian
 from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian_mont
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import pallas_g1_affine
+from zk_dtypes._zk_dtypes_ext import pallas_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import pallas_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import pallas_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import pallas_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import pallas_g1_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import vesta_g1_affine
+from zk_dtypes._zk_dtypes_ext import vesta_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import vesta_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import vesta_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import vesta_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import vesta_g1_xyzz_mont
 
 import numpy as np
 
@@ -142,6 +174,10 @@ koalabear_mont: Type[np.generic]
 mersenne31: Type[np.generic]
 bn254_sf: Type[np.generic]
 bn254_sf_mont: Type[np.generic]
+pallas_sf: Type[np.generic]
+pallas_sf_mont: Type[np.generic]
+vesta_sf: Type[np.generic]
+vesta_sf_mont: Type[np.generic]
 babybearx4: Type[np.generic]
 babybearx4_mont: Type[np.generic]
 goldilocksx3: Type[np.generic]
@@ -169,5 +205,17 @@ bn254_g2_jacobian: Type[np.generic]
 bn254_g2_jacobian_mont: Type[np.generic]
 bn254_g2_xyzz: Type[np.generic]
 bn254_g2_xyzz_mont: Type[np.generic]
+pallas_g1_affine: Type[np.generic]
+pallas_g1_affine_mont: Type[np.generic]
+pallas_g1_jacobian: Type[np.generic]
+pallas_g1_jacobian_mont: Type[np.generic]
+pallas_g1_xyzz: Type[np.generic]
+pallas_g1_xyzz_mont: Type[np.generic]
+vesta_g1_affine: Type[np.generic]
+vesta_g1_affine_mont: Type[np.generic]
+vesta_g1_jacobian: Type[np.generic]
+vesta_g1_jacobian_mont: Type[np.generic]
+vesta_g1_xyzz: Type[np.generic]
+vesta_g1_xyzz_mont: Type[np.generic]
 
 del np, Type

@@ -28,7 +28,7 @@ import numpy as np
 
 # Curve-list-driven fixtures. Adding a curve here (and to _GROUPS, if a curve
 # lacks g2) regenerates every per-type fixture below.
-_CURVES = ["bn254"]
+_CURVES = ["bn254", "pallas", "vesta"]
 _GROUPS = ["g1", "g2"]
 
 EC_STD_POINT_TYPES = []

@@ -26,9 +26,11 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/bls12_381/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
+#include "zk_dtypes/include/elliptic_curve/pallas/g1.h"
 #include "zk_dtypes/include/elliptic_curve/secp256k1/g1.h"
 #include "zk_dtypes/include/elliptic_curve/secp256r1/fq.h"
 #include "zk_dtypes/include/elliptic_curve/secp256r1/g1.h"
+#include "zk_dtypes/include/elliptic_curve/vesta/g1.h"
 
 namespace zk_dtypes {
 namespace {
@@ -52,6 +54,8 @@ static_assert(VerifyConstexpr<bn254::G2SwCurveMontConfig>());
 static_assert(VerifyConstexpr<secp256k1::G1SwCurveMontConfig>());
 static_assert(VerifyConstexpr<secp256r1::G1SwCurveMontConfig>());
 static_assert(VerifyConstexpr<bls12_381::G1SwCurveMontConfig>());
+static_assert(VerifyConstexpr<pallas::G1SwCurveMontConfig>());
+static_assert(VerifyConstexpr<vesta::G1SwCurveMontConfig>());
 
 // =========================================================================
 // Runtime correctness via TYPED_TEST on MontConfig.
@@ -61,7 +65,8 @@ using MontConfigs =
     ::testing::Types<bn254::G1SwCurveMontConfig, bn254::G2SwCurveMontConfig,
                      secp256k1::G1SwCurveMontConfig,
                      secp256r1::G1SwCurveMontConfig,
-                     bls12_381::G1SwCurveMontConfig>;
+                     bls12_381::G1SwCurveMontConfig,
+                     pallas::G1SwCurveMontConfig, vesta::G1SwCurveMontConfig>;
 
 template <typename T>
 class CurveConfigTest : public ::testing::Test {};

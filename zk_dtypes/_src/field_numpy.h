@@ -33,6 +33,8 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/fr.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
+#include "zk_dtypes/include/elliptic_curve/pallas/g1.h"
+#include "zk_dtypes/include/elliptic_curve/vesta/g1.h"
 #include "zk_dtypes/include/field/extension_field.h"
 #include "zk_dtypes/include/field/prime_field.h"
 
@@ -495,6 +497,22 @@ PyObject* PyField_nb_multiply(PyObject* a, PyObject* b) {
           bn254::FrMont, bn254::G1AffinePointMont, bn254::G1JacobianPointMont,
           bn254::G1PointXyzzMont, bn254::G2AffinePointMont,
           bn254::G2JacobianPointMont, bn254::G2PointXyzzMont>(x, b);
+    } else if constexpr (std::is_same_v<T, pallas::Fr>) {
+      return PyField_nb_ec_multiply<pallas::Fr, pallas::G1AffinePoint,
+                                    pallas::G1JacobianPoint,
+                                    pallas::G1PointXyzz>(x, b);
+    } else if constexpr (std::is_same_v<T, pallas::FrMont>) {
+      return PyField_nb_ec_multiply<pallas::FrMont, pallas::G1AffinePointMont,
+                                    pallas::G1JacobianPointMont,
+                                    pallas::G1PointXyzzMont>(x, b);
+    } else if constexpr (std::is_same_v<T, vesta::Fr>) {
+      return PyField_nb_ec_multiply<vesta::Fr, vesta::G1AffinePoint,
+                                    vesta::G1JacobianPoint, vesta::G1PointXyzz>(
+          x, b);
+    } else if constexpr (std::is_same_v<T, vesta::FrMont>) {
+      return PyField_nb_ec_multiply<vesta::FrMont, vesta::G1AffinePointMont,
+                                    vesta::G1JacobianPointMont,
+                                    vesta::G1PointXyzzMont>(x, b);
     }
   }
 

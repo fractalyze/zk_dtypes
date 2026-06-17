@@ -31,6 +31,8 @@ limitations under the License.
 #include "zk_dtypes/_src/ufuncs.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
+#include "zk_dtypes/include/elliptic_curve/pallas/g1.h"
+#include "zk_dtypes/include/elliptic_curve/vesta/g1.h"
 #include "zk_dtypes/include/geometry/point_declarations.h"
 
 namespace zk_dtypes {
@@ -862,6 +864,22 @@ bool RegisterEcPointMultiplyUFunc(PyObject* numpy) {
         bn254::FrMont, bn254::G1AffinePointMont, bn254::G1JacobianPointMont,
         bn254::G1PointXyzzMont, bn254::G2AffinePointMont,
         bn254::G2JacobianPointMont, bn254::G2PointXyzzMont>(numpy);
+  } else if constexpr (std::is_same_v<ScalarField, pallas::Fr>) {
+    return RegisterEcPointMul_Impl<pallas::Fr, pallas::G1AffinePoint,
+                                   pallas::G1JacobianPoint,
+                                   pallas::G1PointXyzz>(numpy);
+  } else if constexpr (std::is_same_v<ScalarField, pallas::FrMont>) {
+    return RegisterEcPointMul_Impl<pallas::FrMont, pallas::G1AffinePointMont,
+                                   pallas::G1JacobianPointMont,
+                                   pallas::G1PointXyzzMont>(numpy);
+  } else if constexpr (std::is_same_v<ScalarField, vesta::Fr>) {
+    return RegisterEcPointMul_Impl<vesta::Fr, vesta::G1AffinePoint,
+                                   vesta::G1JacobianPoint, vesta::G1PointXyzz>(
+        numpy);
+  } else if constexpr (std::is_same_v<ScalarField, vesta::FrMont>) {
+    return RegisterEcPointMul_Impl<vesta::FrMont, vesta::G1AffinePointMont,
+                                   vesta::G1JacobianPointMont,
+                                   vesta::G1PointXyzzMont>(numpy);
   } else {
     return false;
   }
