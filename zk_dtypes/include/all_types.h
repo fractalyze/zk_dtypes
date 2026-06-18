@@ -22,7 +22,9 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g1.h"
 #include "zk_dtypes/include/elliptic_curve/bn/bn254/g2.h"
 #include "zk_dtypes/include/elliptic_curve/curve25519/ed25519/g1.h"
+#include "zk_dtypes/include/elliptic_curve/pallas/g1.h"
 #include "zk_dtypes/include/elliptic_curve/secp256k1/g1.h"
+#include "zk_dtypes/include/elliptic_curve/vesta/g1.h"
 #include "zk_dtypes/include/field/babybear/babybear.h"
 #include "zk_dtypes/include/field/babybear/babybearx4.h"
 #include "zk_dtypes/include/field/binary_field.h"
@@ -73,7 +75,9 @@ WITH_MONT(V, ::zk_dtypes::Babybear, Babybear, BABYBEAR, babybear)         \
 V(::zk_dtypes::Mersenne31, Mersenne31, MERSENNE31, mersenne31)            \
 WITH_MONT(V, ::zk_dtypes::Goldilocks, Goldilocks, GOLDILOCKS, goldilocks) \
 WITH_MONT(V, ::zk_dtypes::Koalabear, Koalabear, KOALABEAR, koalabear)     \
-WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)
+WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)         \
+WITH_MONT(V, ::zk_dtypes::pallas::Fr, PallasSf, PALLAS_SF, pallas_sf)     \
+WITH_MONT(V, ::zk_dtypes::vesta::Fr, VestaSf, VESTA_SF, vesta_sf)
 
 #define ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V)                                        \
 ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)                                             \
@@ -83,7 +87,9 @@ WITH_MONT(V, ::zk_dtypes::secp256k1::Fr, Secp256k1Sf, SECP256K1_SF, secp256k1_sf
 WITH_MONT(V, ::zk_dtypes::bls12_381::Fq, Bls12381Bf, BLS12_381_BF, bls12_381_bf)      \
 WITH_MONT(V, ::zk_dtypes::bls12_381::Fr, Bls12381Sf, BLS12_381_SF, bls12_381_sf)      \
 WITH_MONT(V, ::zk_dtypes::curve25519::Fq, Curve25519Bf, CURVE25519_BF, curve25519_bf) \
-WITH_MONT(V, ::zk_dtypes::curve25519::Fr, Curve25519Sf, CURVE25519_SF, curve25519_sf)
+WITH_MONT(V, ::zk_dtypes::curve25519::Fr, Curve25519Sf, CURVE25519_SF, curve25519_sf) \
+WITH_MONT(V, ::zk_dtypes::pallas::Fq, PallasBf, PALLAS_BF, pallas_bf)                 \
+WITH_MONT(V, ::zk_dtypes::vesta::Fq, VestaBf, VESTA_BF, vesta_bf)
 
 //===----------------------------------------------------------------------===//
 // ExtendedField Types
@@ -119,15 +125,19 @@ ZK_DTYPES_ALL_BINARY_FIELD_TYPE_LIST(V)
 // ScalarField Types
 //===----------------------------------------------------------------------===//
 
-#define ZK_DTYPES_SCALAR_FIELD_TYPE_LIST(V) \
-WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)
+#define ZK_DTYPES_SCALAR_FIELD_TYPE_LIST(V)                          \
+WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)    \
+WITH_MONT(V, ::zk_dtypes::pallas::Fr, PallasSf, PALLAS_SF, pallas_sf) \
+WITH_MONT(V, ::zk_dtypes::vesta::Fr, VestaSf, VESTA_SF, vesta_sf)
 
 //===----------------------------------------------------------------------===//
 // AffinePoint Types
 //===----------------------------------------------------------------------===//
 
-#define ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V) \
-WITH_MONT(V, ::zk_dtypes::bn254::G1AffinePoint, Bn254G1Affine, BN254_G1_AFFINE, bn254_g1_affine)
+#define ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)                                              \
+WITH_MONT(V, ::zk_dtypes::bn254::G1AffinePoint, Bn254G1Affine, BN254_G1_AFFINE, bn254_g1_affine)    \
+WITH_MONT(V, ::zk_dtypes::pallas::G1AffinePoint, PallasG1Affine, PALLAS_G1_AFFINE, pallas_g1_affine) \
+WITH_MONT(V, ::zk_dtypes::vesta::G1AffinePoint, VestaG1Affine, VESTA_G1_AFFINE, vesta_g1_affine)
 
 #define ZK_DTYPES_PUBLIC_R2_AFFINE_POINT_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::G2AffinePoint, Bn254G2Affine, BN254_G2_AFFINE, bn254_g2_affine)
@@ -153,8 +163,10 @@ ZK_DTYPES_ALL_R2_AFFINE_POINT_TYPE_LIST(V)
 // JacobianPoint Types
 //===----------------------------------------------------------------------===//
 
-#define ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V) \
-WITH_MONT(V, ::zk_dtypes::bn254::G1JacobianPoint, Bn254G1Jacobian, BN254_G1_JACOBIAN, bn254_g1_jacobian)
+#define ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)                                                        \
+WITH_MONT(V, ::zk_dtypes::bn254::G1JacobianPoint, Bn254G1Jacobian, BN254_G1_JACOBIAN, bn254_g1_jacobian)        \
+WITH_MONT(V, ::zk_dtypes::pallas::G1JacobianPoint, PallasG1Jacobian, PALLAS_G1_JACOBIAN, pallas_g1_jacobian)     \
+WITH_MONT(V, ::zk_dtypes::vesta::G1JacobianPoint, VestaG1Jacobian, VESTA_G1_JACOBIAN, vesta_g1_jacobian)
 
 #define ZK_DTYPES_PUBLIC_R2_JACOBIAN_POINT_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::G2JacobianPoint, Bn254G2Jacobian, BN254_G2_JACOBIAN, bn254_g2_jacobian)
@@ -179,8 +191,10 @@ ZK_DTYPES_ALL_R2_JACOBIAN_POINT_TYPE_LIST(V)
 // PointXyzz Types
 //===----------------------------------------------------------------------===//
 
-#define ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V) \
-WITH_MONT(V, ::zk_dtypes::bn254::G1PointXyzz, Bn254G1Xyzz, BN254_G1_XYZZ, bn254_g1_xyzz)
+#define ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)                                        \
+WITH_MONT(V, ::zk_dtypes::bn254::G1PointXyzz, Bn254G1Xyzz, BN254_G1_XYZZ, bn254_g1_xyzz)    \
+WITH_MONT(V, ::zk_dtypes::pallas::G1PointXyzz, PallasG1Xyzz, PALLAS_G1_XYZZ, pallas_g1_xyzz) \
+WITH_MONT(V, ::zk_dtypes::vesta::G1PointXyzz, VestaG1Xyzz, VESTA_G1_XYZZ, vesta_g1_xyzz)
 
 #define ZK_DTYPES_PUBLIC_R2_XYZZ_POINT_TYPE_LIST(V) \
 WITH_MONT(V, ::zk_dtypes::bn254::G2PointXyzz, Bn254G2Xyzz, BN254_G2_XYZZ, bn254_g2_xyzz)

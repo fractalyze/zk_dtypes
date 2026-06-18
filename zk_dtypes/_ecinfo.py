@@ -29,11 +29,31 @@ from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian
 from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian_mont
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import pallas_sf
+from zk_dtypes._zk_dtypes_ext import pallas_sf_mont
+from zk_dtypes._zk_dtypes_ext import pallas_g1_affine
+from zk_dtypes._zk_dtypes_ext import pallas_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import pallas_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import pallas_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import pallas_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import pallas_g1_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import vesta_sf
+from zk_dtypes._zk_dtypes_ext import vesta_sf_mont
+from zk_dtypes._zk_dtypes_ext import vesta_g1_affine
+from zk_dtypes._zk_dtypes_ext import vesta_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import vesta_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import vesta_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import vesta_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import vesta_g1_xyzz_mont
 
 import numpy as np
 
 _bn254_sf_dtype = np.dtype(bn254_sf)
 _bn254_sf_mont_dtype = np.dtype(bn254_sf_mont)
+_pallas_sf_dtype = np.dtype(pallas_sf)
+_pallas_sf_mont_dtype = np.dtype(pallas_sf_mont)
+_vesta_sf_dtype = np.dtype(vesta_sf)
+_vesta_sf_mont_dtype = np.dtype(vesta_sf_mont)
 _bn254_g1_affine_dtype = np.dtype(bn254_g1_affine)
 _bn254_g1_affine_mont_dtype = np.dtype(bn254_g1_affine_mont)
 _bn254_g1_jacobian_dtype = np.dtype(bn254_g1_jacobian)
@@ -89,6 +109,25 @@ _BN254_G2_GY_MONT = [
 ]
 _BN254_G2_NON_RESIDUE_MONT = 15537367993719455909907449462855742678907882278146377936676643359958227611562
 
+# Pasta G1: y² = x³ + 5, generator (-1, 2). Standard gx is `modulus - 1`;
+# Montgomery forms are `value * R mod base-field modulus` (arkworks ark-pallas /
+# ark-vesta). See docs/development.md for the constant-derivation method.
+_PALLAS_A = 0
+_PALLAS_B = 5
+_PALLAS_G1_GX = 28948022309329048855892746252171976963363056481941560715954676764349967630336
+_PALLAS_G1_GY = 2
+_PALLAS_G1_B_MONT = 28948022309329048855892746252171976962451850171313166594149061516916263223277
+_PALLAS_G1_GX_MONT = 182241262125678824361123049486740881412
+_PALLAS_G1_GY_MONT = 28948022309329048855892746252171976962998573957690203067232430665376485867513
+
+_VESTA_A = 0
+_VESTA_B = 5
+_VESTA_G1_GX = 28948022309329048855892746252171976963363056481941647379679742748393362948096
+_VESTA_G1_GY = 2
+_VESTA_G1_B_MONT = 28948022309329048855892746252171976962451850171311519983372807820091752185837
+_VESTA_G1_GX_MONT = 182241262126025479261386985660322152452
+_VESTA_G1_GY_MONT = 28948022309329048855892746252171976962998573957689596421156968777072718643193
+
 
 # Curve parameters keyed by (curve, group, is_montgomery). Each entry holds the
 # curve coefficients and generator for that group/representation. Adding a new
@@ -121,6 +160,34 @@ _CURVE_PARAMS = {
         gx=_BN254_G2_GX_MONT,
         gy=_BN254_G2_GY_MONT,
         non_residue=_BN254_G2_NON_RESIDUE_MONT,
+    ),
+    ('pallas', 'g1', False): dict(
+        a=_PALLAS_A,
+        b=_PALLAS_B,
+        gx=_PALLAS_G1_GX,
+        gy=_PALLAS_G1_GY,
+        non_residue=None,
+    ),
+    ('pallas', 'g1', True): dict(
+        a=_PALLAS_A,
+        b=_PALLAS_G1_B_MONT,
+        gx=_PALLAS_G1_GX_MONT,
+        gy=_PALLAS_G1_GY_MONT,
+        non_residue=None,
+    ),
+    ('vesta', 'g1', False): dict(
+        a=_VESTA_A,
+        b=_VESTA_B,
+        gx=_VESTA_G1_GX,
+        gy=_VESTA_G1_GY,
+        non_residue=None,
+    ),
+    ('vesta', 'g1', True): dict(
+        a=_VESTA_A,
+        b=_VESTA_G1_B_MONT,
+        gx=_VESTA_G1_GX_MONT,
+        gy=_VESTA_G1_GY_MONT,
+        non_residue=None,
     ),
 }
 
@@ -174,26 +241,58 @@ def _build_meta(
 
 
 # Curve-list-driven dtype metadata. Each curve contributes one _build_meta call.
-_EC_DTYPE_META = _build_meta(
-    'bn254',
-    256,
-    _bn254_sf_dtype,
-    _bn254_sf_mont_dtype,
-    {
-        ('g1', 'affine', False): bn254_g1_affine,
-        ('g1', 'affine', True): bn254_g1_affine_mont,
-        ('g1', 'jacobian', False): bn254_g1_jacobian,
-        ('g1', 'jacobian', True): bn254_g1_jacobian_mont,
-        ('g1', 'xyzz', False): bn254_g1_xyzz,
-        ('g1', 'xyzz', True): bn254_g1_xyzz_mont,
-        ('g2', 'affine', False): bn254_g2_affine,
-        ('g2', 'affine', True): bn254_g2_affine_mont,
-        ('g2', 'jacobian', False): bn254_g2_jacobian,
-        ('g2', 'jacobian', True): bn254_g2_jacobian_mont,
-        ('g2', 'xyzz', False): bn254_g2_xyzz,
-        ('g2', 'xyzz', True): bn254_g2_xyzz_mont,
-    },
-)
+# Pasta (Pallas/Vesta) is non-pairing, so its table carries only g1 entries;
+# _build_meta skips the absent g2 layout rows.
+_EC_DTYPE_META = {
+    **_build_meta(
+        'bn254',
+        256,
+        _bn254_sf_dtype,
+        _bn254_sf_mont_dtype,
+        {
+            ('g1', 'affine', False): bn254_g1_affine,
+            ('g1', 'affine', True): bn254_g1_affine_mont,
+            ('g1', 'jacobian', False): bn254_g1_jacobian,
+            ('g1', 'jacobian', True): bn254_g1_jacobian_mont,
+            ('g1', 'xyzz', False): bn254_g1_xyzz,
+            ('g1', 'xyzz', True): bn254_g1_xyzz_mont,
+            ('g2', 'affine', False): bn254_g2_affine,
+            ('g2', 'affine', True): bn254_g2_affine_mont,
+            ('g2', 'jacobian', False): bn254_g2_jacobian,
+            ('g2', 'jacobian', True): bn254_g2_jacobian_mont,
+            ('g2', 'xyzz', False): bn254_g2_xyzz,
+            ('g2', 'xyzz', True): bn254_g2_xyzz_mont,
+        },
+    ),
+    **_build_meta(
+        'pallas',
+        256,
+        _pallas_sf_dtype,
+        _pallas_sf_mont_dtype,
+        {
+            ('g1', 'affine', False): pallas_g1_affine,
+            ('g1', 'affine', True): pallas_g1_affine_mont,
+            ('g1', 'jacobian', False): pallas_g1_jacobian,
+            ('g1', 'jacobian', True): pallas_g1_jacobian_mont,
+            ('g1', 'xyzz', False): pallas_g1_xyzz,
+            ('g1', 'xyzz', True): pallas_g1_xyzz_mont,
+        },
+    ),
+    **_build_meta(
+        'vesta',
+        256,
+        _vesta_sf_dtype,
+        _vesta_sf_mont_dtype,
+        {
+            ('g1', 'affine', False): vesta_g1_affine,
+            ('g1', 'affine', True): vesta_g1_affine_mont,
+            ('g1', 'jacobian', False): vesta_g1_jacobian,
+            ('g1', 'jacobian', True): vesta_g1_jacobian_mont,
+            ('g1', 'xyzz', False): vesta_g1_xyzz,
+            ('g1', 'xyzz', True): vesta_g1_xyzz_mont,
+        },
+    ),
+}
 
 
 class ecinfo:  # pylint: disable=invalid-name,missing-class-docstring

@@ -226,6 +226,37 @@ struct TypeDescriptorBase<bn254::FrMont> : FieldTypeDescriptor<bn254::FrMont> {
   static constexpr char kNpyDescrType = 'b';
 };
 
+template <>
+struct TypeDescriptorBase<pallas::Fr> : FieldTypeDescriptor<pallas::Fr> {
+  static constexpr const char* kTpDoc =
+      "pallas scalar field values on standard domain";
+  static constexpr char kNpyDescrType = 'P';
+};
+
+template <>
+struct TypeDescriptorBase<pallas::FrMont>
+    : FieldTypeDescriptor<pallas::FrMont> {
+  static constexpr const char* kTpDoc =
+      "pallas scalar field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'p';
+};
+
+template <>
+struct TypeDescriptorBase<vesta::Fr> : FieldTypeDescriptor<vesta::Fr> {
+  static constexpr const char* kTpDoc =
+      "vesta scalar field values on standard domain";
+  // 'Y'/'y' rather than 'V'/'v': 'V' is the void kind char these user dtypes
+  // register under, so reusing it as the type char is needlessly confusing.
+  static constexpr char kNpyDescrType = 'Y';
+};
+
+template <>
+struct TypeDescriptorBase<vesta::FrMont> : FieldTypeDescriptor<vesta::FrMont> {
+  static constexpr const char* kTpDoc =
+      "vesta scalar field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'y';
+};
+
 //===----------------------------------------------------------------------===//
 // ExtendedField TypeDescriptorBase
 //===----------------------------------------------------------------------===//
@@ -427,6 +458,102 @@ struct TypeDescriptorBase<bn254::G2PointXyzzMont>
     : EcPointTypeDescriptor<bn254::G2PointXyzzMont> {
   static constexpr const char* kTpDoc =
       "bn254 G2 elliptic curve xyzz point on montgomery domain";
+  static constexpr char kNpyDescrType = 'x';
+};
+
+template <>
+struct TypeDescriptorBase<pallas::G1AffinePoint>
+    : EcPointTypeDescriptor<pallas::G1AffinePoint> {
+  static constexpr const char* kTpDoc =
+      "pallas G1 elliptic curve affine point on standard domain";
+  static constexpr char kNpyDescrType = 'A';
+};
+
+template <>
+struct TypeDescriptorBase<pallas::G1AffinePointMont>
+    : EcPointTypeDescriptor<pallas::G1AffinePointMont> {
+  static constexpr const char* kTpDoc =
+      "pallas G1 elliptic curve affine point on montgomery domain";
+  static constexpr char kNpyDescrType = 'a';
+};
+
+template <>
+struct TypeDescriptorBase<pallas::G1JacobianPoint>
+    : EcPointTypeDescriptor<pallas::G1JacobianPoint> {
+  static constexpr const char* kTpDoc =
+      "pallas G1 elliptic curve jacobian point on standard domain";
+  static constexpr char kNpyDescrType = 'J';
+};
+
+template <>
+struct TypeDescriptorBase<pallas::G1JacobianPointMont>
+    : EcPointTypeDescriptor<pallas::G1JacobianPointMont> {
+  static constexpr const char* kTpDoc =
+      "pallas G1 elliptic curve jacobian point on montgomery domain";
+  static constexpr char kNpyDescrType = 'j';
+};
+
+template <>
+struct TypeDescriptorBase<pallas::G1PointXyzz>
+    : EcPointTypeDescriptor<pallas::G1PointXyzz> {
+  static constexpr const char* kTpDoc =
+      "pallas G1 elliptic curve xyzz point on standard domain";
+  static constexpr char kNpyDescrType = 'X';
+};
+
+template <>
+struct TypeDescriptorBase<pallas::G1PointXyzzMont>
+    : EcPointTypeDescriptor<pallas::G1PointXyzzMont> {
+  static constexpr const char* kTpDoc =
+      "pallas G1 elliptic curve xyzz point on montgomery domain";
+  static constexpr char kNpyDescrType = 'x';
+};
+
+template <>
+struct TypeDescriptorBase<vesta::G1AffinePoint>
+    : EcPointTypeDescriptor<vesta::G1AffinePoint> {
+  static constexpr const char* kTpDoc =
+      "vesta G1 elliptic curve affine point on standard domain";
+  static constexpr char kNpyDescrType = 'A';
+};
+
+template <>
+struct TypeDescriptorBase<vesta::G1AffinePointMont>
+    : EcPointTypeDescriptor<vesta::G1AffinePointMont> {
+  static constexpr const char* kTpDoc =
+      "vesta G1 elliptic curve affine point on montgomery domain";
+  static constexpr char kNpyDescrType = 'a';
+};
+
+template <>
+struct TypeDescriptorBase<vesta::G1JacobianPoint>
+    : EcPointTypeDescriptor<vesta::G1JacobianPoint> {
+  static constexpr const char* kTpDoc =
+      "vesta G1 elliptic curve jacobian point on standard domain";
+  static constexpr char kNpyDescrType = 'J';
+};
+
+template <>
+struct TypeDescriptorBase<vesta::G1JacobianPointMont>
+    : EcPointTypeDescriptor<vesta::G1JacobianPointMont> {
+  static constexpr const char* kTpDoc =
+      "vesta G1 elliptic curve jacobian point on montgomery domain";
+  static constexpr char kNpyDescrType = 'j';
+};
+
+template <>
+struct TypeDescriptorBase<vesta::G1PointXyzz>
+    : EcPointTypeDescriptor<vesta::G1PointXyzz> {
+  static constexpr const char* kTpDoc =
+      "vesta G1 elliptic curve xyzz point on standard domain";
+  static constexpr char kNpyDescrType = 'X';
+};
+
+template <>
+struct TypeDescriptorBase<vesta::G1PointXyzzMont>
+    : EcPointTypeDescriptor<vesta::G1PointXyzzMont> {
+  static constexpr const char* kTpDoc =
+      "vesta G1 elliptic curve xyzz point on montgomery domain";
   static constexpr char kNpyDescrType = 'x';
 };
 

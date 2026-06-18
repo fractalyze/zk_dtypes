@@ -94,6 +94,15 @@ using curve25519::FqMont;
 - SW infra: `sw_curve`, `sw_affine_point`, `sw_jacobian_point`, `sw_point_xyzz`
 - TE infra: `te_curve`, `te_affine_point`, `te_extended_point`
 
+### BUILD Target Ordering
+
+- Within the `# Elliptic Curve #` section of `zk_dtypes/BUILD.bazel`, the
+  per-curve `cc_library` groups are ordered **alphabetically by curve name**
+  (`bls12_381`, `bn254`, `pallas`, `secp256k1`, `secp256r1`, `vesta`).
+- Keep each curve's own targets in dependency order within its group (`fq` →
+  `fqx*` → `fr` → `curve` → `g1` → `g2`), not alphabetical.
+- `deps` lists are sorted by buildifier; don't hand-order them.
+
 ### Test Convention
 
 - Small-prime test config in `<curve_type>/test/<type>_curve_config.h` (e.g.
@@ -110,10 +119,17 @@ using curve25519::FqMont;
 1. **Curve config** (`g1.h`): Define `G1<Sw|Te>CurveConfig` with `kA`/`kB`/`kD`,
    generator coords, and Mont variant with `FromUnchecked`. Verify generator is
    on curve in a unittest.
-1. **BUILD.bazel**: Add `cc_library` targets. Add to `all_types` deps and the
-   appropriate type list macros in `all_types.h`.
+1. **BUILD.bazel**: Add `cc_library` targets in alphabetical position (see BUILD
+   Target Ordering). Add to `all_types` deps and the appropriate type list
+   macros in `all_types.h`.
+1. **numpy surface** (if the curve is exposed to numpy): add the curve to the
+   `_CURVE_PARAMS` / `_build_meta` tables in `_ecinfo.py` and a modulus branch
+   in `_pfinfo.py`. These are curve-list-driven, so no per-curve dispatch code
+   is needed.
 1. **Tests**: On-curve check, identity addition, inverse, double=add(self),
-   Mont/non-Mont consistency.
+   Mont/non-Mont consistency. numpy EC point types are covered by adding the
+   curve name to `_CURVES` in `tests/ec_point_test.py` (curve-list-driven — no
+   per-curve test file).
 
 ## Downstream Integration
 

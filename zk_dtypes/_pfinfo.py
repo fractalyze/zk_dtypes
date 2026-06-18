@@ -24,6 +24,10 @@ from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
 from zk_dtypes._zk_dtypes_ext import bn254_sf
 from zk_dtypes._zk_dtypes_ext import bn254_sf_mont
+from zk_dtypes._zk_dtypes_ext import pallas_sf
+from zk_dtypes._zk_dtypes_ext import pallas_sf_mont
+from zk_dtypes._zk_dtypes_ext import vesta_sf
+from zk_dtypes._zk_dtypes_ext import vesta_sf_mont
 
 import numpy as np
 
@@ -36,9 +40,22 @@ _koalabear_mont_dtype = np.dtype(koalabear_mont)
 _mersenne31_dtype = np.dtype(mersenne31)
 _bn254_sf_dtype = np.dtype(bn254_sf)
 _bn254_sf_mont_dtype = np.dtype(bn254_sf_mont)
+_pallas_sf_dtype = np.dtype(pallas_sf)
+_pallas_sf_mont_dtype = np.dtype(pallas_sf_mont)
+_vesta_sf_dtype = np.dtype(vesta_sf)
+_vesta_sf_mont_dtype = np.dtype(vesta_sf_mont)
 
 
 _BN254_PARAM = 4965661367192848881
+
+# Pasta scalar field moduli (arkworks ark-pallas / ark-vesta). The Pallas
+# scalar field equals the Vesta base field (q) and vice versa (p).
+_PALLAS_SF_MODULUS = (
+    0x40000000000000000000000000000000224698FC0994A8DD8C46EB2100000001
+)
+_VESTA_SF_MODULUS = (
+    0x40000000000000000000000000000000224698FC094CF91B992D30ED00000001
+)
 
 
 def _get_bn_scalar_field_modulus(x):
@@ -84,6 +101,18 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.modulus_bits = 254
       self.modulus = _get_bn_scalar_field_modulus(_BN254_PARAM)
       self.is_montgomery = pf_type == _bn254_sf_mont_dtype
+    elif pf_type == _pallas_sf_dtype or pf_type == _pallas_sf_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 256
+      self.modulus_bits = 255
+      self.modulus = _PALLAS_SF_MODULUS
+      self.is_montgomery = pf_type == _pallas_sf_mont_dtype
+    elif pf_type == _vesta_sf_dtype or pf_type == _vesta_sf_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 256
+      self.modulus_bits = 255
+      self.modulus = _VESTA_SF_MODULUS
+      self.is_montgomery = pf_type == _vesta_sf_mont_dtype
     else:
       raise ValueError(f"Unknown prime field type: {pf_type}")
     # Calculate the 2-adicity of `modulus - 1`, which is the number of
