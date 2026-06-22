@@ -41,12 +41,19 @@ from zk_dtypes._zk_dtypes_ext import binary_field_t5
 from zk_dtypes._zk_dtypes_ext import binary_field_t6
 from zk_dtypes._zk_dtypes_ext import binary_field_t7
 from zk_dtypes._zk_dtypes_ext import babybear
+from zk_dtypes._zk_dtypes_ext import babybear_mont
 from zk_dtypes._zk_dtypes_ext import babybearx4
+from zk_dtypes._zk_dtypes_ext import babybearx4_mont
 from zk_dtypes._zk_dtypes_ext import bn254_sf
+from zk_dtypes._zk_dtypes_ext import bn254_sf_mont
 from zk_dtypes._zk_dtypes_ext import goldilocks
+from zk_dtypes._zk_dtypes_ext import goldilocks_mont
 from zk_dtypes._zk_dtypes_ext import goldilocksx3
+from zk_dtypes._zk_dtypes_ext import goldilocksx3_mont
 from zk_dtypes._zk_dtypes_ext import koalabear
+from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import koalabearx4
+from zk_dtypes._zk_dtypes_ext import koalabearx4_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
 from zk_dtypes._zk_dtypes_ext import mersenne31x2
 
@@ -125,7 +132,20 @@ def _field_descr(
 
 def _curated_prime_map() -> dict[tuple[int, bool], type]:
   out: dict[tuple[int, bool], type] = {}
-  for family in (babybear, koalabear, goldilocks, mersenne31, bn254_sf):
+  # Both storage forms are curated where the legacy stack registers them
+  # (Mersenne uses canonical reduction, so it has no Montgomery variant). The
+  # (modulus, is_montgomery) key keeps the two forms distinct.
+  for family in (
+      babybear,
+      babybear_mont,
+      koalabear,
+      koalabear_mont,
+      goldilocks,
+      goldilocks_mont,
+      mersenne31,
+      bn254_sf,
+      bn254_sf_mont,
+  ):
     info = pfinfo(np.dtype(family))
     out[(info.modulus, info.is_montgomery)] = family
   return out
@@ -133,7 +153,15 @@ def _curated_prime_map() -> dict[tuple[int, bool], type]:
 
 def _curated_ext_map() -> dict[tuple[int, int, int, bool], type]:
   out: dict[tuple[int, int, int, bool], type] = {}
-  for family in (babybearx4, koalabearx4, goldilocksx3, mersenne31x2):
+  for family in (
+      babybearx4,
+      babybearx4_mont,
+      koalabearx4,
+      koalabearx4_mont,
+      goldilocksx3,
+      goldilocksx3_mont,
+      mersenne31x2,
+  ):
     info = efinfo(np.dtype(family))
     base_modulus = pfinfo(info.base_field_dtype).modulus
     out[(base_modulus, info.degree, info.non_residue, info.is_montgomery)] = (

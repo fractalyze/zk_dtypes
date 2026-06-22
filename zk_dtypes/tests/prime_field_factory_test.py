@@ -24,9 +24,9 @@ from zk_dtypes._field_factory import _storage_width
 
 # Modulus / storage / expected curated scalar type.
 _CURATED_CASES = (
-    (2013265921, "mont", zk_dtypes.babybear),
-    (2130706433, "mont", zk_dtypes.koalabear),
-    (18446744069414584321, "mont", zk_dtypes.goldilocks),
+    (2013265921, "mont", zk_dtypes.babybear_mont),
+    (2130706433, "mont", zk_dtypes.koalabear_mont),
+    (18446744069414584321, "mont", zk_dtypes.goldilocks_mont),
     (2147483647, "std", zk_dtypes.mersenne31),
 )
 
@@ -55,7 +55,7 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     info = zk_dtypes.pfinfo(zk_dtypes.bn254_sf)
     self.assertEqual(
         zk_dtypes.prime_field(info.modulus, "mont"),
-        np.dtype(zk_dtypes.bn254_sf),
+        np.dtype(zk_dtypes.bn254_sf_mont),
     )
 
   def test_composite_modulus_rejected(self):
@@ -173,8 +173,8 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
 
   # Legacy family / parametric equivalent / base modulus / base width / mont.
   _EF_BYTE_MATCH = (
-      ("babybearx4", 2013265921, 4, 11, "mont", 4, True),
-      ("koalabearx4", 2130706433, 4, 3, "mont", 4, True),
+      ("babybearx4_mont", 2013265921, 4, 11, "mont", 4, True),
+      ("koalabearx4_mont", 2130706433, 4, 3, "mont", 4, True),
       ("mersenne31x2", 2147483647, 2, 2147483646, "canonical", 4, False),
   )
 
@@ -225,7 +225,7 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
   def test_curated_extension_resolves_to_legacy(self):
     self.assertEqual(
         zk_dtypes.extension_field(2013265921, 4, 11, "mont"),
-        np.dtype(zk_dtypes.babybearx4),
+        np.dtype(zk_dtypes.babybearx4_mont),
     )
 
   def test_extension_field_degree_one_rejected(self):
@@ -273,7 +273,7 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
   _BN254_FQ = 21888242871839275222246405745257275088696311157297823662689037894645226208583
 
   def test_ec_g1_jacobian_group_law_byte_matches_legacy(self):
-    legacy = zk_dtypes.bn254_g1_jacobian
+    legacy = zk_dtypes.bn254_g1_jacobian_mont
     p = self._BN254_FQ
     info = zk_dtypes.ecinfo(np.dtype(legacy))
     if getattr(info, "is_montgomery", True):
@@ -307,7 +307,7 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
 
   def _ec_g1_jacobian_param(self):
     p = self._BN254_FQ
-    info = zk_dtypes.ecinfo(np.dtype(zk_dtypes.bn254_g1_jacobian))
+    info = zk_dtypes.ecinfo(np.dtype(zk_dtypes.bn254_g1_jacobian_mont))
     if getattr(info, "is_montgomery", True):
       r = (1 << 256) % p
       return np.dtype(
@@ -318,7 +318,7 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     return np.dtype(zk_dtypes._zk_dtypes_ext.ec_point_descr(p, 256, 3, 0))
 
   def test_ec_group_equality_cross_representative(self):
-    legacy = zk_dtypes.bn254_g1_jacobian
+    legacy = zk_dtypes.bn254_g1_jacobian_mont
     param = self._ec_g1_jacobian_param()
 
     def pt(n):
@@ -340,7 +340,7 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
   _BN254_FR = 21888242871839275222246405745257275088548364400416034343698204186575808495617
 
   def test_ec_scalar_multiplication_byte_matches_legacy(self):
-    legacy = zk_dtypes.bn254_g1_jacobian
+    legacy = zk_dtypes.bn254_g1_jacobian_mont
     param = self._ec_g1_jacobian_param()
     rfr = (1 << 256) % self._BN254_FR
     # Parametric Fr scalar dtype (built directly: the Fr modulus is a curated
@@ -375,9 +375,9 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
 
   def test_ec_coordinate_rep_casts(self):
     legacy = {
-        2: zk_dtypes.bn254_g1_affine,
-        3: zk_dtypes.bn254_g1_jacobian,
-        4: zk_dtypes.bn254_g1_xyzz,
+        2: zk_dtypes.bn254_g1_affine_mont,
+        3: zk_dtypes.bn254_g1_jacobian_mont,
+        4: zk_dtypes.bn254_g1_xyzz_mont,
     }
     param = {nc: self._ec_param(nc) for nc in (2, 3, 4)}
 
@@ -413,7 +413,7 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
             q, 256, 3, 1, r, pow(r, -1, q), 2, q - 1
         )
     )
-    legacy = zk_dtypes.bn254_g2_jacobian
+    legacy = zk_dtypes.bn254_g2_jacobian_mont
     self.assertEqual(np.dtype(g2).itemsize, np.dtype(legacy).itemsize)
 
     def pt(n):
