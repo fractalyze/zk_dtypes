@@ -403,6 +403,32 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
         xy.astype(param[2]).view(np.uint8), j.astype(param[2]).view(np.uint8)
     )
 
+  def test_ec_non_jacobian_arithmetic_rejected(self):
+    # Group-law arithmetic is defined on the Jacobian representation; affine /
+    # xyzz must be cast to Jacobian first (rather than misreading coordinates).
+    aff = self._ec_param(2)
+    a = np.zeros(2, dtype=aff)
+    with self.assertRaisesRegex(TypeError, "Jacobian"):
+      a + a  # noqa: B015
+    with self.assertRaisesRegex(TypeError, "Jacobian"):
+      np.equal(a, a)
+    scalar = np.array(
+        [3],
+        dtype=np.dtype(
+            zk_dtypes._zk_dtypes_ext.field_descr(
+                self._BN254_FQ,
+                1,
+                0,
+                256,
+                1,
+                (1 << 256) % self._BN254_FQ,
+                pow((1 << 256) % self._BN254_FQ, -1, self._BN254_FQ),
+            )
+        ),
+    )
+    with self.assertRaisesRegex(TypeError, "Jacobian"):
+      scalar * a
+
   def test_scalar_subscript_returns_element(self):
     # arr[i] (integer subscript to a scalar) must not segfault and returns the
     # element via getitem.
