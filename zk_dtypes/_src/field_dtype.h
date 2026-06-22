@@ -29,6 +29,16 @@ namespace zk_dtypes {
 // a Python error set) on failure. Must run after numpy is imported.
 bool RegisterFieldDType(PyObject* numpy, PyObject* module);
 
+// Seam for EC scalar multiplication (the scalar is a prime FieldDType element).
+// `FieldDTypeMetaObject` returns the FieldDType metaclass (a
+// `PyArray_DTypeMeta*` as `PyObject*`) for registering a mixed ufunc loop
+// against. `PrimeFieldValue` returns the canonical integer value of a degree-1
+// (prime) FieldDType element at `data`, given its descriptor (a
+// `PyArray_Descr*` as `PyObject*`), or NULL with an error set if the descriptor
+// is not a prime FieldDType.
+PyObject* FieldDTypeMetaObject();
+PyObject* PrimeFieldValue(PyObject* descr, const char* data);
+
 }  // namespace zk_dtypes
 
 #endif  // ZK_DTYPES__SRC_FIELD_DTYPE_H_

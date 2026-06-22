@@ -337,6 +337,33 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     self.assertTrue(bool((p5 == s)[0]))
     self.assertTrue(bool((p3 == (p1 + p2))[0]))
 
+  _BN254_FR = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+
+  def test_ec_scalar_multiplication_byte_matches_legacy(self):
+    legacy = zk_dtypes.bn254_g1_jacobian
+    param = self._ec_g1_jacobian_param()
+    rfr = (1 << 256) % self._BN254_FR
+    # Parametric Fr scalar dtype (built directly: the Fr modulus is a curated
+    # family that prime_field would resolve to the legacy dtype).
+    scalar_dt = np.dtype(
+        zk_dtypes._zk_dtypes_ext.field_descr(
+            self._BN254_FR, 1, 0, 256, 1, rfr, pow(rfr, -1, self._BN254_FR)
+        )
+    )
+
+    def pt(n):
+      out = np.zeros(1, dtype=param)
+      out.view(np.uint8)[:] = np.array([n], dtype=legacy).view(np.uint8)
+      return out
+
+    g = pt(1)
+    for s in (2, 3, 7, 100, 12345):
+      res = np.array([s], dtype=scalar_dt) * g
+      np.testing.assert_array_equal(res.view(np.uint8), pt(s).view(np.uint8))
+      # point * scalar (reverse operand order)
+      res2 = g * np.array([s], dtype=scalar_dt)
+      np.testing.assert_array_equal(res2.view(np.uint8), pt(s).view(np.uint8))
+
   def test_scalar_subscript_returns_element(self):
     # arr[i] (integer subscript to a scalar) must not segfault and returns the
     # element via getitem.

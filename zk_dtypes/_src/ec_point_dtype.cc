@@ -37,6 +37,7 @@ limitations under the License.
 #include <cstring>
 
 #include "zk_dtypes/_src/numpy.h"
+#include "zk_dtypes/_src/field_dtype.h"
 #include "numpy/dtype_api.h"
 #include "numpy/ndarraytypes.h"
 // clang-format on
@@ -361,6 +362,57 @@ int JacEqual(PyObject* p, PyObject* const* P, PyObject* const* Q) {
   Py_XDECREF(ly);
   Py_XDECREF(ry);
   return result;
+}
+
+void MovePoint(PyObject** dst, PyObject* const* src, int n) {
+  for (int i = 0; i < n; ++i) {
+    Py_DECREF(dst[i]);
+    dst[i] = src[i];
+  }
+}
+
+// MSB-first double-and-add: ret = scalar * point (canonical Jacobian coords).
+// The scalar is a canonical integer (Montgomery already decoded by the caller),
+// matching the legacy curve operator* which de-Montgomery's the scalar first.
+int JacScalarMul(PyObject* p, PyObject* scalar, PyObject* const* point,
+                 PyObject** out) {
+  PyObject* ret[3] = {PyLong_FromLong(1), PyLong_FromLong(1),
+                      PyLong_FromLong(0)};  // Zero = (1, 1, 0)
+  if (!ret[0] || !ret[1] || !ret[2]) {
+    for (int j = 0; j < 3; ++j) Py_XDECREF(ret[j]);
+    return -1;
+  }
+  size_t nbits = _PyLong_NumBits(scalar);
+  size_t nbytes = (nbits + 7) / 8;
+  unsigned char buf[64] = {0};
+  if (nbytes > sizeof(buf)) {
+    for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
+    PyErr_SetString(PyExc_OverflowError, "EC scalar too large");
+    return -1;
+  }
+  if (nbytes > 0) {
+    _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(scalar), buf, nbytes, 1,
+                        0);
+  }
+  for (Py_ssize_t i = static_cast<Py_ssize_t>(nbits) - 1; i >= 0; --i) {
+    PyObject* tmp[3];
+    if (JacDouble(p, ret, tmp) < 0) {
+      for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
+      return -1;
+    }
+    MovePoint(ret, tmp, 3);
+    if ((buf[i >> 3] >> (i & 7)) & 1) {
+      if (JacAdd(p, ret, point, tmp) < 0) {
+        for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
+        return -1;
+      }
+      MovePoint(ret, tmp, 3);
+    }
+  }
+  out[0] = ret[0];
+  out[1] = ret[1];
+  out[2] = ret[2];
+  return 0;
 }
 
 // --- descriptor lifecycle ------------------------------------------------
@@ -844,6 +896,102 @@ bool AddCmpLoop(PyObject* numpy, const char* name,
   return rc >= 0;
 }
 
+// Scalar multiplication: np.multiply(scalar_field, point) and the reverse. The
+// output is the point's Ec dtype; the scalar field is the other operand.
+NPY_CASTING ScalarMulResolve(struct PyArrayMethodObject_tag* /*method*/,
+                             PyArray_DTypeMeta* const* /*dtypes*/,
+                             PyArray_Descr* const* given, PyArray_Descr** loop,
+                             npy_intp* view_offset) {
+  PyArray_Descr* point =
+      Py_TYPE(given[0]) == reinterpret_cast<PyTypeObject*>(&EcPointDType)
+          ? given[0]
+          : given[1];
+  Py_INCREF(given[0]);
+  loop[0] = given[0];
+  Py_INCREF(given[1]);
+  loop[1] = given[1];
+  loop[2] = given[2] != nullptr ? given[2] : point;
+  Py_INCREF(loop[2]);
+  *view_offset = NPY_MIN_INTP;
+  return NPY_NO_CASTING;
+}
+
+template <bool scalar_first>
+int ScalarMulLoop(PyArrayMethod_Context* context, char* const* data,
+                  const npy_intp* dimensions, const npy_intp* strides,
+                  NpyAuxData* /*aux*/) {
+  PyArray_Descr* scalar_descr = context->descriptors[scalar_first ? 0 : 1];
+  EcPointDescr* d = AsEc(context->descriptors[scalar_first ? 1 : 0]);
+  EcPointDescr* od = AsEc(context->descriptors[2]);
+  PyObject* p = d->modulus;
+  npy_intp n = dimensions[0];
+  char* s = data[scalar_first ? 0 : 1];
+  char* pt = data[scalar_first ? 1 : 0];
+  char* o = data[2];
+  npy_intp s_stride = strides[scalar_first ? 0 : 1];
+  npy_intp pt_stride = strides[scalar_first ? 1 : 0];
+  for (npy_intp i = 0; i < n; ++i) {
+    PyObject* scalar =
+        PrimeFieldValue(reinterpret_cast<PyObject*>(scalar_descr), s);
+    if (scalar == nullptr) return -1;
+    PyObject* P[kMaxCoords];
+    if (DecodePoint(d, pt, P) < 0) {
+      Py_DECREF(scalar);
+      return -1;
+    }
+    PyObject* R[3];
+    int rc = JacScalarMul(p, scalar, P, R);
+    Py_DECREF(scalar);
+    for (int j = 0; j < d->num_coords; ++j) Py_DECREF(P[j]);
+    if (rc < 0) return -1;
+    int erc = EncodePoint(od, o, R);
+    for (int j = 0; j < 3; ++j) Py_DECREF(R[j]);
+    if (erc < 0) return -1;
+    s += s_stride;
+    pt += pt_stride;
+    o += strides[2];
+  }
+  return 0;
+}
+
+bool AddScalarMulLoops(PyObject* numpy) {
+  PyObject* ufunc = PyObject_GetAttrString(numpy, "multiply");
+  if (ufunc == nullptr) return false;
+  PyArray_DTypeMeta* field =
+      reinterpret_cast<PyArray_DTypeMeta*>(FieldDTypeMetaObject());
+  bool ok = true;
+  for (int order = 0; order < 2 && ok; ++order) {
+    PyArray_DTypeMeta* dtypes[3];
+    PyType_Slot slots[] = {
+        {NPY_METH_resolve_descriptors,
+         reinterpret_cast<void*>(ScalarMulResolve)},
+        {NPY_METH_strided_loop,
+         reinterpret_cast<void*>(order == 0 ? ScalarMulLoop<true>
+                                            : ScalarMulLoop<false>)},
+        {0, nullptr},
+    };
+    if (order == 0) {  // scalar * point
+      dtypes[0] = field;
+      dtypes[1] = &EcPointDType;
+    } else {  // point * scalar
+      dtypes[0] = &EcPointDType;
+      dtypes[1] = field;
+    }
+    dtypes[2] = &EcPointDType;
+    PyArrayMethod_Spec spec = {};
+    spec.name = "ec_point_scalar_mul";
+    spec.nin = 2;
+    spec.nout = 1;
+    spec.casting = NPY_NO_CASTING;
+    spec.flags = NPY_METH_REQUIRES_PYAPI;
+    spec.dtypes = dtypes;
+    spec.slots = slots;
+    ok = PyUFunc_AddLoopFromSpec(ufunc, &spec) >= 0;
+  }
+  Py_DECREF(ufunc);
+  return ok;
+}
+
 }  // namespace
 
 bool RegisterEcPointDType(PyObject* /*numpy*/, PyObject* module) {
@@ -939,7 +1087,8 @@ bool RegisterEcPointDType(PyObject* /*numpy*/, PyObject* module) {
   bool ok = AddBinLoop(numpy, "add", BinLoop<BinOp::kAdd>) &&
             AddBinLoop(numpy, "subtract", BinLoop<BinOp::kSub>) &&
             AddNegLoop(numpy) && AddCmpLoop(numpy, "equal", CmpLoop<false>) &&
-            AddCmpLoop(numpy, "not_equal", CmpLoop<true>);
+            AddCmpLoop(numpy, "not_equal", CmpLoop<true>) &&
+            AddScalarMulLoops(numpy);
   Py_DECREF(numpy);
   return ok;
 }
