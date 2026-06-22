@@ -37,6 +37,7 @@ limitations under the License.
 #include <cstdint>
 #include <cstring>
 
+#include "zk_dtypes/_src/field_modarith.h"
 #include "zk_dtypes/_src/numpy.h"
 #include "numpy/dtype_api.h"
 #include "numpy/ndarraytypes.h"
@@ -743,6 +744,13 @@ cleanup:
   return rc;
 }
 
+// Advances the three element cursors by their strides.
+inline void Advance(char*& a, char*& b, char*& o, const npy_intp* strides) {
+  a += strides[0];
+  b += strides[1];
+  o += strides[2];
+}
+
 template <Op op>
 int ArithLoop(PyArrayMethod_Context* context, char* const* data,
               const npy_intp* dimensions, const npy_intp* strides,
@@ -752,38 +760,126 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
   char* a = data[0];
   char* b = data[1];
   char* o = data[2];
+  const int wb = d->base_width_bytes;
+
   if (d->kind == kBinaryTower) {
-    const int wb = d->base_width_bytes;
-    for (npy_intp i = 0; i < n; ++i) {
-      if (op != Op::kMul) {  // characteristic 2: add == sub == XOR
+    if (op != Op::kMul) {  // characteristic 2: add == sub == XOR
+      for (npy_intp i = 0; i < n; ++i) {
         for (int k = 0; k < wb; ++k) o[k] = static_cast<char>(a[k] ^ b[k]);
-      } else {
-        PyObject* av = _PyLong_FromByteArray(
-            reinterpret_cast<unsigned char*>(a), wb, 1, 0);
-        PyObject* bv = _PyLong_FromByteArray(
-            reinterpret_cast<unsigned char*>(b), wb, 1, 0);
-        if (!av || !bv) {
-          Py_XDECREF(av);
-          Py_XDECREF(bv);
-          return -1;
-        }
-        PyObject* rv = TowerMul(d->tower_level, av, bv);
-        Py_DECREF(av);
-        Py_DECREF(bv);
-        if (!rv) return -1;
-        int rc =
-            _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(rv),
-                                reinterpret_cast<unsigned char*>(o), wb, 1, 0);
-        Py_DECREF(rv);
-        if (rc < 0) return -1;
+        Advance(a, b, o, strides);
       }
-      a += strides[0];
-      b += strides[1];
-      o += strides[2];
+      return 0;
+    }
+    if (d->tower_level <= 7) {  // native recursive Karatsuba tower multiply
+      for (npy_intp i = 0; i < n; ++i) {
+        modarith::BinaryTowerMul(d->tower_level, wb,
+                                 reinterpret_cast<const unsigned char*>(a),
+                                 reinterpret_cast<const unsigned char*>(b),
+                                 reinterpret_cast<unsigned char*>(o));
+        Advance(a, b, o, strides);
+      }
+      return 0;
+    }
+    for (npy_intp i = 0; i < n; ++i) {  // wide tower: Python-int Karatsuba
+      PyObject* av =
+          _PyLong_FromByteArray(reinterpret_cast<unsigned char*>(a), wb, 1, 0);
+      PyObject* bv =
+          _PyLong_FromByteArray(reinterpret_cast<unsigned char*>(b), wb, 1, 0);
+      if (!av || !bv) {
+        Py_XDECREF(av);
+        Py_XDECREF(bv);
+        return -1;
+      }
+      PyObject* rv = TowerMul(d->tower_level, av, bv);
+      Py_DECREF(av);
+      Py_DECREF(bv);
+      if (!rv) return -1;
+      int rc =
+          _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(rv),
+                              reinterpret_cast<unsigned char*>(o), wb, 1, 0);
+      Py_DECREF(rv);
+      if (rc < 0) return -1;
+      Advance(a, b, o, strides);
     }
     return 0;
   }
-  for (npy_intp i = 0; i < n; ++i) {
+
+  // Odd field: native fixed-width path where supported, Python-int otherwise.
+  unsigned char mod_le[32];
+  if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(d->modulus), mod_le,
+                          wb, 1, 0) >= 0) {
+    modarith::PrimeField pf =
+        modarith::PrimeField::Make(mod_le, wb, d->is_montgomery);
+    if (d->degree == 1 && pf.native) {
+      for (npy_intp i = 0; i < n; ++i) {
+        const auto* ua = reinterpret_cast<const unsigned char*>(a);
+        const auto* ub = reinterpret_cast<const unsigned char*>(b);
+        auto* uo = reinterpret_cast<unsigned char*>(o);
+        if (op == Op::kAdd) {
+          pf.Add(ua, ub, uo);
+        } else if (op == Op::kSub) {
+          pf.Sub(ua, ub, uo);
+        } else {
+          pf.Mul(ua, ub, uo);
+        }
+        Advance(a, b, o, strides);
+      }
+      return 0;
+    }
+    const int k = d->degree;
+    if (k > 1 && op != Op::kMul && pf.native) {  // extension add/sub: linear
+      for (npy_intp i = 0; i < n; ++i) {
+        for (int c = 0; c < k; ++c) {
+          const auto* ua = reinterpret_cast<const unsigned char*>(a) + c * wb;
+          const auto* ub = reinterpret_cast<const unsigned char*>(b) + c * wb;
+          auto* uo = reinterpret_cast<unsigned char*>(o) + c * wb;
+          if (op == Op::kAdd) {
+            pf.Add(ua, ub, uo);
+          } else {
+            pf.Sub(ua, ub, uo);
+          }
+        }
+        Advance(a, b, o, strides);
+      }
+      return 0;
+    }
+    if (k > 1 && op == Op::kMul && pf.ext_native) {  // binomial polynomial mul
+      unsigned char nr_le[8] = {0};
+      if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(d->non_residue),
+                              nr_le, wb, 1, 0) >= 0) {
+        for (npy_intp i = 0; i < n; ++i) {
+          // Coefficients stay in their storage form; the product/accumulate
+          // (montmul/modadd) and the X^k = non_residue fold preserve it, so the
+          // output is byte-identical to the decode/compute/encode path.
+          unsigned char prod[2 * kMaxDegree][8] = {{0}};
+          for (int ii = 0; ii < k; ++ii) {
+            for (int jj = 0; jj < k; ++jj) {
+              unsigned char term[8];
+              pf.Mul(reinterpret_cast<const unsigned char*>(a) + ii * wb,
+                     reinterpret_cast<const unsigned char*>(b) + jj * wb, term);
+              pf.Add(prod[ii + jj], term, prod[ii + jj]);
+            }
+          }
+          for (int ii = 2 * k - 2; ii >= k; --ii) {
+            unsigned char scaled[8];
+            pf.CanonMulBytes(nr_le, prod[ii], scaled);
+            pf.Add(prod[ii - k], scaled, prod[ii - k]);
+          }
+          for (int c = 0; c < k; ++c) {
+            std::memcpy(reinterpret_cast<unsigned char*>(o) + c * wb, prod[c],
+                        wb);
+          }
+          Advance(a, b, o, strides);
+        }
+        return 0;
+      }
+      PyErr_Clear();
+    }
+  } else {
+    PyErr_Clear();
+  }
+
+  for (npy_intp i = 0; i < n; ++i) {  // generic Python-int fallback
     PyObject* av[kMaxDegree];
     PyObject* bv[kMaxDegree];
     PyObject* ov[kMaxDegree];
@@ -807,9 +903,7 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
     if (erc < 0) {
       return -1;
     }
-    a += strides[0];
-    b += strides[1];
-    o += strides[2];
+    Advance(a, b, o, strides);
   }
   return 0;
 }

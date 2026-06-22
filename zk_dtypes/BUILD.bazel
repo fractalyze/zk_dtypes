@@ -1130,6 +1130,7 @@ cc_library(
         "_src/ec_point_numpy.h",
         "_src/field_dtype.cc",
         "_src/field_dtype.h",
+        "_src/field_modarith.h",
         "_src/field_numpy.h",
         "_src/int_caster.cc",
         "_src/int_caster.h",
