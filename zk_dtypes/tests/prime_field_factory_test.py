@@ -364,6 +364,45 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
       res2 = g * np.array([s], dtype=scalar_dt)
       np.testing.assert_array_equal(res2.view(np.uint8), pt(s).view(np.uint8))
 
+  def _ec_param(self, num_coords):
+    p = self._BN254_FQ
+    r = (1 << 256) % p
+    return np.dtype(
+        zk_dtypes._zk_dtypes_ext.ec_point_descr(
+            p, 256, num_coords, 1, r, pow(r, -1, p)
+        )
+    )
+
+  def test_ec_coordinate_rep_casts(self):
+    legacy = {
+        2: zk_dtypes.bn254_g1_affine,
+        3: zk_dtypes.bn254_g1_jacobian,
+        4: zk_dtypes.bn254_g1_xyzz,
+    }
+    param = {nc: self._ec_param(nc) for nc in (2, 3, 4)}
+
+    def to_param(arr, nc):
+      out = np.zeros(len(arr), dtype=param[nc])
+      out.view(np.uint8)[:] = arr.view(np.uint8)
+      return out
+
+    # The four affine<->projective directions the legacy backend registers;
+    # byte-match its cast.
+    for frm, to in [(3, 2), (4, 2), (2, 3), (2, 4)]:
+      lsrc = np.array([5], dtype=legacy[frm])
+      ldst = lsrc.astype(legacy[to])
+      pdst = to_param(lsrc, frm).astype(param[to])
+      np.testing.assert_array_equal(pdst.view(np.uint8), ldst.view(np.uint8))
+
+    # Jacobian<->xyzz (legacy registers neither direction): verify correctness
+    # by round-trip group equality and a shared affine projection.
+    j = to_param(np.array([5], dtype=legacy[3]), 3)
+    xy = j.astype(param[4])
+    self.assertTrue(bool((xy.astype(param[3]) == j)[0]))
+    np.testing.assert_array_equal(
+        xy.astype(param[2]).view(np.uint8), j.astype(param[2]).view(np.uint8)
+    )
+
   def test_scalar_subscript_returns_element(self):
     # arr[i] (integer subscript to a scalar) must not segfault and returns the
     # element via getitem.
