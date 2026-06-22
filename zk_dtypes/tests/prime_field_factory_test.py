@@ -403,6 +403,49 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
         xy.astype(param[2]).view(np.uint8), j.astype(param[2]).view(np.uint8)
     )
 
+  def test_ec_g2_jacobian_byte_matches_legacy(self):
+    # G2 points are over Fp2 = Fq[u]/(u^2 + 1); the same Jacobian formulas run
+    # over the degree-2 coordinate field.
+    q = self._BN254_FQ
+    r = (1 << 256) % q
+    g2 = np.dtype(
+        zk_dtypes._zk_dtypes_ext.ec_point_descr(
+            q, 256, 3, 1, r, pow(r, -1, q), 2, q - 1
+        )
+    )
+    legacy = zk_dtypes.bn254_g2_jacobian
+    self.assertEqual(np.dtype(g2).itemsize, np.dtype(legacy).itemsize)
+
+    def pt(n):
+      out = np.zeros(1, dtype=g2)
+      out.view(np.uint8)[:] = np.array([n], dtype=legacy).view(np.uint8)
+      return out
+
+    for a, b in [(1, 2), (3, 5), (2, 2), (123, 456)]:
+      la, lb = np.array([a], dtype=legacy), np.array([b], dtype=legacy)
+      np.testing.assert_array_equal(
+          (pt(a) + pt(b)).view(np.uint8), (la + lb).view(np.uint8)
+      )
+      np.testing.assert_array_equal(
+          (pt(a) - pt(b)).view(np.uint8), (la - lb).view(np.uint8)
+      )
+      np.testing.assert_array_equal(
+          (-pt(a)).view(np.uint8), (-la).view(np.uint8)
+      )
+
+    rfr = (1 << 256) % self._BN254_FR
+    scalar = np.dtype(
+        zk_dtypes._zk_dtypes_ext.field_descr(
+            self._BN254_FR, 1, 0, 256, 1, rfr, pow(rfr, -1, self._BN254_FR)
+        )
+    )
+    g = pt(1)
+    for s in (2, 3, 7, 100):
+      np.testing.assert_array_equal(
+          (np.array([s], dtype=scalar) * g).view(np.uint8), pt(s).view(np.uint8)
+      )
+    self.assertTrue(bool((pt(5) == (pt(2) + pt(3)))[0]))
+
   def test_ec_non_jacobian_arithmetic_rejected(self):
     # Group-law arithmetic is defined on the Jacobian representation; affine /
     # xyzz must be cast to Jacobian first (rather than misreading coordinates).
