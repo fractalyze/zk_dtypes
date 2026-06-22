@@ -69,10 +69,11 @@ struct FieldDescr {
   // Binary-tower parameters (kOddField leaves value_mask NULL):
   PyObject* value_mask;  // owned (binary): 2^(2^level) - 1
   uint8_t kind;
-  uint8_t
-      base_width_bytes;  // odd: per-coefficient width; binary: storage width
-  uint8_t degree;        // odd: extension degree (1 = prime); binary: 1
-  uint8_t tower_level;   // binary tower level
+  // odd: per-coefficient width; binary: storage width. uint16 so a high binary
+  // tower (level 11/12 -> 256/512 bytes) does not truncate to 0.
+  uint16_t base_width_bytes;
+  uint8_t degree;       // odd: extension degree (1 = prime); binary: 1
+  uint8_t tower_level;  // binary tower level
   uint8_t is_montgomery;
 };
 
@@ -282,7 +283,7 @@ PyArray_Descr* MakeDescr(PyObject* modulus, PyObject* non_residue, int degree,
   d->rinv_mod_p = rinv;
   d->value_mask = nullptr;
   d->kind = kOddField;
-  d->base_width_bytes = static_cast<uint8_t>(base_width_bytes);
+  d->base_width_bytes = static_cast<uint16_t>(base_width_bytes);
   d->degree = static_cast<uint8_t>(degree);
   d->tower_level = 0;
   d->is_montgomery = static_cast<uint8_t>(is_montgomery ? 1 : 0);
@@ -315,7 +316,7 @@ PyArray_Descr* MakeBinaryDescr(int tower_level, int width_bytes) {
   d->r_mod_p = nullptr;
   d->rinv_mod_p = nullptr;
   d->kind = kBinaryTower;
-  d->base_width_bytes = static_cast<uint8_t>(width_bytes);
+  d->base_width_bytes = static_cast<uint16_t>(width_bytes);
   d->degree = 1;
   d->tower_level = static_cast<uint8_t>(tower_level);
   d->is_montgomery = 0;
@@ -528,14 +529,38 @@ PyObject* GetItem(PyArray_Descr* descr, char* dataptr) {
 
 // --- within-DType copy cast (numpy requires at least a self-copy) --------
 
+// Same odd field except for the storage form (Montgomery vs canonical) — the
+// only non-identity cast we re-encode. Anything else (different modulus/degree/
+// width, binary level, or kind) is a meaningless cast and is rejected rather
+// than raw-copied (which would corrupt values and, across widths, write out of
+// bounds).
+bool CastCompatible(FieldDescr* a, FieldDescr* b) {
+  if (a->kind != kOddField || b->kind != kOddField) return false;
+  if (a->base_width_bytes != b->base_width_bytes || a->degree != b->degree) {
+    return false;
+  }
+  if (PyObject_RichCompareBool(a->modulus, b->modulus, Py_EQ) != 1)
+    return false;
+  if (a->degree > 1) {
+    return PyObject_RichCompareBool(a->non_residue, b->non_residue, Py_EQ) == 1;
+  }
+  return true;
+}
+
 NPY_CASTING CastResolve(struct PyArrayMethodObject_tag* /*method*/,
                         PyArray_DTypeMeta* const* /*dtypes*/,
                         PyArray_Descr* const* given, PyArray_Descr** loop,
                         npy_intp* view_offset) {
   PyArray_Descr* from = given[0];
+  PyArray_Descr* to = given[1];
+  if (to != nullptr && !SameField(AsField(from), AsField(to)) &&
+      !CastCompatible(AsField(from), AsField(to))) {
+    PyErr_SetString(PyExc_TypeError,
+                    "cannot cast between different parametric fields");
+    return static_cast<NPY_CASTING>(-1);
+  }
   Py_INCREF(from);
   loop[0] = from;
-  PyArray_Descr* to = given[1];
   if (to == nullptr) {
     Py_INCREF(from);
     loop[1] = from;
@@ -548,18 +573,33 @@ NPY_CASTING CastResolve(struct PyArrayMethodObject_tag* /*method*/,
     *view_offset = 0;
     return NPY_NO_CASTING;
   }
-  return NPY_UNSAFE_CASTING;
+  return NPY_UNSAFE_CASTING;  // same field, Montgomery <-> canonical re-encode
 }
 
 int CastLoop(PyArrayMethod_Context* context, char* const* data,
              const npy_intp* dimensions, const npy_intp* strides,
              NpyAuxData* /*aux*/) {
+  FieldDescr* from = AsField(context->descriptors[0]);
+  FieldDescr* to = AsField(context->descriptors[1]);
   npy_intp n = dimensions[0];
   char* in = data[0];
   char* out = data[1];
-  npy_intp elsize = context->descriptors[0]->elsize;
+  if (SameField(from, to)) {  // byte-identical: raw copy
+    npy_intp elsize = context->descriptors[0]->elsize;
+    for (npy_intp i = 0; i < n; ++i) {
+      std::memcpy(out, in, elsize);
+      in += strides[0];
+      out += strides[1];
+    }
+    return 0;
+  }
+  // Montgomery <-> canonical of the same field: decode then re-encode.
   for (npy_intp i = 0; i < n; ++i) {
-    std::memcpy(out, in, elsize);
+    PyObject* coeffs[kMaxDegree];
+    if (DecodeElement(from, in, coeffs) < 0) return -1;
+    int rc = EncodeElement(to, out, coeffs);
+    for (int j = 0; j < from->degree; ++j) Py_DECREF(coeffs[j]);
+    if (rc < 0) return -1;
     in += strides[0];
     out += strides[1];
   }

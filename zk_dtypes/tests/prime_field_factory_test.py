@@ -487,6 +487,56 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     b = np.array([0x12345], dtype=bf)
     self.assertEqual(int(b[0]), 0x12345)
 
+  def test_mont_canonical_astype_reencodes(self):
+    # astype between the Montgomery and canonical forms of one field must
+    # re-encode the value, not raw-copy the bytes.
+    p = 10**9 + 7
+    mont = zk_dtypes.prime_field(p, "mont")
+    canon = zk_dtypes.prime_field(p, "canonical")
+    vals = [7, 123456789, p - 1]
+    a = np.array(vals, dtype=canon)
+    b = a.astype(mont)
+    self.assertEqual([int(x) for x in b.tolist()], vals)
+    r = (1 << 32) % p
+    self.assertEqual(b.view(np.uint32).tolist(), [(v * r) % p for v in vals])
+    self.assertEqual([int(x) for x in b.astype(canon).tolist()], vals)
+
+  def test_cast_between_distinct_fields_rejected(self):
+    # A cast between genuinely different fields is meaningless (and across widths
+    # would write out of bounds) — it must raise, not silently copy bytes.
+    a = np.array([1], dtype=zk_dtypes.prime_field(10**9 + 7))
+    with self.assertRaises(TypeError):
+      a.astype(zk_dtypes.prime_field(2130706433))
+
+  def test_high_binary_tower_round_trips(self):
+    # Levels 11/12 (256/512-byte storage) must not truncate base_width_bytes to
+    # 0 (would silently zero every element).
+    for level, width in ((11, 256), (12, 512)):
+      bf = np.dtype(zk_dtypes._zk_dtypes_ext.binary_field_descr(level))
+      self.assertEqual(np.dtype(bf).itemsize, width)
+      v = 0x123456789ABCDEF
+      a = np.array([v], dtype=bf)
+      self.assertEqual(int(a[0]), v)
+      b = np.array([0xFF], dtype=bf)
+      self.assertEqual(int((a + b)[0]), v ^ 0xFF)
+
+  def test_scalar_mul_output_curve_mismatch_rejected(self):
+    # out= of a different representation than the Jacobian point must be rejected
+    # (the native scalar-mul sizes its write from the input point's width).
+    jac = self._ec_param(3)
+    affine = self._ec_param(2)
+    rfr = (1 << 256) % self._BN254_FR
+    scalar_dt = np.dtype(
+        zk_dtypes._zk_dtypes_ext.field_descr(
+            self._BN254_FR, 1, 0, 256, 1, rfr, pow(rfr, -1, self._BN254_FR)
+        )
+    )
+    s = np.array([3], dtype=scalar_dt)
+    g = np.zeros(1, dtype=jac)
+    out = np.zeros(1, dtype=affine)
+    with self.assertRaises((TypeError, ValueError)):
+      np.multiply(s, g, out=out)
+
   def test_miller_rabin_known_primes(self):
     for p in (
         2,
