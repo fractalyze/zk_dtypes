@@ -841,6 +841,20 @@ bool AddArithLoop(PyObject* numpy, const char* ufunc_name) {
 
 }  // namespace
 
+PyObject* FieldDTypeMetaObject() {
+  return reinterpret_cast<PyObject*>(&FieldDType);
+}
+
+PyObject* PrimeFieldValue(PyObject* descr, const char* data) {
+  FieldDescr* f = AsField(reinterpret_cast<PyArray_Descr*>(descr));
+  if (f->kind != kOddField || f->degree != 1) {
+    PyErr_SetString(PyExc_TypeError,
+                    "EC scalar must be a prime (degree-1) field element");
+    return nullptr;
+  }
+  return DecodeCoeff(f, data);
+}
+
 bool RegisterFieldDType(PyObject* /*numpy*/, PyObject* module) {
   FieldScalar_Type.tp_name = "zk_dtypes._zk_dtypes_ext.FieldScalar";
   FieldScalar_Type.tp_basicsize = 0;
