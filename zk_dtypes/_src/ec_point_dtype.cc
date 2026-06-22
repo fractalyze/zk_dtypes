@@ -162,6 +162,17 @@ PyObject* FMulInt(PyObject* p, PyObject* a, long k) {
   return r;
 }
 
+// Field inverse via Fermat: x^(p-2) mod p (p prime). x must be nonzero.
+PyObject* FInv(PyObject* p, PyObject* x) {
+  PyObject* two = PyLong_FromLong(2);
+  PyObject* pm2 = two ? PyNumber_Subtract(p, two) : nullptr;
+  Py_XDECREF(two);
+  if (pm2 == nullptr) return nullptr;
+  PyObject* r = PyNumber_Power(x, pm2, p);  // 3-arg pow == modular exponent
+  Py_DECREF(pm2);
+  return r;
+}
+
 bool IsZeroCoord(PyObject* x) { return PyObject_IsTrue(x) == 0; }
 
 // Jacobian doubling, a == 0 (EFD dbl-2009-l). in/out: 3 canonical coords.
@@ -564,7 +575,138 @@ PyObject* GetItem(PyArray_Descr* descr, char* dataptr) {
   return tuple;
 }
 
-// --- within-DType copy cast ---------------------------------------------
+// Same curve and coordinate field, ignoring the representation (coord count).
+bool SameCurveField(EcPointDescr* a, EcPointDescr* b) {
+  return a->base_width_bytes == b->base_width_bytes &&
+         a->is_montgomery == b->is_montgomery &&
+         PyObject_RichCompareBool(a->modulus, b->modulus, Py_EQ) == 1;
+}
+
+PyObject* One() { return PyLong_FromLong(1); }
+PyObject* ZeroL() { return PyLong_FromLong(0); }
+
+// Converts a point between coordinate representations (canonical coords
+// in/out). num_coords: affine 2, Jacobian 3, xyzz 4. Jacobian<->xyzz keep the
+// projective coordinates (legacy direct formulas); the rest go through affine
+// (needs a field inverse), matching the legacy registered casts byte-for-byte.
+int ConvertRep(PyObject* p, int fn, int tn, PyObject* const* in,
+               PyObject** out) {
+  if (fn == tn) {
+    CopyPoint(in, out, fn);
+    return 0;
+  }
+  if (fn == 3 && tn == 4) {  // jac (X,Y,Z) -> xyzz (X,Y,Z^2,Z^3)
+    PyObject* z2 = FMul(p, in[2], in[2]);
+    PyObject* z3 = z2 ? FMul(p, z2, in[2]) : nullptr;
+    if (!z2 || !z3) {
+      Py_XDECREF(z2);
+      Py_XDECREF(z3);
+      return -1;
+    }
+    Py_INCREF(in[0]);
+    out[0] = in[0];
+    Py_INCREF(in[1]);
+    out[1] = in[1];
+    out[2] = z2;
+    out[3] = z3;
+    return 0;
+  }
+  if (fn == 4 && tn == 3) {  // xyzz (X,Y,ZZ,ZZZ) -> jac (X,Y,ZZZ/ZZ)
+    if (IsZeroCoord(in[2])) {
+      out[0] = One();
+      out[1] = One();
+      out[2] = ZeroL();
+      if (!out[0] || !out[1] || !out[2]) {
+        Py_XDECREF(out[0]);
+        Py_XDECREF(out[1]);
+        Py_XDECREF(out[2]);
+        return -1;
+      }
+      return 0;
+    }
+    PyObject* zzinv = FInv(p, in[2]);
+    PyObject* z = zzinv ? FMul(p, in[3], zzinv) : nullptr;
+    Py_XDECREF(zzinv);
+    if (!z) return -1;
+    Py_INCREF(in[0]);
+    out[0] = in[0];
+    Py_INCREF(in[1]);
+    out[1] = in[1];
+    out[2] = z;
+    return 0;
+  }
+  // Remaining pairs route through affine (x, y).
+  PyObject* ax = nullptr;
+  PyObject* ay = nullptr;
+  bool inf = false;
+  if (fn == 2) {
+    inf = IsZeroCoord(in[0]) && IsZeroCoord(in[1]);
+    Py_INCREF(in[0]);
+    ax = in[0];
+    Py_INCREF(in[1]);
+    ay = in[1];
+  } else if (fn == 3) {  // jac -> affine
+    if (IsZeroCoord(in[2])) {
+      inf = true;
+    } else {
+      PyObject* zi = FInv(p, in[2]);
+      PyObject* z2 = zi ? FMul(p, zi, zi) : nullptr;
+      PyObject* z3 = z2 ? FMul(p, z2, zi) : nullptr;
+      ax = z2 ? FMul(p, in[0], z2) : nullptr;
+      ay = z3 ? FMul(p, in[1], z3) : nullptr;
+      Py_XDECREF(zi);
+      Py_XDECREF(z2);
+      Py_XDECREF(z3);
+    }
+  } else {  // xyzz -> affine
+    if (IsZeroCoord(in[2])) {
+      inf = true;
+    } else {
+      PyObject* zzi = FInv(p, in[2]);
+      PyObject* zzzi = FInv(p, in[3]);
+      ax = zzi ? FMul(p, in[0], zzi) : nullptr;
+      ay = zzzi ? FMul(p, in[1], zzzi) : nullptr;
+      Py_XDECREF(zzi);
+      Py_XDECREF(zzzi);
+    }
+  }
+  if (!inf && (!ax || !ay)) {
+    Py_XDECREF(ax);
+    Py_XDECREF(ay);
+    return -1;
+  }
+  int rc = 0;
+  if (inf) {
+    Py_XDECREF(ax);
+    Py_XDECREF(ay);
+    if (tn == 2) {
+      out[0] = ZeroL();
+      out[1] = ZeroL();
+    } else {
+      out[0] = One();
+      out[1] = One();
+      out[2] = ZeroL();
+      if (tn == 4) out[3] = ZeroL();
+    }
+    for (int i = 0; i < tn; ++i) {
+      if (!out[i]) rc = -1;
+    }
+  } else {
+    out[0] = ax;
+    out[1] = ay;
+    if (tn >= 3) out[2] = One();
+    if (tn == 4) out[3] = One();
+    for (int i = 2; i < tn; ++i) {
+      if (!out[i]) rc = -1;
+    }
+  }
+  if (rc < 0) {
+    for (int i = 0; i < tn; ++i) Py_XDECREF(out[i]);
+  }
+  return rc;
+}
+
+// --- within-DType cast (copy + representation conversion) ----------------
 
 NPY_CASTING CastResolve(struct PyArrayMethodObject_tag* /*method*/,
                         PyArray_DTypeMeta* const* /*dtypes*/,
@@ -586,18 +728,37 @@ NPY_CASTING CastResolve(struct PyArrayMethodObject_tag* /*method*/,
     *view_offset = 0;
     return NPY_NO_CASTING;
   }
-  return NPY_UNSAFE_CASTING;
+  return NPY_UNSAFE_CASTING;  // same field, different representation
 }
 
 int CastLoop(PyArrayMethod_Context* context, char* const* data,
              const npy_intp* dimensions, const npy_intp* strides,
              NpyAuxData* /*aux*/) {
+  EcPointDescr* from = AsEc(context->descriptors[0]);
+  EcPointDescr* to = AsEc(context->descriptors[1]);
   npy_intp n = dimensions[0];
   char* in = data[0];
   char* out = data[1];
-  npy_intp elsize = context->descriptors[0]->elsize;
+  if (from->num_coords == to->num_coords) {
+    npy_intp elsize = context->descriptors[0]->elsize;
+    for (npy_intp i = 0; i < n; ++i) {
+      std::memcpy(out, in, elsize);
+      in += strides[0];
+      out += strides[1];
+    }
+    return 0;
+  }
+  PyObject* p = from->modulus;
   for (npy_intp i = 0; i < n; ++i) {
-    std::memcpy(out, in, elsize);
+    PyObject* src[kMaxCoords];
+    PyObject* dst[kMaxCoords];
+    if (DecodePoint(from, in, src) < 0) return -1;
+    int rc = ConvertRep(p, from->num_coords, to->num_coords, src, dst);
+    for (int j = 0; j < from->num_coords; ++j) Py_DECREF(src[j]);
+    if (rc < 0) return -1;
+    int erc = EncodePoint(to, out, dst);
+    for (int j = 0; j < to->num_coords; ++j) Py_DECREF(dst[j]);
+    if (erc < 0) return -1;
     in += strides[0];
     out += strides[1];
   }
