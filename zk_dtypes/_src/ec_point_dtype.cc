@@ -834,6 +834,12 @@ NPY_CASTING BinResolve(struct PyArrayMethodObject_tag* /*method*/,
     PyErr_SetString(PyExc_TypeError, "point op requires the same curve");
     return static_cast<NPY_CASTING>(-1);
   }
+  if (AsEc(given[0])->num_coords != 3) {
+    PyErr_SetString(PyExc_TypeError,
+                    "EC arithmetic requires the Jacobian representation; cast "
+                    "affine/xyzz points to Jacobian first");
+    return static_cast<NPY_CASTING>(-1);
+  }
   Py_INCREF(given[0]);
   loop[0] = given[0];
   Py_INCREF(given[1]);
@@ -984,6 +990,12 @@ NPY_CASTING CmpResolve(struct PyArrayMethodObject_tag* /*method*/,
                     "point comparison requires the same curve");
     return static_cast<NPY_CASTING>(-1);
   }
+  if (AsEc(given[0])->num_coords != 3) {
+    PyErr_SetString(PyExc_TypeError,
+                    "EC comparison requires the Jacobian representation; cast "
+                    "affine/xyzz points to Jacobian first");
+    return static_cast<NPY_CASTING>(-1);
+  }
   Py_INCREF(given[0]);
   loop[0] = given[0];
   Py_INCREF(given[1]);
@@ -1067,6 +1079,12 @@ NPY_CASTING ScalarMulResolve(struct PyArrayMethodObject_tag* /*method*/,
       Py_TYPE(given[0]) == reinterpret_cast<PyTypeObject*>(&EcPointDType)
           ? given[0]
           : given[1];
+  if (AsEc(point)->num_coords != 3) {
+    PyErr_SetString(PyExc_TypeError,
+                    "EC scalar multiplication requires the Jacobian "
+                    "representation; cast the point to Jacobian first");
+    return static_cast<NPY_CASTING>(-1);
+  }
   Py_INCREF(given[0]);
   loop[0] = given[0];
   Py_INCREF(given[1]);
