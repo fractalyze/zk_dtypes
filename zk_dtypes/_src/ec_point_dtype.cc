@@ -49,11 +49,14 @@ constexpr int kMaxCoords = 4;
 
 struct EcPointDescr {
   PyArray_Descr base;
-  PyObject* modulus;  // owned: coordinate prime field modulus
+  PyObject* modulus;  // owned: base prime field modulus
   PyObject* r_mod_p;  // owned (Montgomery): R = 2^base_width mod p; else NULL
   PyObject* rinv_mod_p;  // owned (Montgomery): R^-1 mod p; else NULL
+  // Coordinate field: prime (G1, degree 1) or Fp2 (G2, degree 2, u^2 = nr).
+  PyObject* non_residue;  // owned (degree 2): the Fp2 non-residue; else NULL
+  uint8_t coord_degree;   // 1 = G1 (Fq), 2 = G2 (Fp2)
   uint8_t base_width_bytes;
-  uint8_t num_coords;  // 3 for Jacobian (X, Y, Z)
+  uint8_t num_coords;  // 2 affine, 3 Jacobian, 4 xyzz
   uint8_t is_montgomery;
 };
 
@@ -64,9 +67,12 @@ EcPointDescr* AsEc(PyArray_Descr* d) {
   return reinterpret_cast<EcPointDescr*>(d);
 }
 
-// --- coordinate (prime field) encode / decode ---------------------------
+// --- coordinate encode / decode -----------------------------------------
+// A coordinate is one base-field element (G1) or `coord_degree` of them packed
+// low-to-high (G2 Fp2 = c0,c1). Its decoded value is a canonical int (degree 1)
+// or a tuple of canonical ints (degree > 1).
 
-PyObject* DecodeCoord(EcPointDescr* d, const char* slot) {
+PyObject* DecodeBase(EcPointDescr* d, const char* slot) {
   PyObject* stored = _PyLong_FromByteArray(
       reinterpret_cast<const unsigned char*>(slot), d->base_width_bytes, 1, 0);
   if (stored == nullptr || !d->is_montgomery) {
@@ -82,7 +88,7 @@ PyObject* DecodeCoord(EcPointDescr* d, const char* slot) {
   return canonical;
 }
 
-int EncodeCoord(EcPointDescr* d, char* slot, PyObject* value) {
+int EncodeBase(EcPointDescr* d, char* slot, PyObject* value) {
   PyObject* rem = PyNumber_Remainder(value, d->modulus);
   if (rem == nullptr) {
     return -1;
@@ -106,9 +112,42 @@ int EncodeCoord(EcPointDescr* d, char* slot, PyObject* value) {
   return rc < 0 ? -1 : 0;
 }
 
+PyObject* DecodeCoord(EcPointDescr* d, const char* slot) {
+  if (d->coord_degree == 1) {
+    return DecodeBase(d, slot);
+  }
+  PyObject* tuple = PyTuple_New(d->coord_degree);
+  if (tuple == nullptr) {
+    return nullptr;
+  }
+  for (int k = 0; k < d->coord_degree; ++k) {
+    PyObject* c = DecodeBase(d, slot + k * d->base_width_bytes);
+    if (c == nullptr) {
+      Py_DECREF(tuple);
+      return nullptr;
+    }
+    PyTuple_SET_ITEM(tuple, k, c);
+  }
+  return tuple;
+}
+
+int EncodeCoord(EcPointDescr* d, char* slot, PyObject* coord) {
+  if (d->coord_degree == 1) {
+    return EncodeBase(d, slot, coord);
+  }
+  for (int k = 0; k < d->coord_degree; ++k) {
+    if (EncodeBase(d, slot + k * d->base_width_bytes,
+                   PyTuple_GET_ITEM(coord, k)) < 0) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
 int DecodePoint(EcPointDescr* d, const char* ptr, PyObject** out) {
+  int stride = d->coord_degree * d->base_width_bytes;
   for (int i = 0; i < d->num_coords; ++i) {
-    out[i] = DecodeCoord(d, ptr + i * d->base_width_bytes);
+    out[i] = DecodeCoord(d, ptr + i * stride);
     if (out[i] == nullptr) {
       for (int j = 0; j < i; ++j) Py_DECREF(out[j]);
       return -1;
@@ -118,8 +157,9 @@ int DecodePoint(EcPointDescr* d, const char* ptr, PyObject** out) {
 }
 
 int EncodePoint(EcPointDescr* d, char* ptr, PyObject* const* coords) {
+  int stride = d->coord_degree * d->base_width_bytes;
   for (int i = 0; i < d->num_coords; ++i) {
-    if (EncodeCoord(d, ptr + i * d->base_width_bytes, coords[i]) < 0) {
+    if (EncodeCoord(d, ptr + i * stride, coords[i]) < 0) {
       return -1;
     }
   }
@@ -127,8 +167,6 @@ int EncodePoint(EcPointDescr* d, char* ptr, PyObject* const* coords) {
 }
 
 // --- prime-field helpers on canonical Python ints -----------------------
-
-PyObject* FMod(PyObject* p, PyObject* x) { return PyNumber_Remainder(x, p); }
 
 PyObject* FAdd(PyObject* p, PyObject* a, PyObject* b) {
   PyObject* s = PyNumber_Add(a, b);
@@ -175,26 +213,139 @@ PyObject* FInv(PyObject* p, PyObject* x) {
 
 bool IsZeroCoord(PyObject* x) { return PyObject_IsTrue(x) == 0; }
 
+// --- coordinate-field ops (prime Fq for G1; Fp2 for G2, u^2 = non_residue) --
+// A coordinate value is a canonical Python int (degree 1) or a 2-tuple of
+// canonical ints (a0, a1) for Fp2. The C* helpers dispatch on coord_degree and
+// build on the base-field F* helpers, so the group-law formulas are written
+// once and work over either coordinate field.
+
+PyObject* MakeFp2(PyObject* c0, PyObject* c1) {  // steals c0, c1
+  if (!c0 || !c1) {
+    Py_XDECREF(c0);
+    Py_XDECREF(c1);
+    return nullptr;
+  }
+  PyObject* t = PyTuple_New(2);
+  if (!t) {
+    Py_DECREF(c0);
+    Py_DECREF(c1);
+    return nullptr;
+  }
+  PyTuple_SET_ITEM(t, 0, c0);
+  PyTuple_SET_ITEM(t, 1, c1);
+  return t;
+}
+
+PyObject* CZero(EcPointDescr* d) {
+  if (d->coord_degree == 1) return PyLong_FromLong(0);
+  return MakeFp2(PyLong_FromLong(0), PyLong_FromLong(0));
+}
+
+PyObject* COne(EcPointDescr* d) {
+  if (d->coord_degree == 1) return PyLong_FromLong(1);
+  return MakeFp2(PyLong_FromLong(1), PyLong_FromLong(0));
+}
+
+bool CIsZero(EcPointDescr* d, PyObject* a) {
+  if (d->coord_degree == 1) return IsZeroCoord(a);
+  return IsZeroCoord(PyTuple_GET_ITEM(a, 0)) &&
+         IsZeroCoord(PyTuple_GET_ITEM(a, 1));
+}
+
+PyObject* CAdd(EcPointDescr* d, PyObject* a, PyObject* b) {
+  if (d->coord_degree == 1) return FAdd(d->modulus, a, b);
+  return MakeFp2(
+      FAdd(d->modulus, PyTuple_GET_ITEM(a, 0), PyTuple_GET_ITEM(b, 0)),
+      FAdd(d->modulus, PyTuple_GET_ITEM(a, 1), PyTuple_GET_ITEM(b, 1)));
+}
+
+PyObject* CSub(EcPointDescr* d, PyObject* a, PyObject* b) {
+  if (d->coord_degree == 1) return FSub(d->modulus, a, b);
+  return MakeFp2(
+      FSub(d->modulus, PyTuple_GET_ITEM(a, 0), PyTuple_GET_ITEM(b, 0)),
+      FSub(d->modulus, PyTuple_GET_ITEM(a, 1), PyTuple_GET_ITEM(b, 1)));
+}
+
+PyObject* CNeg(EcPointDescr* d, PyObject* a) {
+  PyObject* m = d->modulus;
+  if (d->coord_degree == 1) return FSub(m, m, a);  // (p - a) mod p
+  return MakeFp2(FSub(m, m, PyTuple_GET_ITEM(a, 0)),
+                 FSub(m, m, PyTuple_GET_ITEM(a, 1)));
+}
+
+PyObject* CMulInt(EcPointDescr* d, PyObject* a, long k) {
+  if (d->coord_degree == 1) return FMulInt(d->modulus, a, k);
+  return MakeFp2(FMulInt(d->modulus, PyTuple_GET_ITEM(a, 0), k),
+                 FMulInt(d->modulus, PyTuple_GET_ITEM(a, 1), k));
+}
+
+PyObject* CMul(EcPointDescr* d, PyObject* a, PyObject* b) {
+  PyObject* m = d->modulus;
+  if (d->coord_degree == 1) return FMul(m, a, b);
+  PyObject* a0 = PyTuple_GET_ITEM(a, 0);
+  PyObject* a1 = PyTuple_GET_ITEM(a, 1);
+  PyObject* b0 = PyTuple_GET_ITEM(b, 0);
+  PyObject* b1 = PyTuple_GET_ITEM(b, 1);
+  // (a0 + a1 u)(b0 + b1 u) = (a0 b0 + nr a1 b1) + (a0 b1 + a1 b0) u
+  PyObject* a0b0 = FMul(m, a0, b0);
+  PyObject* a1b1 = FMul(m, a1, b1);
+  PyObject* nra1b1 = a1b1 ? FMul(m, d->non_residue, a1b1) : nullptr;
+  PyObject* c0 = (a0b0 && nra1b1) ? FAdd(m, a0b0, nra1b1) : nullptr;
+  PyObject* a0b1 = FMul(m, a0, b1);
+  PyObject* a1b0 = FMul(m, a1, b0);
+  PyObject* c1 = (a0b1 && a1b0) ? FAdd(m, a0b1, a1b0) : nullptr;
+  Py_XDECREF(a0b0);
+  Py_XDECREF(a1b1);
+  Py_XDECREF(nra1b1);
+  Py_XDECREF(a0b1);
+  Py_XDECREF(a1b0);
+  return MakeFp2(c0, c1);
+}
+
+// Coordinate-field inverse (used by representation casts).
+PyObject* CInv(EcPointDescr* d, PyObject* a) {
+  PyObject* m = d->modulus;
+  if (d->coord_degree == 1) return FInv(m, a);
+  PyObject* a0 = PyTuple_GET_ITEM(a, 0);
+  PyObject* a1 = PyTuple_GET_ITEM(a, 1);
+  // norm = a0^2 - nr a1^2 ; a^-1 = (a0 - a1 u) / norm
+  PyObject* a0sq = FMul(m, a0, a0);
+  PyObject* a1sq = FMul(m, a1, a1);
+  PyObject* nra1sq = a1sq ? FMul(m, d->non_residue, a1sq) : nullptr;
+  PyObject* norm = (a0sq && nra1sq) ? FSub(m, a0sq, nra1sq) : nullptr;
+  PyObject* ninv = norm ? FInv(m, norm) : nullptr;
+  PyObject* c0 = ninv ? FMul(m, a0, ninv) : nullptr;
+  PyObject* na1 = FSub(m, m, a1);
+  PyObject* c1 = (ninv && na1) ? FMul(m, na1, ninv) : nullptr;
+  Py_XDECREF(a0sq);
+  Py_XDECREF(a1sq);
+  Py_XDECREF(nra1sq);
+  Py_XDECREF(norm);
+  Py_XDECREF(ninv);
+  Py_XDECREF(na1);
+  return MakeFp2(c0, c1);
+}
+
 // Jacobian doubling, a == 0 (EFD dbl-2009-l). in/out: 3 canonical coords.
-int JacDouble(PyObject* p, PyObject* const* in, PyObject** out) {
+int JacDouble(EcPointDescr* ec, PyObject* const* in, PyObject** out) {
   PyObject* X = in[0];
   PyObject* Y = in[1];
   PyObject* Z = in[2];
-  PyObject* xx = FMul(p, X, X);
-  PyObject* yy = FMul(p, Y, Y);
-  PyObject* yyyy = yy ? FMul(p, yy, yy) : nullptr;
-  PyObject* xyy = (xx && yy) ? FMul(p, X, yy) : nullptr;
-  PyObject* d = xyy ? FMulInt(p, xyy, 4) : nullptr;  // d = 4*X*yy
-  PyObject* e = xx ? FMulInt(p, xx, 3) : nullptr;    // e = 3*xx
-  PyObject* ee = e ? FMul(p, e, e) : nullptr;
-  PyObject* twod = d ? FMulInt(p, d, 2) : nullptr;
-  PyObject* X2 = (ee && twod) ? FSub(p, ee, twod) : nullptr;  // e^2 - 2d
-  PyObject* dmx = (d && X2) ? FSub(p, d, X2) : nullptr;
-  PyObject* edmx = (e && dmx) ? FMul(p, e, dmx) : nullptr;
-  PyObject* eightyyyy = yyyy ? FMulInt(p, yyyy, 8) : nullptr;
-  PyObject* Y2 = (edmx && eightyyyy) ? FSub(p, edmx, eightyyyy) : nullptr;
-  PyObject* yz = FMul(p, Y, Z);
-  PyObject* Z2 = yz ? FMulInt(p, yz, 2) : nullptr;
+  PyObject* xx = CMul(ec, X, X);
+  PyObject* yy = CMul(ec, Y, Y);
+  PyObject* yyyy = yy ? CMul(ec, yy, yy) : nullptr;
+  PyObject* xyy = (xx && yy) ? CMul(ec, X, yy) : nullptr;
+  PyObject* d = xyy ? CMulInt(ec, xyy, 4) : nullptr;  // d = 4*X*yy
+  PyObject* e = xx ? CMulInt(ec, xx, 3) : nullptr;    // e = 3*xx
+  PyObject* ee = e ? CMul(ec, e, e) : nullptr;
+  PyObject* twod = d ? CMulInt(ec, d, 2) : nullptr;
+  PyObject* X2 = (ee && twod) ? CSub(ec, ee, twod) : nullptr;  // e^2 - 2d
+  PyObject* dmx = (d && X2) ? CSub(ec, d, X2) : nullptr;
+  PyObject* edmx = (e && dmx) ? CMul(ec, e, dmx) : nullptr;
+  PyObject* eightyyyy = yyyy ? CMulInt(ec, yyyy, 8) : nullptr;
+  PyObject* Y2 = (edmx && eightyyyy) ? CSub(ec, edmx, eightyyyy) : nullptr;
+  PyObject* yz = CMul(ec, Y, Z);
+  PyObject* Z2 = yz ? CMulInt(ec, yz, 2) : nullptr;
   Py_XDECREF(xx);
   Py_XDECREF(yy);
   Py_XDECREF(yyyy);
@@ -227,57 +378,56 @@ void CopyPoint(PyObject* const* in, PyObject** out, int n) {
 }
 
 // Jacobian addition (EFD add-2007-bl), a == 0. in1/in2/out: 3 canonical coords.
-int JacAdd(PyObject* p, PyObject* const* P, PyObject* const* Q,
+int JacAdd(EcPointDescr* ec, PyObject* const* P, PyObject* const* Q,
            PyObject** out) {
-  if (IsZeroCoord(P[2])) {  // P is infinity
+  if (CIsZero(ec, P[2])) {  // P is infinity
     CopyPoint(Q, out, 3);
     return 0;
   }
-  if (IsZeroCoord(Q[2])) {  // Q is infinity
+  if (CIsZero(ec, Q[2])) {  // Q is infinity
     CopyPoint(P, out, 3);
     return 0;
   }
   PyObject *X1 = P[0], *Y1 = P[1], *Z1 = P[2];
   PyObject *X2 = Q[0], *Y2 = Q[1], *Z2 = Q[2];
-  PyObject* z1z1 = FMul(p, Z1, Z1);
-  PyObject* z2z2 = FMul(p, Z2, Z2);
-  PyObject* u1 = z2z2 ? FMul(p, X1, z2z2) : nullptr;
-  PyObject* u2 = z1z1 ? FMul(p, X2, z1z1) : nullptr;
-  PyObject* yz2 = z2z2 ? FMul(p, Y1, Z2) : nullptr;
-  PyObject* s1 = yz2 ? FMul(p, yz2, z2z2) : nullptr;
-  PyObject* yz1 = z1z1 ? FMul(p, Y2, Z1) : nullptr;
-  PyObject* s2 = yz1 ? FMul(p, yz1, z1z1) : nullptr;
+  PyObject* z1z1 = CMul(ec, Z1, Z1);
+  PyObject* z2z2 = CMul(ec, Z2, Z2);
+  PyObject* u1 = z2z2 ? CMul(ec, X1, z2z2) : nullptr;
+  PyObject* u2 = z1z1 ? CMul(ec, X2, z1z1) : nullptr;
+  PyObject* yz2 = z2z2 ? CMul(ec, Y1, Z2) : nullptr;
+  PyObject* s1 = yz2 ? CMul(ec, yz2, z2z2) : nullptr;
+  PyObject* yz1 = z1z1 ? CMul(ec, Y2, Z1) : nullptr;
+  PyObject* s2 = yz1 ? CMul(ec, yz1, z1z1) : nullptr;
   int rc = -1;
   if (!u1 || !u2 || !s1 || !s2) goto cleanup;
   if (PyObject_RichCompareBool(u1, u2, Py_EQ) == 1 &&
       PyObject_RichCompareBool(s1, s2, Py_EQ) == 1) {
-    rc = JacDouble(p, P, out);
+    rc = JacDouble(ec, P, out);
     goto cleanup;
   }
   {
-    PyObject* h = FSub(p, u2, u1);
-    PyObject* twoh = h ? FMulInt(p, h, 2) : nullptr;
-    PyObject* i = twoh ? FMul(p, twoh, twoh) : nullptr;  // (2h)^2
-    PyObject* hi = (h && i) ? FMul(p, h, i) : nullptr;
-    PyObject* j =
-        hi ? FSub(p, p, hi) : nullptr;  // j = -(h*i) = p - h*i (then mod)
-    PyObject* sdiff = FSub(p, s2, s1);
-    PyObject* r = sdiff ? FMulInt(p, sdiff, 2) : nullptr;  // 2(s2-s1)
-    PyObject* v = i ? FMul(p, u1, i) : nullptr;
-    PyObject* rr = r ? FMul(p, r, r) : nullptr;
-    PyObject* twov = v ? FMulInt(p, v, 2) : nullptr;
-    PyObject* rrj = (rr && j) ? FAdd(p, rr, j) : nullptr;
+    PyObject* h = CSub(ec, u2, u1);
+    PyObject* twoh = h ? CMulInt(ec, h, 2) : nullptr;
+    PyObject* i = twoh ? CMul(ec, twoh, twoh) : nullptr;  // (2h)^2
+    PyObject* hi = (h && i) ? CMul(ec, h, i) : nullptr;
+    PyObject* j = hi ? CNeg(ec, hi) : nullptr;  // j = -(h*i)
+    PyObject* sdiff = CSub(ec, s2, s1);
+    PyObject* r = sdiff ? CMulInt(ec, sdiff, 2) : nullptr;  // 2(s2-s1)
+    PyObject* v = i ? CMul(ec, u1, i) : nullptr;
+    PyObject* rr = r ? CMul(ec, r, r) : nullptr;
+    PyObject* twov = v ? CMulInt(ec, v, 2) : nullptr;
+    PyObject* rrj = (rr && j) ? CAdd(ec, rr, j) : nullptr;
     PyObject* X3 =
-        (rrj && twov) ? FSub(p, rrj, twov) : nullptr;  // r^2 + j - 2v
-    PyObject* vmx = (v && X3) ? FSub(p, v, X3) : nullptr;
-    PyObject* rvmx = (r && vmx) ? FMul(p, r, vmx) : nullptr;
-    PyObject* s1j = (s1 && j) ? FMul(p, s1, j) : nullptr;
-    PyObject* twos1j = s1j ? FMulInt(p, s1j, 2) : nullptr;
+        (rrj && twov) ? CSub(ec, rrj, twov) : nullptr;  // r^2 + j - 2v
+    PyObject* vmx = (v && X3) ? CSub(ec, v, X3) : nullptr;
+    PyObject* rvmx = (r && vmx) ? CMul(ec, r, vmx) : nullptr;
+    PyObject* s1j = (s1 && j) ? CMul(ec, s1, j) : nullptr;
+    PyObject* twos1j = s1j ? CMulInt(ec, s1j, 2) : nullptr;
     PyObject* Y3 =
-        (rvmx && twos1j) ? FAdd(p, rvmx, twos1j) : nullptr;  // r(v-X3) + 2*s1*j
-    PyObject* z1z2 = FMul(p, Z1, Z2);
-    PyObject* z1z2h = (z1z2 && h) ? FMul(p, z1z2, h) : nullptr;
-    PyObject* Z3 = z1z2h ? FMulInt(p, z1z2h, 2) : nullptr;  // 2*Z1*Z2*h
+        (rvmx && twos1j) ? CAdd(ec, rvmx, twos1j) : nullptr;  // r(v-X3)+2*s1*j
+    PyObject* z1z2 = CMul(ec, Z1, Z2);
+    PyObject* z1z2h = (z1z2 && h) ? CMul(ec, z1z2, h) : nullptr;
+    PyObject* Z3 = z1z2h ? CMulInt(ec, z1z2h, 2) : nullptr;  // 2*Z1*Z2*h
     Py_XDECREF(h);
     Py_XDECREF(twoh);
     Py_XDECREF(i);
@@ -320,21 +470,21 @@ cleanup:
 }
 
 // Negate: flip Y only.
-int JacNegate(PyObject* p, PyObject* const* in, PyObject** out) {
-  PyObject* negY = FSub(p, p, in[1]);  // -Y = p - Y (then mod)
+// Negate flips Y (coordinate 1) and copies the rest — rep-safe for affine /
+// Jacobian / xyzz alike (Y is coordinate 1 in every representation).
+int JacNegate(EcPointDescr* ec, PyObject* const* in, PyObject** out) {
+  PyObject* negY = CNeg(ec, in[1]);
   if (negY == nullptr) {
     return -1;
   }
-  PyObject* y = FMod(p, negY);
-  Py_DECREF(negY);
-  if (y == nullptr) {
-    return -1;
+  for (int i = 0; i < ec->num_coords; ++i) {
+    if (i == 1) {
+      out[i] = negY;
+    } else {
+      Py_INCREF(in[i]);
+      out[i] = in[i];
+    }
   }
-  Py_INCREF(in[0]);
-  out[0] = in[0];
-  out[1] = y;
-  Py_INCREF(in[2]);
-  out[2] = in[2];
   return 0;
 }
 
@@ -342,21 +492,21 @@ int JacNegate(PyObject* p, PyObject* const* in, PyObject** out) {
 // encodings for one group element. Returns 1 if P == Q as group elements,
 // 0 if not, -1 on error. Both infinity -> equal; one infinity -> not equal;
 // else x1*z2^2 == x2*z1^2 and y1*z2^3 == y2*z1^3.
-int JacEqual(PyObject* p, PyObject* const* P, PyObject* const* Q) {
-  bool pz = IsZeroCoord(P[2]);
-  bool qz = IsZeroCoord(Q[2]);
+int JacEqual(EcPointDescr* ec, PyObject* const* P, PyObject* const* Q) {
+  bool pz = CIsZero(ec, P[2]);
+  bool qz = CIsZero(ec, Q[2]);
   if (pz || qz) {
     return (pz && qz) ? 1 : 0;
   }
   int result = -1;
-  PyObject* z1s = FMul(p, P[2], P[2]);  // z1^2
-  PyObject* z2s = FMul(p, Q[2], Q[2]);  // z2^2
-  PyObject* lx = z2s ? FMul(p, P[0], z2s) : nullptr;
-  PyObject* rx = z1s ? FMul(p, Q[0], z1s) : nullptr;
-  PyObject* z1c = z1s ? FMul(p, z1s, P[2]) : nullptr;  // z1^3
-  PyObject* z2c = z2s ? FMul(p, z2s, Q[2]) : nullptr;  // z2^3
-  PyObject* ly = z2c ? FMul(p, P[1], z2c) : nullptr;
-  PyObject* ry = z1c ? FMul(p, Q[1], z1c) : nullptr;
+  PyObject* z1s = CMul(ec, P[2], P[2]);
+  PyObject* z2s = CMul(ec, Q[2], Q[2]);
+  PyObject* lx = z2s ? CMul(ec, P[0], z2s) : nullptr;
+  PyObject* rx = z1s ? CMul(ec, Q[0], z1s) : nullptr;
+  PyObject* z1c = z1s ? CMul(ec, z1s, P[2]) : nullptr;
+  PyObject* z2c = z2s ? CMul(ec, z2s, Q[2]) : nullptr;
+  PyObject* ly = z2c ? CMul(ec, P[1], z2c) : nullptr;
+  PyObject* ry = z1c ? CMul(ec, Q[1], z1c) : nullptr;
   if (lx && rx && ly && ry) {
     int xe = PyObject_RichCompareBool(lx, rx, Py_EQ);
     int ye = PyObject_RichCompareBool(ly, ry, Py_EQ);
@@ -385,10 +535,9 @@ void MovePoint(PyObject** dst, PyObject* const* src, int n) {
 // MSB-first double-and-add: ret = scalar * point (canonical Jacobian coords).
 // The scalar is a canonical integer (Montgomery already decoded by the caller),
 // matching the legacy curve operator* which de-Montgomery's the scalar first.
-int JacScalarMul(PyObject* p, PyObject* scalar, PyObject* const* point,
+int JacScalarMul(EcPointDescr* ec, PyObject* scalar, PyObject* const* point,
                  PyObject** out) {
-  PyObject* ret[3] = {PyLong_FromLong(1), PyLong_FromLong(1),
-                      PyLong_FromLong(0)};  // Zero = (1, 1, 0)
+  PyObject* ret[3] = {COne(ec), COne(ec), CZero(ec)};  // Zero = (1, 1, 0)
   if (!ret[0] || !ret[1] || !ret[2]) {
     for (int j = 0; j < 3; ++j) Py_XDECREF(ret[j]);
     return -1;
@@ -407,13 +556,13 @@ int JacScalarMul(PyObject* p, PyObject* scalar, PyObject* const* point,
   }
   for (Py_ssize_t i = static_cast<Py_ssize_t>(nbits) - 1; i >= 0; --i) {
     PyObject* tmp[3];
-    if (JacDouble(p, ret, tmp) < 0) {
+    if (JacDouble(ec, ret, tmp) < 0) {
       for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
       return -1;
     }
     MovePoint(ret, tmp, 3);
     if ((buf[i >> 3] >> (i & 7)) & 1) {
-      if (JacAdd(p, ret, point, tmp) < 0) {
+      if (JacAdd(ec, ret, point, tmp) < 0) {
         for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
         return -1;
       }
@@ -430,7 +579,8 @@ int JacScalarMul(PyObject* p, PyObject* scalar, PyObject* const* point,
 
 PyArray_Descr* MakeDescr(PyObject* modulus, int base_width_bytes,
                          int num_coords, int is_montgomery, PyObject* r,
-                         PyObject* rinv) {
+                         PyObject* rinv, int coord_degree,
+                         PyObject* non_residue) {
   auto* d = reinterpret_cast<EcPointDescr*>(PyArrayDescr_Type.tp_new(
       reinterpret_cast<PyTypeObject*>(&EcPointDType), nullptr, nullptr));
   if (d == nullptr) {
@@ -442,6 +592,9 @@ PyArray_Descr* MakeDescr(PyObject* modulus, int base_width_bytes,
   d->r_mod_p = r;
   Py_XINCREF(rinv);
   d->rinv_mod_p = rinv;
+  Py_XINCREF(non_residue);
+  d->non_residue = non_residue;
+  d->coord_degree = static_cast<uint8_t>(coord_degree);
   d->base_width_bytes = static_cast<uint8_t>(base_width_bytes);
   d->num_coords = static_cast<uint8_t>(num_coords);
   d->is_montgomery = static_cast<uint8_t>(is_montgomery ? 1 : 0);
@@ -450,7 +603,7 @@ PyArray_Descr* MakeDescr(PyObject* modulus, int base_width_bytes,
   base->type = 'j';
   base->byteorder = '=';
   base->flags = NPY_USE_GETITEM | NPY_USE_SETITEM;
-  base->elsize = base_width_bytes * num_coords;
+  base->elsize = base_width_bytes * coord_degree * num_coords;
   base->alignment = base_width_bytes <= 8 ? base_width_bytes : 8;
   return base;
 }
@@ -460,6 +613,7 @@ void Descr_dealloc(PyObject* self) {
   Py_XDECREF(d->modulus);
   Py_XDECREF(d->r_mod_p);
   Py_XDECREF(d->rinv_mod_p);
+  Py_XDECREF(d->non_residue);
   PyArrayDescr_Type.tp_dealloc(self);
 }
 
@@ -487,7 +641,7 @@ PyArray_Descr* DefaultDescr(PyArray_DTypeMeta* /*cls*/) {
   if (two == nullptr) {
     return nullptr;
   }
-  PyArray_Descr* d = MakeDescr(two, 4, 3, 0, nullptr, nullptr);
+  PyArray_Descr* d = MakeDescr(two, 4, 3, 0, nullptr, nullptr, 1, nullptr);
   Py_DECREF(two);
   return d;
 }
@@ -503,7 +657,7 @@ PyArray_DTypeMeta* CommonDType(PyArray_DTypeMeta* a, PyArray_DTypeMeta* b) {
 
 bool SameCurve(EcPointDescr* a, EcPointDescr* b) {
   return a->base_width_bytes == b->base_width_bytes &&
-         a->num_coords == b->num_coords &&
+         a->num_coords == b->num_coords && a->coord_degree == b->coord_degree &&
          a->is_montgomery == b->is_montgomery &&
          PyObject_RichCompareBool(a->modulus, b->modulus, Py_EQ) == 1;
 }
@@ -575,29 +729,19 @@ PyObject* GetItem(PyArray_Descr* descr, char* dataptr) {
   return tuple;
 }
 
-// Same curve and coordinate field, ignoring the representation (coord count).
-bool SameCurveField(EcPointDescr* a, EcPointDescr* b) {
-  return a->base_width_bytes == b->base_width_bytes &&
-         a->is_montgomery == b->is_montgomery &&
-         PyObject_RichCompareBool(a->modulus, b->modulus, Py_EQ) == 1;
-}
-
-PyObject* One() { return PyLong_FromLong(1); }
-PyObject* ZeroL() { return PyLong_FromLong(0); }
-
 // Converts a point between coordinate representations (canonical coords
 // in/out). num_coords: affine 2, Jacobian 3, xyzz 4. Jacobian<->xyzz keep the
 // projective coordinates (legacy direct formulas); the rest go through affine
 // (needs a field inverse), matching the legacy registered casts byte-for-byte.
-int ConvertRep(PyObject* p, int fn, int tn, PyObject* const* in,
+int ConvertRep(EcPointDescr* ec, int fn, int tn, PyObject* const* in,
                PyObject** out) {
   if (fn == tn) {
     CopyPoint(in, out, fn);
     return 0;
   }
   if (fn == 3 && tn == 4) {  // jac (X,Y,Z) -> xyzz (X,Y,Z^2,Z^3)
-    PyObject* z2 = FMul(p, in[2], in[2]);
-    PyObject* z3 = z2 ? FMul(p, z2, in[2]) : nullptr;
+    PyObject* z2 = CMul(ec, in[2], in[2]);
+    PyObject* z3 = z2 ? CMul(ec, z2, in[2]) : nullptr;
     if (!z2 || !z3) {
       Py_XDECREF(z2);
       Py_XDECREF(z3);
@@ -612,10 +756,10 @@ int ConvertRep(PyObject* p, int fn, int tn, PyObject* const* in,
     return 0;
   }
   if (fn == 4 && tn == 3) {  // xyzz (X,Y,ZZ,ZZZ) -> jac (X,Y,ZZZ/ZZ)
-    if (IsZeroCoord(in[2])) {
-      out[0] = One();
-      out[1] = One();
-      out[2] = ZeroL();
+    if (CIsZero(ec, in[2])) {
+      out[0] = COne(ec);
+      out[1] = COne(ec);
+      out[2] = CZero(ec);
       if (!out[0] || !out[1] || !out[2]) {
         Py_XDECREF(out[0]);
         Py_XDECREF(out[1]);
@@ -624,8 +768,8 @@ int ConvertRep(PyObject* p, int fn, int tn, PyObject* const* in,
       }
       return 0;
     }
-    PyObject* zzinv = FInv(p, in[2]);
-    PyObject* z = zzinv ? FMul(p, in[3], zzinv) : nullptr;
+    PyObject* zzinv = CInv(ec, in[2]);
+    PyObject* z = zzinv ? CMul(ec, in[3], zzinv) : nullptr;
     Py_XDECREF(zzinv);
     if (!z) return -1;
     Py_INCREF(in[0]);
@@ -640,32 +784,32 @@ int ConvertRep(PyObject* p, int fn, int tn, PyObject* const* in,
   PyObject* ay = nullptr;
   bool inf = false;
   if (fn == 2) {
-    inf = IsZeroCoord(in[0]) && IsZeroCoord(in[1]);
+    inf = CIsZero(ec, in[0]) && CIsZero(ec, in[1]);
     Py_INCREF(in[0]);
     ax = in[0];
     Py_INCREF(in[1]);
     ay = in[1];
   } else if (fn == 3) {  // jac -> affine
-    if (IsZeroCoord(in[2])) {
+    if (CIsZero(ec, in[2])) {
       inf = true;
     } else {
-      PyObject* zi = FInv(p, in[2]);
-      PyObject* z2 = zi ? FMul(p, zi, zi) : nullptr;
-      PyObject* z3 = z2 ? FMul(p, z2, zi) : nullptr;
-      ax = z2 ? FMul(p, in[0], z2) : nullptr;
-      ay = z3 ? FMul(p, in[1], z3) : nullptr;
+      PyObject* zi = CInv(ec, in[2]);
+      PyObject* z2 = zi ? CMul(ec, zi, zi) : nullptr;
+      PyObject* z3 = z2 ? CMul(ec, z2, zi) : nullptr;
+      ax = z2 ? CMul(ec, in[0], z2) : nullptr;
+      ay = z3 ? CMul(ec, in[1], z3) : nullptr;
       Py_XDECREF(zi);
       Py_XDECREF(z2);
       Py_XDECREF(z3);
     }
   } else {  // xyzz -> affine
-    if (IsZeroCoord(in[2])) {
+    if (CIsZero(ec, in[2])) {
       inf = true;
     } else {
-      PyObject* zzi = FInv(p, in[2]);
-      PyObject* zzzi = FInv(p, in[3]);
-      ax = zzi ? FMul(p, in[0], zzi) : nullptr;
-      ay = zzzi ? FMul(p, in[1], zzzi) : nullptr;
+      PyObject* zzi = CInv(ec, in[2]);
+      PyObject* zzzi = CInv(ec, in[3]);
+      ax = zzi ? CMul(ec, in[0], zzi) : nullptr;
+      ay = zzzi ? CMul(ec, in[1], zzzi) : nullptr;
       Py_XDECREF(zzi);
       Py_XDECREF(zzzi);
     }
@@ -680,13 +824,13 @@ int ConvertRep(PyObject* p, int fn, int tn, PyObject* const* in,
     Py_XDECREF(ax);
     Py_XDECREF(ay);
     if (tn == 2) {
-      out[0] = ZeroL();
-      out[1] = ZeroL();
+      out[0] = CZero(ec);
+      out[1] = CZero(ec);
     } else {
-      out[0] = One();
-      out[1] = One();
-      out[2] = ZeroL();
-      if (tn == 4) out[3] = ZeroL();
+      out[0] = COne(ec);
+      out[1] = COne(ec);
+      out[2] = CZero(ec);
+      if (tn == 4) out[3] = CZero(ec);
     }
     for (int i = 0; i < tn; ++i) {
       if (!out[i]) rc = -1;
@@ -694,8 +838,8 @@ int ConvertRep(PyObject* p, int fn, int tn, PyObject* const* in,
   } else {
     out[0] = ax;
     out[1] = ay;
-    if (tn >= 3) out[2] = One();
-    if (tn == 4) out[3] = One();
+    if (tn >= 3) out[2] = COne(ec);
+    if (tn == 4) out[3] = COne(ec);
     for (int i = 2; i < tn; ++i) {
       if (!out[i]) rc = -1;
     }
@@ -748,12 +892,11 @@ int CastLoop(PyArrayMethod_Context* context, char* const* data,
     }
     return 0;
   }
-  PyObject* p = from->modulus;
   for (npy_intp i = 0; i < n; ++i) {
     PyObject* src[kMaxCoords];
     PyObject* dst[kMaxCoords];
     if (DecodePoint(from, in, src) < 0) return -1;
-    int rc = ConvertRep(p, from->num_coords, to->num_coords, src, dst);
+    int rc = ConvertRep(from, from->num_coords, to->num_coords, src, dst);
     for (int j = 0; j < from->num_coords; ++j) Py_DECREF(src[j]);
     if (rc < 0) return -1;
     int erc = EncodePoint(to, out, dst);
@@ -774,8 +917,11 @@ PyObject* MakeEcPointDescrPy(PyObject* /*self*/, PyObject* args) {
   int is_montgomery;
   PyObject* r_obj = nullptr;
   PyObject* rinv_obj = nullptr;
-  if (!PyArg_ParseTuple(args, "Oiii|OO", &modulus_obj, &base_width_bits,
-                        &num_coords, &is_montgomery, &r_obj, &rinv_obj)) {
+  int coord_degree = 1;
+  PyObject* nr_obj = nullptr;
+  if (!PyArg_ParseTuple(args, "Oiii|OOiO", &modulus_obj, &base_width_bits,
+                        &num_coords, &is_montgomery, &r_obj, &rinv_obj,
+                        &coord_degree, &nr_obj)) {
     return nullptr;
   }
   if (base_width_bits != 32 && base_width_bits != 64 &&
@@ -786,6 +932,15 @@ PyObject* MakeEcPointDescrPy(PyObject* /*self*/, PyObject* args) {
   }
   if (num_coords < 2 || num_coords > kMaxCoords) {
     PyErr_Format(PyExc_ValueError, "num_coords must be in [2, %d]", kMaxCoords);
+    return nullptr;
+  }
+  if (coord_degree < 1 || coord_degree > 2) {
+    PyErr_SetString(PyExc_ValueError, "coord_degree must be 1 (G1) or 2 (G2)");
+    return nullptr;
+  }
+  if (coord_degree == 2 && nr_obj == nullptr) {
+    PyErr_SetString(PyExc_ValueError,
+                    "coord_degree 2 (Fp2) requires a non_residue");
     return nullptr;
   }
   if (is_montgomery && (r_obj == nullptr || rinv_obj == nullptr)) {
@@ -808,11 +963,22 @@ PyObject* MakeEcPointDescrPy(PyObject* /*self*/, PyObject* args) {
       return nullptr;
     }
   }
+  PyObject* nr = nullptr;
+  if (coord_degree == 2) {
+    nr = PyNumber_Index(nr_obj);
+    if (nr == nullptr) {
+      Py_DECREF(modulus);
+      Py_XDECREF(r);
+      Py_XDECREF(rinv);
+      return nullptr;
+    }
+  }
   PyArray_Descr* d = MakeDescr(modulus, base_width_bits / 8, num_coords,
-                               is_montgomery, r, rinv);
+                               is_montgomery, r, rinv, coord_degree, nr);
   Py_DECREF(modulus);
   Py_XDECREF(r);
   Py_XDECREF(rinv);
+  Py_XDECREF(nr);
   return reinterpret_cast<PyObject*>(d);
 }
 
@@ -871,7 +1037,6 @@ int BinLoop(PyArrayMethod_Context* context, char* const* data,
             const npy_intp* dimensions, const npy_intp* strides,
             NpyAuxData* /*aux*/) {
   EcPointDescr* d = AsEc(context->descriptors[0]);
-  PyObject* p = d->modulus;
   npy_intp n = dimensions[0];
   char* a = data[0];
   char* b = data[1];
@@ -888,13 +1053,13 @@ int BinLoop(PyArrayMethod_Context* context, char* const* data,
     int rc;
     if (op == BinOp::kSub) {
       PyObject* negQ[kMaxCoords];
-      rc = JacNegate(p, Q, negQ);
+      rc = JacNegate(d, Q, negQ);
       if (rc == 0) {
-        rc = JacAdd(p, P, negQ, R);
+        rc = JacAdd(d, P, negQ, R);
         for (int j = 0; j < d->num_coords; ++j) Py_DECREF(negQ[j]);
       }
     } else {
-      rc = JacAdd(p, P, Q, R);
+      rc = JacAdd(d, P, Q, R);
     }
     for (int j = 0; j < d->num_coords; ++j) {
       Py_DECREF(P[j]);
@@ -915,7 +1080,6 @@ int NegLoop(PyArrayMethod_Context* context, char* const* data,
             const npy_intp* dimensions, const npy_intp* strides,
             NpyAuxData* /*aux*/) {
   EcPointDescr* d = AsEc(context->descriptors[0]);
-  PyObject* p = d->modulus;
   npy_intp n = dimensions[0];
   char* a = data[0];
   char* o = data[1];
@@ -923,7 +1087,7 @@ int NegLoop(PyArrayMethod_Context* context, char* const* data,
     PyObject* P[kMaxCoords];
     PyObject* R[kMaxCoords];
     if (DecodePoint(d, a, P) < 0) return -1;
-    int rc = JacNegate(p, P, R);
+    int rc = JacNegate(d, P, R);
     for (int j = 0; j < d->num_coords; ++j) Py_DECREF(P[j]);
     if (rc < 0) return -1;
     int erc = EncodePoint(d, o, R);
@@ -1016,7 +1180,6 @@ int CmpLoop(PyArrayMethod_Context* context, char* const* data,
             const npy_intp* dimensions, const npy_intp* strides,
             NpyAuxData* /*aux*/) {
   EcPointDescr* d = AsEc(context->descriptors[0]);
-  PyObject* p = d->modulus;
   npy_intp n = dimensions[0];
   char* a = data[0];
   char* b = data[1];
@@ -1029,7 +1192,7 @@ int CmpLoop(PyArrayMethod_Context* context, char* const* data,
       for (int j = 0; j < d->num_coords; ++j) Py_DECREF(P[j]);
       return -1;
     }
-    int eq = JacEqual(p, P, Q);
+    int eq = JacEqual(d, P, Q);
     for (int j = 0; j < d->num_coords; ++j) {
       Py_DECREF(P[j]);
       Py_DECREF(Q[j]);
@@ -1102,7 +1265,6 @@ int ScalarMulLoop(PyArrayMethod_Context* context, char* const* data,
   PyArray_Descr* scalar_descr = context->descriptors[scalar_first ? 0 : 1];
   EcPointDescr* d = AsEc(context->descriptors[scalar_first ? 1 : 0]);
   EcPointDescr* od = AsEc(context->descriptors[2]);
-  PyObject* p = d->modulus;
   npy_intp n = dimensions[0];
   char* s = data[scalar_first ? 0 : 1];
   char* pt = data[scalar_first ? 1 : 0];
@@ -1119,7 +1281,7 @@ int ScalarMulLoop(PyArrayMethod_Context* context, char* const* data,
       return -1;
     }
     PyObject* R[3];
-    int rc = JacScalarMul(p, scalar, P, R);
+    int rc = JacScalarMul(d, scalar, P, R);
     Py_DECREF(scalar);
     for (int j = 0; j < d->num_coords; ++j) Py_DECREF(P[j]);
     if (rc < 0) return -1;
