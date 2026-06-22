@@ -270,6 +270,41 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     with self.assertRaisesRegex(ValueError, "level must be >= 0"):
       zk_dtypes.binary_field(-1)
 
+  _BN254_FQ = 21888242871839275222246405745257275088696311157297823662689037894645226208583
+
+  def test_ec_g1_jacobian_group_law_byte_matches_legacy(self):
+    legacy = zk_dtypes.bn254_g1_jacobian
+    p = self._BN254_FQ
+    info = zk_dtypes.ecinfo(np.dtype(legacy))
+    if getattr(info, "is_montgomery", True):
+      r = (1 << 256) % p
+      param = np.dtype(
+          zk_dtypes._zk_dtypes_ext.ec_point_descr(
+              p, 256, 3, 1, r, pow(r, -1, p)
+          )
+      )
+    else:
+      param = np.dtype(zk_dtypes._zk_dtypes_ext.ec_point_descr(p, 256, 3, 0))
+    self.assertEqual(np.dtype(param).itemsize, np.dtype(legacy).itemsize)
+
+    def to_param(legacy_arr):
+      out = np.zeros(len(legacy_arr), dtype=param)
+      out.view(np.uint8)[:] = legacy_arr.view(np.uint8)
+      return out
+
+    # n*G are valid curve points; identical input representatives let byte
+    # equality test that the EFD formulas reproduce the exact legacy output.
+    for a, b in [(1, 2), (3, 5), (7, 11), (2, 2), (10, 10), (123, 456), (0, 5)]:
+      la, lb = np.array([a], dtype=legacy), np.array([b], dtype=legacy)
+      pa, pb = to_param(la), to_param(lb)
+      np.testing.assert_array_equal(
+          (pa + pb).view(np.uint8), (la + lb).view(np.uint8)
+      )
+      np.testing.assert_array_equal(
+          (pa - pb).view(np.uint8), (la - lb).view(np.uint8)
+      )
+      np.testing.assert_array_equal((-pa).view(np.uint8), (-la).view(np.uint8))
+
   def test_scalar_subscript_returns_element(self):
     # arr[i] (integer subscript to a scalar) must not segfault and returns the
     # element via getitem.
