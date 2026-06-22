@@ -751,14 +751,40 @@ inline void Advance(char*& a, char*& b, char*& o, const npy_intp* strides) {
   o += strides[2];
 }
 
-// Monomorphic strided modular add/sub over `degree` coefficients of a
-// single-word field (T = uint32_t / uint64_t). Type-specialized and free of the
-// per-element width switch, so the contiguous case auto-vectorizes — this is
-// the small-field add/sub hot path (degree 1 for a prime, k for an extension).
+// True when all three operands are contiguous (stride == element size) and
+// pointer-aligned to T, so the element bytes can be read as a flat T[] and the
+// inner loop auto-vectorizes the same way the legacy compile-time loops do.
+template <typename T>
+inline bool FlatAligned(char* a, char* b, char* o, const npy_intp* strides,
+                        npy_intp elsize) {
+  return strides[0] == elsize && strides[1] == elsize && strides[2] == elsize &&
+         reinterpret_cast<uintptr_t>(a) % sizeof(T) == 0 &&
+         reinterpret_cast<uintptr_t>(b) % sizeof(T) == 0 &&
+         reinterpret_cast<uintptr_t>(o) % sizeof(T) == 0;
+}
+
+// Monomorphic modular add/sub over `degree` coefficients of a single-word field
+// (T = uint32_t / uint64_t). Free of the per-element width switch; the
+// contiguous case runs as one flat T[] loop (degree folds into the count) so
+// the compiler vectorizes it. Prime (degree 1) and extension share it.
 template <typename T, bool kSub>
-void IntAddSubLoop(char* a, char* b, char* o, npy_intp n,
-                   const npy_intp* strides, int degree, int wb, T modulus,
-                   bool spare) {
+void TypedAddSub(char* a, char* b, char* o, npy_intp n, const npy_intp* strides,
+                 int degree, int wb, T modulus, bool spare) {
+  npy_intp elsize = static_cast<npy_intp>(degree) * wb;
+  if (FlatAligned<T>(a, b, o, strides, elsize)) {
+    npy_intp m = n * degree;  // every coefficient is contiguous
+    const T* ap = reinterpret_cast<const T*>(a);
+    const T* bp = reinterpret_cast<const T*>(b);
+    T* op = reinterpret_cast<T*>(o);
+    for (npy_intp i = 0; i < m; ++i) {
+      if (kSub) {
+        ModSub<T>(ap[i], bp[i], op[i], modulus, spare);
+      } else {
+        ModAdd<T>(ap[i], bp[i], op[i], modulus, spare);
+      }
+    }
+    return;
+  }
   for (npy_intp i = 0; i < n; ++i) {
     for (int c = 0; c < degree; ++c) {
       T x, y, r;
@@ -775,6 +801,44 @@ void IntAddSubLoop(char* a, char* b, char* o, npy_intp n,
   }
 }
 
+// Monomorphic multiply for a degree-1 single-word prime field: Montgomery
+// (kMont) on the stored representatives, or canonical a*b mod p. Contiguous
+// case is a flat vectorizable loop.
+template <typename T, bool kMont>
+void TypedMul(char* a, char* b, char* o, npy_intp n, const npy_intp* strides,
+              T modulus, T mont_nprime) {
+  if (FlatAligned<T>(a, b, o, strides, sizeof(T))) {
+    const T* ap = reinterpret_cast<const T*>(a);
+    const T* bp = reinterpret_cast<const T*>(b);
+    T* op = reinterpret_cast<T*>(o);
+    for (npy_intp i = 0; i < n; ++i) {
+      if (kMont) {
+        MontMul<T>(ap[i], bp[i], op[i], modulus, mont_nprime);
+      } else {
+        op[i] = static_cast<T>(
+            (static_cast<internal::make_promoted_t<T>>(ap[i]) * bp[i]) %
+            modulus);
+      }
+    }
+    return;
+  }
+  for (npy_intp i = 0; i < n; ++i) {
+    T x, y, r;
+    std::memcpy(&x, a, sizeof(T));
+    std::memcpy(&y, b, sizeof(T));
+    if (kMont) {
+      MontMul<T>(x, y, r, modulus, mont_nprime);
+    } else {
+      r = static_cast<T>((static_cast<internal::make_promoted_t<T>>(x) * y) %
+                         modulus);
+    }
+    std::memcpy(o, &r, sizeof(T));
+    a += strides[0];
+    b += strides[1];
+    o += strides[2];
+  }
+}
+
 template <Op op>
 int ArithLoop(PyArrayMethod_Context* context, char* const* data,
               const npy_intp* dimensions, const npy_intp* strides,
@@ -788,9 +852,16 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
 
   if (d->kind == kBinaryTower) {
     if (op != Op::kMul) {  // characteristic 2: add == sub == XOR
-      for (npy_intp i = 0; i < n; ++i) {
-        for (int k = 0; k < wb; ++k) o[k] = static_cast<char>(a[k] ^ b[k]);
-        Advance(a, b, o, strides);
+      if (strides[0] == wb && strides[1] == wb && strides[2] == wb) {
+        npy_intp total = n * wb;  // contiguous: one flat XOR sweep, vectorizes
+        for (npy_intp i = 0; i < total; ++i) {
+          o[i] = static_cast<char>(a[i] ^ b[i]);
+        }
+      } else {
+        for (npy_intp i = 0; i < n; ++i) {
+          for (int k = 0; k < wb; ++k) o[k] = static_cast<char>(a[k] ^ b[k]);
+          Advance(a, b, o, strides);
+        }
       }
       return 0;
     }
@@ -840,13 +911,13 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
     // extension share it.
     if (op != Op::kMul && pf.native) {
       if (wb == 4) {
-        IntAddSubLoop<uint32_t, op == Op::kSub>(a, b, o, n, strides, k, wb,
-                                                pf.p32, pf.spare);
+        TypedAddSub<uint32_t, op == Op::kSub>(a, b, o, n, strides, k, wb,
+                                              pf.p32, pf.spare);
         return 0;
       }
       if (wb == 8) {
-        IntAddSubLoop<uint64_t, op == Op::kSub>(a, b, o, n, strides, k, wb,
-                                                pf.p64, pf.spare);
+        TypedAddSub<uint64_t, op == Op::kSub>(a, b, o, n, strides, k, wb,
+                                              pf.p64, pf.spare);
         return 0;
       }
       for (npy_intp i = 0; i < n; ++i) {
@@ -865,7 +936,24 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
       return 0;
     }
     if (k == 1 && pf.native) {  // prime multiply
-      for (npy_intp i = 0; i < n; ++i) {
+      if (wb == 4) {
+        if (pf.is_mont) {
+          TypedMul<uint32_t, true>(a, b, o, n, strides, pf.p32,
+                                   static_cast<uint32_t>(pf.inv));
+        } else {
+          TypedMul<uint32_t, false>(a, b, o, n, strides, pf.p32, 0);
+        }
+        return 0;
+      }
+      if (wb == 8) {
+        if (pf.is_mont) {
+          TypedMul<uint64_t, true>(a, b, o, n, strides, pf.p64, pf.inv);
+        } else {
+          TypedMul<uint64_t, false>(a, b, o, n, strides, pf.p64, 0);
+        }
+        return 0;
+      }
+      for (npy_intp i = 0; i < n; ++i) {  // 128/256-bit
         pf.Mul(reinterpret_cast<const unsigned char*>(a),
                reinterpret_cast<const unsigned char*>(b),
                reinterpret_cast<unsigned char*>(o));
