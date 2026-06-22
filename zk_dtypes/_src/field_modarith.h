@@ -48,7 +48,7 @@ namespace modarith {
 // single-word MontMul<T> subtracts and needs n' = +p^-1 mod 2^w.
 inline uint64_t ComputeInverse(uint64_t p_low) {
   uint64_t inv = p_low;  // correct mod 2^3 for odd p_low
-  for (int i = 0; i < 6; ++i) inv *= 2 - p_low * inv;
+  for (int i = 0; i < 5; ++i) inv *= 2 - p_low * inv;  // 3->6->12->24->48->96
   return inv;
 }
 

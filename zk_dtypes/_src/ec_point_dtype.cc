@@ -727,18 +727,20 @@ void EcDouble(const CoordField& cf, const unsigned char* in,
   std::memcpy(out + 2 * cb, Z2, cb);
 }
 
-// Jacobian addition (EFD add-2007-bl, a == 0); 3 coords. out must not alias.
+// Jacobian addition (EFD add-2007-bl, a == 0); 3 coords. `out` may alias an
+// input: every read of P/Q completes into stack temporaries before the result
+// is written, and the infinity copies below skip a no-op self-copy.
 void EcAdd(const CoordField& cf, const unsigned char* P, const unsigned char* Q,
            unsigned char* out) {
   const int cb = cf.cb;
   const unsigned char* Z1 = P + 2 * cb;
   const unsigned char* Z2 = Q + 2 * cb;
   if (cf.IsZero(Z1)) {
-    std::memcpy(out, Q, 3 * cb);
+    if (out != Q) std::memcpy(out, Q, 3 * cb);
     return;
   }
   if (cf.IsZero(Z2)) {
-    std::memcpy(out, P, 3 * cb);
+    if (out != P) std::memcpy(out, P, 3 * cb);
     return;
   }
   const unsigned char* X1 = P;
@@ -927,10 +929,18 @@ PyArray_DTypeMeta* CommonDType(PyArray_DTypeMeta* a, PyArray_DTypeMeta* b) {
 }
 
 bool SameCurve(EcPointDescr* a, EcPointDescr* b) {
-  return a->base_width_bytes == b->base_width_bytes &&
-         a->num_coords == b->num_coords && a->coord_degree == b->coord_degree &&
-         a->is_montgomery == b->is_montgomery &&
-         PyObject_RichCompareBool(a->modulus, b->modulus, Py_EQ) == 1;
+  if (a->base_width_bytes != b->base_width_bytes ||
+      a->num_coords != b->num_coords || a->coord_degree != b->coord_degree ||
+      a->is_montgomery != b->is_montgomery ||
+      PyObject_RichCompareBool(a->modulus, b->modulus, Py_EQ) != 1) {
+    return false;
+  }
+  // Fp2 (G2) is parameterized by the non-residue; distinct non-residues are
+  // distinct fields even at the same prime.
+  if (a->coord_degree == 2) {
+    return PyObject_RichCompareBool(a->non_residue, b->non_residue, Py_EQ) == 1;
+  }
+  return true;
 }
 
 PyArray_Descr* CommonInstance(PyArray_Descr* a, PyArray_Descr* b) {
@@ -1154,7 +1164,10 @@ int CastLoop(PyArrayMethod_Context* context, char* const* data,
   npy_intp n = dimensions[0];
   char* in = data[0];
   char* out = data[1];
-  if (from->num_coords == to->num_coords) {
+  // Only a byte-identical field is a raw copy; anything else (a coordinate-rep
+  // change OR a Montgomery<->canonical re-encoding at the same shape) must go
+  // through decode/encode below.
+  if (SameCurve(from, to)) {
     npy_intp elsize = context->descriptors[0]->elsize;
     for (npy_intp i = 0; i < n; ++i) {
       std::memcpy(out, in, elsize);
@@ -1522,9 +1535,16 @@ bool AddCmpLoop(PyObject* numpy, const char* name,
                 PyArrayMethod_StridedLoop* loop) {
   PyObject* ufunc = PyObject_GetAttrString(numpy, name);
   if (ufunc == nullptr) return false;
+  // PyArray_DescrFromType returns a new reference; we only need its DType meta
+  // (Py_TYPE, borrowed and immortal), so drop the descr ref.
+  PyArray_Descr* bool_descr = PyArray_DescrFromType(NPY_BOOL);
+  if (bool_descr == nullptr) {
+    Py_DECREF(ufunc);
+    return false;
+  }
   PyArray_DTypeMeta* booldt =
-      reinterpret_cast<PyArray_DTypeMeta*>(Py_TYPE(PyArray_DescrFromType(
-          NPY_BOOL)));  // borrowed: builtin bool descr/DType are immortal
+      reinterpret_cast<PyArray_DTypeMeta*>(Py_TYPE(bool_descr));
+  Py_DECREF(bool_descr);
   PyArray_DTypeMeta* dtypes[3] = {&EcPointDType, &EcPointDType, booldt};
   PyType_Slot slots[] = {
       {NPY_METH_resolve_descriptors, reinterpret_cast<void*>(CmpResolve)},
@@ -1560,12 +1580,24 @@ NPY_CASTING ScalarMulResolve(struct PyArrayMethodObject_tag* /*method*/,
                     "representation; cast the point to Jacobian first");
     return static_cast<NPY_CASTING>(-1);
   }
+  // The output is a Jacobian point on the same curve. A user-supplied out= of a
+  // different curve/representation would be written with the input point's
+  // width (the loop sizes its store from the input) — reject it instead of an
+  // out-of-bounds / wrong-width write.
+  PyArray_Descr* out = given[2] != nullptr ? given[2] : point;
+  if (given[2] != nullptr && !SameCurve(AsEc(out), AsEc(point))) {
+    PyErr_SetString(
+        PyExc_TypeError,
+        "EC scalar multiplication output must be the same curve and "
+        "representation as the point");
+    return static_cast<NPY_CASTING>(-1);
+  }
   Py_INCREF(given[0]);
   loop[0] = given[0];
   Py_INCREF(given[1]);
   loop[1] = given[1];
-  loop[2] = given[2] != nullptr ? given[2] : point;
-  Py_INCREF(loop[2]);
+  Py_INCREF(out);
+  loop[2] = out;
   *view_offset = NPY_MIN_INTP;
   return NPY_NO_CASTING;
 }
