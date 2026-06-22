@@ -28,6 +28,7 @@ limitations under the License.
 #include <Python.h>
 
 #include "zk_dtypes/_src/bigint_numpy.h"
+#include "zk_dtypes/_src/ec_point_dtype.h"
 #include "zk_dtypes/_src/ec_point_numpy.h"
 #include "zk_dtypes/_src/field_dtype.h"
 #include "zk_dtypes/_src/field_numpy.h"
@@ -619,6 +620,9 @@ extern "C" EXPORT_SYMBOL PyObject* PyInit__zk_dtypes_ext() {
   // registered alongside the legacy per-family field dtypes, which are
   // untouched.
   if (!RegisterFieldDType(/*numpy=*/nullptr, m.get())) {
+    return nullptr;
+  }
+  if (!RegisterEcPointDType(/*numpy=*/nullptr, m.get())) {
     return nullptr;
   }
 

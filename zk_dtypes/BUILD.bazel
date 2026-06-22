@@ -1125,6 +1125,8 @@ cc_library(
         "_src/bigint_numpy.h",
         "_src/common.h",
         "_src/dtypes.cc",
+        "_src/ec_point_dtype.cc",
+        "_src/ec_point_dtype.h",
         "_src/ec_point_numpy.h",
         "_src/field_dtype.cc",
         "_src/field_dtype.h",
