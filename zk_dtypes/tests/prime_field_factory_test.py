@@ -305,6 +305,38 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
       )
       np.testing.assert_array_equal((-pa).view(np.uint8), (-la).view(np.uint8))
 
+  def _ec_g1_jacobian_param(self):
+    p = self._BN254_FQ
+    info = zk_dtypes.ecinfo(np.dtype(zk_dtypes.bn254_g1_jacobian))
+    if getattr(info, "is_montgomery", True):
+      r = (1 << 256) % p
+      return np.dtype(
+          zk_dtypes._zk_dtypes_ext.ec_point_descr(
+              p, 256, 3, 1, r, pow(r, -1, p)
+          )
+      )
+    return np.dtype(zk_dtypes._zk_dtypes_ext.ec_point_descr(p, 256, 3, 0))
+
+  def test_ec_group_equality_cross_representative(self):
+    legacy = zk_dtypes.bn254_g1_jacobian
+    param = self._ec_g1_jacobian_param()
+
+    def pt(n):
+      out = np.zeros(1, dtype=param)
+      out.view(np.uint8)[:] = np.array([n], dtype=legacy).view(np.uint8)
+      return out
+
+    p1, p2, p3, p5 = pt(1), pt(2), pt(3), pt(5)
+    self.assertTrue(bool((p3 == p3)[0]))
+    self.assertFalse(bool((p3 == p5)[0]))
+    self.assertTrue(bool((p3 != p5)[0]))
+    # 5G and 2G+3G are the same group element with different Jacobian
+    # representatives (byte-different); == must compare by group element.
+    s = p2 + p3
+    self.assertFalse(np.array_equal(p5.view(np.uint8), s.view(np.uint8)))
+    self.assertTrue(bool((p5 == s)[0]))
+    self.assertTrue(bool((p3 == (p1 + p2))[0]))
+
   def test_scalar_subscript_returns_element(self):
     # arr[i] (integer subscript to a scalar) must not segfault and returns the
     # element via getitem.

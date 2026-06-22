@@ -326,6 +326,43 @@ int JacNegate(PyObject* p, PyObject* const* in, PyObject** out) {
   return 0;
 }
 
+// Group equality (cross-representative): a Jacobian point has many byte
+// encodings for one group element. Returns 1 if P == Q as group elements,
+// 0 if not, -1 on error. Both infinity -> equal; one infinity -> not equal;
+// else x1*z2^2 == x2*z1^2 and y1*z2^3 == y2*z1^3.
+int JacEqual(PyObject* p, PyObject* const* P, PyObject* const* Q) {
+  bool pz = IsZeroCoord(P[2]);
+  bool qz = IsZeroCoord(Q[2]);
+  if (pz || qz) {
+    return (pz && qz) ? 1 : 0;
+  }
+  int result = -1;
+  PyObject* z1s = FMul(p, P[2], P[2]);  // z1^2
+  PyObject* z2s = FMul(p, Q[2], Q[2]);  // z2^2
+  PyObject* lx = z2s ? FMul(p, P[0], z2s) : nullptr;
+  PyObject* rx = z1s ? FMul(p, Q[0], z1s) : nullptr;
+  PyObject* z1c = z1s ? FMul(p, z1s, P[2]) : nullptr;  // z1^3
+  PyObject* z2c = z2s ? FMul(p, z2s, Q[2]) : nullptr;  // z2^3
+  PyObject* ly = z2c ? FMul(p, P[1], z2c) : nullptr;
+  PyObject* ry = z1c ? FMul(p, Q[1], z1c) : nullptr;
+  if (lx && rx && ly && ry) {
+    int xe = PyObject_RichCompareBool(lx, rx, Py_EQ);
+    int ye = PyObject_RichCompareBool(ly, ry, Py_EQ);
+    if (xe >= 0 && ye >= 0) {
+      result = (xe == 1 && ye == 1) ? 1 : 0;
+    }
+  }
+  Py_XDECREF(z1s);
+  Py_XDECREF(z2s);
+  Py_XDECREF(lx);
+  Py_XDECREF(rx);
+  Py_XDECREF(z1c);
+  Py_XDECREF(z2c);
+  Py_XDECREF(ly);
+  Py_XDECREF(ry);
+  return result;
+}
+
 // --- descriptor lifecycle ------------------------------------------------
 
 PyArray_Descr* MakeDescr(PyObject* modulus, int base_width_bytes,
@@ -724,6 +761,89 @@ bool AddNegLoop(PyObject* numpy) {
   return rc >= 0;
 }
 
+// Comparison: (point, point) -> bool. Inputs share a curve; output is bool.
+NPY_CASTING CmpResolve(struct PyArrayMethodObject_tag* /*method*/,
+                       PyArray_DTypeMeta* const* /*dtypes*/,
+                       PyArray_Descr* const* given, PyArray_Descr** loop,
+                       npy_intp* view_offset) {
+  if (!SameCurve(AsEc(given[0]), AsEc(given[1]))) {
+    PyErr_SetString(PyExc_TypeError,
+                    "point comparison requires the same curve");
+    return static_cast<NPY_CASTING>(-1);
+  }
+  Py_INCREF(given[0]);
+  loop[0] = given[0];
+  Py_INCREF(given[1]);
+  loop[1] = given[1];
+  loop[2] = given[2] != nullptr ? given[2] : PyArray_DescrFromType(NPY_BOOL);
+  if (loop[2] == nullptr) {
+    return static_cast<NPY_CASTING>(-1);
+  }
+  if (given[2] != nullptr) {
+    Py_INCREF(loop[2]);
+  }
+  *view_offset = NPY_MIN_INTP;
+  return NPY_NO_CASTING;
+}
+
+template <bool negate>
+int CmpLoop(PyArrayMethod_Context* context, char* const* data,
+            const npy_intp* dimensions, const npy_intp* strides,
+            NpyAuxData* /*aux*/) {
+  EcPointDescr* d = AsEc(context->descriptors[0]);
+  PyObject* p = d->modulus;
+  npy_intp n = dimensions[0];
+  char* a = data[0];
+  char* b = data[1];
+  char* o = data[2];
+  for (npy_intp i = 0; i < n; ++i) {
+    PyObject* P[kMaxCoords];
+    PyObject* Q[kMaxCoords];
+    if (DecodePoint(d, a, P) < 0) return -1;
+    if (DecodePoint(d, b, Q) < 0) {
+      for (int j = 0; j < d->num_coords; ++j) Py_DECREF(P[j]);
+      return -1;
+    }
+    int eq = JacEqual(p, P, Q);
+    for (int j = 0; j < d->num_coords; ++j) {
+      Py_DECREF(P[j]);
+      Py_DECREF(Q[j]);
+    }
+    if (eq < 0) return -1;
+    *reinterpret_cast<npy_bool*>(o) = (negate ? !eq : eq) ? 1 : 0;
+    a += strides[0];
+    b += strides[1];
+    o += strides[2];
+  }
+  return 0;
+}
+
+bool AddCmpLoop(PyObject* numpy, const char* name,
+                PyArrayMethod_StridedLoop* loop) {
+  PyObject* ufunc = PyObject_GetAttrString(numpy, name);
+  if (ufunc == nullptr) return false;
+  PyArray_DTypeMeta* booldt =
+      reinterpret_cast<PyArray_DTypeMeta*>(Py_TYPE(PyArray_DescrFromType(
+          NPY_BOOL)));  // borrowed: builtin bool descr/DType are immortal
+  PyArray_DTypeMeta* dtypes[3] = {&EcPointDType, &EcPointDType, booldt};
+  PyType_Slot slots[] = {
+      {NPY_METH_resolve_descriptors, reinterpret_cast<void*>(CmpResolve)},
+      {NPY_METH_strided_loop, reinterpret_cast<void*>(loop)},
+      {0, nullptr},
+  };
+  PyArrayMethod_Spec spec = {};
+  spec.name = "ec_point_compare";
+  spec.nin = 2;
+  spec.nout = 1;
+  spec.casting = NPY_NO_CASTING;
+  spec.flags = NPY_METH_REQUIRES_PYAPI;
+  spec.dtypes = dtypes;
+  spec.slots = slots;
+  int rc = PyUFunc_AddLoopFromSpec(ufunc, &spec);
+  Py_DECREF(ufunc);
+  return rc >= 0;
+}
+
 }  // namespace
 
 bool RegisterEcPointDType(PyObject* /*numpy*/, PyObject* module) {
@@ -818,7 +938,8 @@ bool RegisterEcPointDType(PyObject* /*numpy*/, PyObject* module) {
   }
   bool ok = AddBinLoop(numpy, "add", BinLoop<BinOp::kAdd>) &&
             AddBinLoop(numpy, "subtract", BinLoop<BinOp::kSub>) &&
-            AddNegLoop(numpy);
+            AddNegLoop(numpy) && AddCmpLoop(numpy, "equal", CmpLoop<false>) &&
+            AddCmpLoop(numpy, "not_equal", CmpLoop<true>);
   Py_DECREF(numpy);
   return ok;
 }
