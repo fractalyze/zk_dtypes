@@ -63,7 +63,7 @@ struct PrimeField {
   bool spare = false;       // modulus has a spare high bit in its storage width
   bool no_carry = false;    // gnark no-carry Montgomery optimization applies
   uint64_t nprime_neg = 0;  // -p^-1 mod 2^64 (multi-limb MontMul<N>)
-  uint32_t nprime_pos = 0;  // +p^-1 mod 2^32 (single-word MontMul<uint32>)
+  uint64_t inv = 0;         // +p^-1 mod 2^64 (single-word MontMul<uint32/64>)
   uint32_t p32 = 0;
   uint64_t p64 = 0;
   BigInt<2> p128{};
@@ -76,9 +76,8 @@ struct PrimeField {
     f.is_mont = is_mont;
     uint64_t low = 0;
     std::memcpy(&low, mod_le, width_bytes < 8 ? width_bytes : 8);
-    uint64_t inv = ComputeInverse(low);
-    f.nprime_neg = uint64_t{0} - inv;
-    f.nprime_pos = static_cast<uint32_t>(inv);
+    f.inv = ComputeInverse(low);
+    f.nprime_neg = uint64_t{0} - f.inv;
     switch (width_bytes) {
       case 4:
         f.p32 = static_cast<uint32_t>(low);
@@ -206,16 +205,16 @@ struct PrimeField {
         uint32_t x, y, r;
         std::memcpy(&x, a, 4);
         std::memcpy(&y, b, 4);
-        MontMul<uint32_t>(x, y, r, p32, nprime_pos);
+        MontMul<uint32_t>(x, y, r, p32, static_cast<uint32_t>(inv));
         std::memcpy(o, &r, 4);
         break;
       }
       case 8: {
-        BigInt<1> x(0), y(0), r;
-        std::memcpy(&x[0], a, 8);
-        std::memcpy(&y[0], b, 8);
-        MontMul<1>(x, y, r, BigInt<1>(p64), nprime_neg, spare, no_carry);
-        std::memcpy(o, &r[0], 8);
+        uint64_t x, y, r;
+        std::memcpy(&x, a, 8);
+        std::memcpy(&y, b, 8);
+        MontMul<uint64_t>(x, y, r, p64, inv);
+        std::memcpy(o, &r, 8);
         break;
       }
       case 16: {
