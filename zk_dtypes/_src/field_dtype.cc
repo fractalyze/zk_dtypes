@@ -751,6 +751,30 @@ inline void Advance(char*& a, char*& b, char*& o, const npy_intp* strides) {
   o += strides[2];
 }
 
+// Monomorphic strided modular add/sub over `degree` coefficients of a
+// single-word field (T = uint32_t / uint64_t). Type-specialized and free of the
+// per-element width switch, so the contiguous case auto-vectorizes — this is
+// the small-field add/sub hot path (degree 1 for a prime, k for an extension).
+template <typename T, bool kSub>
+void IntAddSubLoop(char* a, char* b, char* o, npy_intp n,
+                   const npy_intp* strides, int degree, int wb, T modulus,
+                   bool spare) {
+  for (npy_intp i = 0; i < n; ++i) {
+    for (int c = 0; c < degree; ++c) {
+      T x, y, r;
+      std::memcpy(&x, a + c * wb, sizeof(T));
+      std::memcpy(&y, b + c * wb, sizeof(T));
+      if (kSub) {
+        ModSub<T>(x, y, r, modulus, spare);
+      } else {
+        ModAdd<T>(x, y, r, modulus, spare);
+      }
+      std::memcpy(o + c * wb, &r, sizeof(T));
+    }
+    Advance(a, b, o, strides);
+  }
+}
+
 template <Op op>
 int ArithLoop(PyArrayMethod_Context* context, char* const* data,
               const npy_intp* dimensions, const npy_intp* strides,
@@ -810,35 +834,41 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
                           wb, 1, 0) >= 0) {
     modarith::PrimeField pf =
         modarith::PrimeField::Make(mod_le, wb, d->is_montgomery);
-    if (d->degree == 1 && pf.native) {
-      for (npy_intp i = 0; i < n; ++i) {
-        const auto* ua = reinterpret_cast<const unsigned char*>(a);
-        const auto* ub = reinterpret_cast<const unsigned char*>(b);
-        auto* uo = reinterpret_cast<unsigned char*>(o);
-        if (op == Op::kAdd) {
-          pf.Add(ua, ub, uo);
-        } else if (op == Op::kSub) {
-          pf.Sub(ua, ub, uo);
-        } else {
-          pf.Mul(ua, ub, uo);
-        }
-        Advance(a, b, o, strides);
-      }
-      return 0;
-    }
     const int k = d->degree;
-    if (k > 1 && op != Op::kMul && pf.native) {  // extension add/sub: linear
+    // Add/sub: a monomorphic typed loop at single-word widths
+    // (auto-vectorizes), BigInt per-element at 128/256-bit. Prime (k == 1) and
+    // extension share it.
+    if (op != Op::kMul && pf.native) {
+      if (wb == 4) {
+        IntAddSubLoop<uint32_t, op == Op::kSub>(a, b, o, n, strides, k, wb,
+                                                pf.p32, pf.spare);
+        return 0;
+      }
+      if (wb == 8) {
+        IntAddSubLoop<uint64_t, op == Op::kSub>(a, b, o, n, strides, k, wb,
+                                                pf.p64, pf.spare);
+        return 0;
+      }
       for (npy_intp i = 0; i < n; ++i) {
         for (int c = 0; c < k; ++c) {
           const auto* ua = reinterpret_cast<const unsigned char*>(a) + c * wb;
           const auto* ub = reinterpret_cast<const unsigned char*>(b) + c * wb;
           auto* uo = reinterpret_cast<unsigned char*>(o) + c * wb;
-          if (op == Op::kAdd) {
-            pf.Add(ua, ub, uo);
-          } else {
+          if (op == Op::kSub) {
             pf.Sub(ua, ub, uo);
+          } else {
+            pf.Add(ua, ub, uo);
           }
         }
+        Advance(a, b, o, strides);
+      }
+      return 0;
+    }
+    if (k == 1 && pf.native) {  // prime multiply
+      for (npy_intp i = 0; i < n; ++i) {
+        pf.Mul(reinterpret_cast<const unsigned char*>(a),
+               reinterpret_cast<const unsigned char*>(b),
+               reinterpret_cast<unsigned char*>(o));
         Advance(a, b, o, strides);
       }
       return 0;
