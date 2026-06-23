@@ -816,7 +816,24 @@ void TypedAddSub(char* a, char* b, char* o, npy_intp n, const npy_intp* strides,
     const T* ap = reinterpret_cast<const T*>(a);
     const T* bp = reinterpret_cast<const T*>(b);
     T* op = reinterpret_cast<T*>(o);
-    for (npy_intp i = 0; i < m; ++i) {
+    if (spare) {
+      // a, b < p < 2^(w-1), so a+b does not overflow: the conditional reduce is
+      // a branchless min(x, x-+p), which auto-vectorizes (legacy gets the same
+      // from its compile-time modulus). Byte-identical to ModAdd/ModSub.
+      for (npy_intp i = 0; i < m; ++i) {
+        if (kSub) {
+          T d = ap[i] - bp[i];
+          T dp = d + modulus;
+          op[i] = dp < d ? dp : d;
+        } else {
+          T s = ap[i] + bp[i];
+          T sm = s - modulus;
+          op[i] = sm < s ? sm : s;
+        }
+      }
+      return;
+    }
+    for (npy_intp i = 0; i < m; ++i) {  // no spare bit: carry-aware reduce
       if (kSub) {
         ModSub<T>(ap[i], bp[i], op[i], modulus, spare);
       } else {
