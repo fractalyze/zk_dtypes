@@ -533,6 +533,25 @@ void MovePoint(PyObject** dst, PyObject* const* src, int n) {
   }
 }
 
+// Decodes a canonical scalar int into `buf` (little-endian, zero-padded) and
+// returns its bit length, or -1 (with an exception set) if it needs more than
+// buf_size bytes.
+Py_ssize_t ScalarToBytesLE(PyObject* scalar, unsigned char* buf,
+                           size_t buf_size) {
+  size_t nbits = _PyLong_NumBits(scalar);
+  size_t nbytes = (nbits + 7) / 8;
+  if (nbytes > buf_size) {
+    PyErr_SetString(PyExc_OverflowError, "EC scalar too large");
+    return -1;
+  }
+  std::memset(buf, 0, buf_size);
+  if (nbytes > 0) {
+    _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(scalar), buf, nbytes, 1,
+                        0);
+  }
+  return static_cast<Py_ssize_t>(nbits);
+}
+
 // MSB-first double-and-add: ret = scalar * point (canonical Jacobian coords).
 // The scalar is a canonical integer (Montgomery already decoded by the caller),
 // matching the legacy curve operator* which de-Montgomery's the scalar first.
@@ -543,19 +562,13 @@ int JacScalarMul(EcPointDescr* ec, PyObject* scalar, PyObject* const* point,
     for (int j = 0; j < 3; ++j) Py_XDECREF(ret[j]);
     return -1;
   }
-  size_t nbits = _PyLong_NumBits(scalar);
-  size_t nbytes = (nbits + 7) / 8;
-  unsigned char buf[64] = {0};
-  if (nbytes > sizeof(buf)) {
+  unsigned char buf[64];
+  Py_ssize_t nbits = ScalarToBytesLE(scalar, buf, sizeof(buf));
+  if (nbits < 0) {
     for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
-    PyErr_SetString(PyExc_OverflowError, "EC scalar too large");
     return -1;
   }
-  if (nbytes > 0) {
-    _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(scalar), buf, nbytes, 1,
-                        0);
-  }
-  for (Py_ssize_t i = static_cast<Py_ssize_t>(nbits) - 1; i >= 0; --i) {
+  for (Py_ssize_t i = nbits - 1; i >= 0; --i) {
     PyObject* tmp[3];
     if (JacDouble(ec, ret, tmp) < 0) {
       for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
@@ -583,6 +596,13 @@ int JacScalarMul(EcPointDescr* ec, PyObject* scalar, PyObject* const* point,
 // Montgomery space directly on the stored bytes (mont(x)*mont(y)*R^-1 =
 // mont(x*y); add/sub are linear; X^... = non_residue folds with mont(nr)), so
 // no decode/encode and no Python ints — byte-identical to the path above.
+//
+// These are byte-space twins of the PyObject Jac* functions: EcDouble<->
+// JacDouble, EcAdd<->JacAdd, EcNegate<->JacNegate, EcEqual<->JacEqual,
+// EcScalarMul<->JacScalarMul, CoordField::Mul (Fp2) <-> CMul. The two MUST stay
+// in lockstep — the Jac* versions are the canonical spec; a formula change must
+// be made in both (the byte-identity tests only catch divergence on the cases
+// they exercise).
 
 constexpr int kCoordBytes = 64;  // max coordinate: Fp2 over 256-bit base
 
@@ -611,6 +631,10 @@ struct CoordField {
     }
     cf.fq = modarith::PrimeField::Make(mod_le, cf.wb, /*is_mont=*/true);
     if (!cf.fq.native) return cf;
+    // The native EC temporaries are fixed kCoordBytes stack buffers (= 2*32,
+    // the Fp2-over-256-bit max). degree<=2 and a native base width<=32 keep cb
+    // in range; bail to the Python path otherwise rather than overflow.
+    if (cf.cb > kCoordBytes) return cf;
     if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(d->r_mod_p),
                             cf.one_le, cf.wb, 1, 0) < 0) {
       PyErr_Clear();
@@ -833,16 +857,15 @@ void EcScalarMul(const CoordField& cf, const unsigned char* point,
                  const unsigned char* sbytes, int nbits, unsigned char* out) {
   const int cb = cf.cb;
   unsigned char ret[3 * kCoordBytes];
-  unsigned char tmp[3 * kCoordBytes];
   cf.SetOne(ret);  // Jacobian zero = (1, 1, 0)
   cf.SetOne(ret + cb);
   cf.SetZero(ret + 2 * cb);
+  // EcDouble/EcAdd read all of their inputs before writing the result, so they
+  // accept out == in1 in place; no scratch point is needed.
   for (int i = nbits - 1; i >= 0; --i) {
-    EcDouble(cf, ret, tmp);
-    std::memcpy(ret, tmp, 3 * cb);
+    EcDouble(cf, ret, ret);
     if ((sbytes[i >> 3] >> (i & 7)) & 1) {
-      EcAdd(cf, ret, point, tmp);
-      std::memcpy(ret, tmp, 3 * cb);
+      EcAdd(cf, ret, point, ret);
     }
   }
   std::memcpy(out, ret, 3 * cb);
@@ -1621,19 +1644,10 @@ int ScalarMulLoop(PyArrayMethod_Context* context, char* const* data,
       PyObject* scalar =
           PrimeFieldValue(reinterpret_cast<PyObject*>(scalar_descr), s);
       if (scalar == nullptr) return -1;
-      size_t nbits = _PyLong_NumBits(scalar);
-      size_t nbytes = (nbits + 7) / 8;
-      unsigned char buf[64] = {0};
-      if (nbytes > sizeof(buf)) {
-        Py_DECREF(scalar);
-        PyErr_SetString(PyExc_OverflowError, "EC scalar too large");
-        return -1;
-      }
-      if (nbytes > 0) {
-        _PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(scalar), buf,
-                            nbytes, 1, 0);
-      }
+      unsigned char buf[64];
+      Py_ssize_t nbits = ScalarToBytesLE(scalar, buf, sizeof(buf));
       Py_DECREF(scalar);
+      if (nbits < 0) return -1;
       EcScalarMul(cf, reinterpret_cast<const unsigned char*>(pt), buf,
                   static_cast<int>(nbits), reinterpret_cast<unsigned char*>(o));
       s += s_stride;
