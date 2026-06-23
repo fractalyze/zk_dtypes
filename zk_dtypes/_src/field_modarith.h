@@ -120,14 +120,21 @@ struct PrimeField {
     return f;
   }
 
-  void Add(const unsigned char* a, const unsigned char* b,
-           unsigned char* o) const {
+  // ModAdd and ModSub share one width switch; kSub picks the operation (the
+  // dead branch folds away at compile time).
+  template <bool kSub>
+  void AddSub(const unsigned char* a, const unsigned char* b,
+              unsigned char* o) const {
     switch (width_bytes) {
       case 4: {
         uint32_t x, y, r;
         std::memcpy(&x, a, 4);
         std::memcpy(&y, b, 4);
-        ModAdd<uint32_t>(x, y, r, p32, spare);
+        if (kSub) {
+          ModSub<uint32_t>(x, y, r, p32, spare);
+        } else {
+          ModAdd<uint32_t>(x, y, r, p32, spare);
+        }
         std::memcpy(o, &r, 4);
         break;
       }
@@ -135,7 +142,11 @@ struct PrimeField {
         uint64_t x, y, r;
         std::memcpy(&x, a, 8);
         std::memcpy(&y, b, 8);
-        ModAdd<uint64_t>(x, y, r, p64, spare);
+        if (kSub) {
+          ModSub<uint64_t>(x, y, r, p64, spare);
+        } else {
+          ModAdd<uint64_t>(x, y, r, p64, spare);
+        }
         std::memcpy(o, &r, 8);
         break;
       }
@@ -143,7 +154,11 @@ struct PrimeField {
         BigInt<2> x, y, r;
         std::memcpy(&x[0], a, 16);
         std::memcpy(&y[0], b, 16);
-        ModAdd<BigInt<2>>(x, y, r, p128, spare);
+        if (kSub) {
+          ModSub<BigInt<2>>(x, y, r, p128, spare);
+        } else {
+          ModAdd<BigInt<2>>(x, y, r, p128, spare);
+        }
         std::memcpy(o, &r[0], 16);
         break;
       }
@@ -151,49 +166,24 @@ struct PrimeField {
         BigInt<4> x, y, r;
         std::memcpy(&x[0], a, 32);
         std::memcpy(&y[0], b, 32);
-        ModAdd<BigInt<4>>(x, y, r, p256, spare);
+        if (kSub) {
+          ModSub<BigInt<4>>(x, y, r, p256, spare);
+        } else {
+          ModAdd<BigInt<4>>(x, y, r, p256, spare);
+        }
         std::memcpy(o, &r[0], 32);
         break;
       }
     }
   }
 
+  void Add(const unsigned char* a, const unsigned char* b,
+           unsigned char* o) const {
+    AddSub<false>(a, b, o);
+  }
   void Sub(const unsigned char* a, const unsigned char* b,
            unsigned char* o) const {
-    switch (width_bytes) {
-      case 4: {
-        uint32_t x, y, r;
-        std::memcpy(&x, a, 4);
-        std::memcpy(&y, b, 4);
-        ModSub<uint32_t>(x, y, r, p32, spare);
-        std::memcpy(o, &r, 4);
-        break;
-      }
-      case 8: {
-        uint64_t x, y, r;
-        std::memcpy(&x, a, 8);
-        std::memcpy(&y, b, 8);
-        ModSub<uint64_t>(x, y, r, p64, spare);
-        std::memcpy(o, &r, 8);
-        break;
-      }
-      case 16: {
-        BigInt<2> x, y, r;
-        std::memcpy(&x[0], a, 16);
-        std::memcpy(&y[0], b, 16);
-        ModSub<BigInt<2>>(x, y, r, p128, spare);
-        std::memcpy(o, &r[0], 16);
-        break;
-      }
-      case 32: {
-        BigInt<4> x, y, r;
-        std::memcpy(&x[0], a, 32);
-        std::memcpy(&y[0], b, 32);
-        ModSub<BigInt<4>>(x, y, r, p256, spare);
-        std::memcpy(o, &r[0], 32);
-        break;
-      }
-    }
+    AddSub<true>(a, b, o);
   }
 
   // Montgomery multiply on stored (Montgomery) representatives:
@@ -267,9 +257,10 @@ struct PrimeField {
 };
 
 // Binary tower GF(2^(2^level)) multiply, levels 0..7 (1..128 bits). Returns
-// false for higher levels (caller falls back). Inputs/outputs are width_bytes
-// little-endian; the legacy binary_field_t* dtypes use the same BinaryMul.
-inline bool BinaryTowerMul(int level, int width_bytes, const unsigned char* a,
+// false for higher levels (caller falls back). The byte width is implied by the
+// level; inputs/outputs are little-endian; the legacy binary_field_t* dtypes
+// use the same BinaryMul.
+inline bool BinaryTowerMul(int level, const unsigned char* a,
                            const unsigned char* b, unsigned char* o) {
   switch (level) {
     case 0: {
@@ -339,7 +330,6 @@ inline bool BinaryTowerMul(int level, int width_bytes, const unsigned char* a,
       return true;
     }
     default:
-      (void)width_bytes;
       return false;
   }
 }

@@ -907,7 +907,7 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
     }
     if (d->tower_level <= 7) {  // native recursive Karatsuba tower multiply
       for (npy_intp i = 0; i < n; ++i) {
-        modarith::BinaryTowerMul(d->tower_level, wb,
+        modarith::BinaryTowerMul(d->tower_level,
                                  reinterpret_cast<const unsigned char*>(a),
                                  reinterpret_cast<const unsigned char*>(b),
                                  reinterpret_cast<unsigned char*>(o));
@@ -1002,14 +1002,19 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
       return 0;
     }
     if (k > 1 && op == Op::kMul && pf.ext_native) {  // binomial polynomial mul
+      // ext_native is set only for a base width of 4 or 8 (PrimeField::Make),
+      // so the 8-byte coefficient buffers (nr_le/prod/term/scaled) below always
+      // hold a full coefficient.
       unsigned char nr_le[8] = {0};
       if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(d->non_residue),
                               nr_le, wb, 1, 0) >= 0) {
         for (npy_intp i = 0; i < n; ++i) {
           // Coefficients stay in their storage form; the product/accumulate
           // (montmul/modadd) and the X^k = non_residue fold preserve it, so the
-          // output is byte-identical to the decode/compute/encode path.
-          unsigned char prod[2 * kMaxDegree][8] = {{0}};
+          // output is byte-identical to the decode/compute/encode path. Only
+          // the 2k-1 product rows that get touched need zeroing.
+          unsigned char prod[2 * kMaxDegree][8];
+          std::memset(prod, 0, sizeof(prod[0]) * (2 * k - 1));
           for (int ii = 0; ii < k; ++ii) {
             for (int jj = 0; jj < k; ++jj) {
               unsigned char term[8];
