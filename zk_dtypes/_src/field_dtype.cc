@@ -879,6 +879,41 @@ void TypedMul(char* a, char* b, char* o, npy_intp n, const npy_intp* strides,
   }
 }
 
+// Native binomial-extension (degree k) multiply over a single-word base field
+// (T = uint32_t / uint64_t), in Montgomery space: coefficient products via
+// MontMul<T>, the X^k = non_residue fold via a canonical scalar multiply, all
+// typed (no per-coefficient width switch). nr is the canonical non-residue;
+// mont_nprime is the single-word +p^-1. Byte-identical to the byte EF-mul path.
+template <typename T>
+void EfMulTyped(char* a, char* b, char* o, npy_intp n, const npy_intp* strides,
+                int k, int wb, T modulus, T mont_nprime, bool spare, T nr) {
+  for (npy_intp i = 0; i < n; ++i) {
+    T av[kMaxDegree], bv[kMaxDegree], prod[2 * kMaxDegree];
+    for (int c = 0; c < 2 * k - 1; ++c) prod[c] = 0;
+    for (int c = 0; c < k; ++c) {
+      std::memcpy(&av[c], a + c * wb, sizeof(T));
+      std::memcpy(&bv[c], b + c * wb, sizeof(T));
+    }
+    for (int ii = 0; ii < k; ++ii) {
+      for (int jj = 0; jj < k; ++jj) {
+        T t, s;
+        MontMul<T>(av[ii], bv[jj], t, modulus, mont_nprime);
+        ModAdd<T>(prod[ii + jj], t, s, modulus, spare);
+        prod[ii + jj] = s;
+      }
+    }
+    for (int ii = 2 * k - 2; ii >= k; --ii) {  // fold X^k = non_residue
+      T sc = static_cast<T>(
+          (static_cast<internal::make_promoted_t<T>>(nr) * prod[ii]) % modulus);
+      T s;
+      ModAdd<T>(prod[ii - k], sc, s, modulus, spare);
+      prod[ii - k] = s;
+    }
+    for (int c = 0; c < k; ++c) std::memcpy(o + c * wb, &prod[c], sizeof(T));
+    Advance(a, b, o, strides);
+  }
+}
+
 template <Op op>
 int ArithLoop(PyArrayMethod_Context* context, char* const* data,
               const npy_intp* dimensions, const npy_intp* strides,
@@ -1002,39 +1037,27 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
       return 0;
     }
     if (k > 1 && op == Op::kMul && pf.ext_native) {  // binomial polynomial mul
-      // ext_native is set only for a base width of 4 or 8 (PrimeField::Make),
-      // so the 8-byte coefficient buffers (nr_le/prod/term/scaled) below always
-      // hold a full coefficient.
-      unsigned char nr_le[8] = {0};
-      if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(d->non_residue),
-                              nr_le, wb, 1, 0) >= 0) {
-        for (npy_intp i = 0; i < n; ++i) {
-          // Coefficients stay in their storage form; the product/accumulate
-          // (montmul/modadd) and the X^k = non_residue fold preserve it, so the
-          // output is byte-identical to the decode/compute/encode path. Only
-          // the 2k-1 product rows that get touched need zeroing.
-          unsigned char prod[2 * kMaxDegree][8];
-          std::memset(prod, 0, sizeof(prod[0]) * (2 * k - 1));
-          for (int ii = 0; ii < k; ++ii) {
-            for (int jj = 0; jj < k; ++jj) {
-              unsigned char term[8];
-              pf.Mul(reinterpret_cast<const unsigned char*>(a) + ii * wb,
-                     reinterpret_cast<const unsigned char*>(b) + jj * wb, term);
-              pf.Add(prod[ii + jj], term, prod[ii + jj]);
-            }
-          }
-          for (int ii = 2 * k - 2; ii >= k; --ii) {
-            unsigned char scaled[8];
-            pf.CanonMulBytes(nr_le, prod[ii], scaled);
-            pf.Add(prod[ii - k], scaled, prod[ii - k]);
-          }
-          for (int c = 0; c < k; ++c) {
-            std::memcpy(reinterpret_cast<unsigned char*>(o) + c * wb, prod[c],
-                        wb);
-          }
-          Advance(a, b, o, strides);
+      // ext_native ⟹ base width 4 or 8 (PrimeField::Make); dispatch the typed
+      // Montgomery-space schoolbook (coefficients stay in storage form, so the
+      // result is byte-identical to the decode/compute/encode path).
+      if (wb == 4) {
+        uint32_t nr = 0;
+        if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(d->non_residue),
+                                reinterpret_cast<unsigned char*>(&nr), 4, 1,
+                                0) >= 0) {
+          EfMulTyped<uint32_t>(a, b, o, n, strides, k, wb, pf.p32,
+                               static_cast<uint32_t>(pf.inv), pf.spare, nr);
+          return 0;
         }
-        return 0;
+      } else {  // wb == 8
+        uint64_t nr = 0;
+        if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(d->non_residue),
+                                reinterpret_cast<unsigned char*>(&nr), 8, 1,
+                                0) >= 0) {
+          EfMulTyped<uint64_t>(a, b, o, n, strides, k, wb, pf.p64, pf.inv,
+                               pf.spare, nr);
+          return 0;
+        }
       }
       PyErr_Clear();
     }
