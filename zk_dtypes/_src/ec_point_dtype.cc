@@ -871,6 +871,286 @@ void EcScalarMul(const CoordField& cf, const unsigned char* point,
   std::memcpy(out, ret, 3 * cb);
 }
 
+// --- typed-limb group law (256-bit coordinate field) ---------------------
+// The byte-space Ec* above re-memcpy every coordinate in and out of every field
+// operation. For the dominant case — a 256-bit Montgomery coordinate field
+// (bn254 / bls12-381 / secp256k1 Fq, G1 and G2) — run the *same* formulas on
+// BigInt<4> values held in locals: load each coordinate from the stored bytes
+// once, compute, store once. Same MontMul<4>/ModAdd/ModSub kernels as the byte
+// path, so the result is byte-identical. Twins of the Jac*/Ec* spec — keep in
+// lockstep.
+
+template <size_t N>
+struct FqOpsBig {
+  BigInt<N> p;
+  BigInt<N> one_mont;  // mont(1) = R mod p
+  uint64_t nprime = 0;
+  bool spare = false;
+  bool no_carry = false;
+  BigInt<N> One() const { return one_mont; }
+  BigInt<N> Zero() const { return BigInt<N>(0); }
+  BigInt<N> Mul(const BigInt<N>& a, const BigInt<N>& b) const {
+    BigInt<N> c;
+    MontMul<N>(a, b, c, p, nprime, spare, no_carry);
+    return c;
+  }
+  BigInt<N> Add(const BigInt<N>& a, const BigInt<N>& b) const {
+    BigInt<N> c;
+    ModAdd<BigInt<N>>(a, b, c, p, spare);
+    return c;
+  }
+  BigInt<N> Sub(const BigInt<N>& a, const BigInt<N>& b) const {
+    BigInt<N> c;
+    ModSub<BigInt<N>>(a, b, c, p, spare);
+    return c;
+  }
+  BigInt<N> Neg(const BigInt<N>& a) const { return Sub(BigInt<N>(0), a); }
+  BigInt<N> MulInt(const BigInt<N>& a, int k) const {
+    BigInt<N> c = a;
+    for (int j = 1; j < k; ++j) c = Add(c, a);
+    return c;
+  }
+  bool IsZero(const BigInt<N>& a) const { return a == BigInt<N>(0); }
+  bool Equal(const BigInt<N>& a, const BigInt<N>& b) const { return a == b; }
+};
+
+template <size_t N>
+struct Fp2 {
+  BigInt<N> c0, c1;
+};
+
+template <size_t N>
+struct Fp2OpsBig {
+  FqOpsBig<N> fq;
+  BigInt<N> mont_nr;
+  Fp2<N> One() const { return {fq.One(), BigInt<N>(0)}; }
+  Fp2<N> Zero() const { return {BigInt<N>(0), BigInt<N>(0)}; }
+  Fp2<N> Add(const Fp2<N>& a, const Fp2<N>& b) const {
+    return {fq.Add(a.c0, b.c0), fq.Add(a.c1, b.c1)};
+  }
+  Fp2<N> Sub(const Fp2<N>& a, const Fp2<N>& b) const {
+    return {fq.Sub(a.c0, b.c0), fq.Sub(a.c1, b.c1)};
+  }
+  Fp2<N> Neg(const Fp2<N>& a) const { return {fq.Neg(a.c0), fq.Neg(a.c1)}; }
+  Fp2<N> MulInt(const Fp2<N>& a, int k) const {
+    return {fq.MulInt(a.c0, k), fq.MulInt(a.c1, k)};
+  }
+  Fp2<N> Mul(const Fp2<N>& a, const Fp2<N>& b) const {
+    // (a0 + a1 u)(b0 + b1 u) = (a0 b0 + nr a1 b1) + (a0 b1 + a1 b0) u.
+    BigInt<N> a0b0 = fq.Mul(a.c0, b.c0);
+    BigInt<N> a1b1 = fq.Mul(a.c1, b.c1);
+    BigInt<N> c0 = fq.Add(a0b0, fq.Mul(mont_nr, a1b1));
+    BigInt<N> c1 = fq.Add(fq.Mul(a.c0, b.c1), fq.Mul(a.c1, b.c0));
+    return {c0, c1};
+  }
+  bool IsZero(const Fp2<N>& a) const {
+    return fq.IsZero(a.c0) && fq.IsZero(a.c1);
+  }
+  bool Equal(const Fp2<N>& a, const Fp2<N>& b) const {
+    return fq.Equal(a.c0, b.c0) && fq.Equal(a.c1, b.c1);
+  }
+};
+
+template <size_t N>
+void LoadCoord(BigInt<N>& c, const unsigned char* p) {
+  std::memcpy(&c[0], p, N * 8);
+}
+template <size_t N>
+void StoreCoord(unsigned char* p, const BigInt<N>& c) {
+  std::memcpy(p, &c[0], N * 8);
+}
+template <size_t N>
+void LoadCoord(Fp2<N>& c, const unsigned char* p) {
+  LoadCoord(c.c0, p);
+  LoadCoord(c.c1, p + N * 8);
+}
+template <size_t N>
+void StoreCoord(unsigned char* p, const Fp2<N>& c) {
+  StoreCoord(p, c.c0);
+  StoreCoord(p + N * 8, c.c1);
+}
+template <typename C>
+void LoadPt(C out[3], const unsigned char* p, int cb) {
+  for (int i = 0; i < 3; ++i) LoadCoord(out[i], p + i * cb);
+}
+template <typename C>
+void StorePt(unsigned char* p, const C in[3], int cb) {
+  for (int i = 0; i < 3; ++i) StoreCoord(p + i * cb, in[i]);
+}
+
+// Jacobian doubling (EFD dbl-2009-l, a == 0). out may alias in.
+template <typename C, typename Ops>
+void EcDoubleT(const Ops& f, const C in[3], C out[3]) {
+  const C& X = in[0];
+  const C& Y = in[1];
+  const C& Z = in[2];
+  C xx = f.Mul(X, X);
+  C yy = f.Mul(Y, Y);
+  C yyyy = f.Mul(yy, yy);
+  C dd = f.MulInt(f.Mul(X, yy), 4);
+  C e = f.MulInt(xx, 3);
+  C X2 = f.Sub(f.Mul(e, e), f.MulInt(dd, 2));
+  C Y2 = f.Sub(f.Mul(e, f.Sub(dd, X2)), f.MulInt(yyyy, 8));
+  C Z2 = f.MulInt(f.Mul(Y, Z), 2);
+  out[0] = X2;
+  out[1] = Y2;
+  out[2] = Z2;
+}
+
+// Jacobian addition (EFD add-2007-bl, a == 0). out may alias an input.
+template <typename C, typename Ops>
+void EcAddT(const Ops& f, const C P[3], const C Q[3], C out[3]) {
+  if (f.IsZero(P[2])) {
+    out[0] = Q[0];
+    out[1] = Q[1];
+    out[2] = Q[2];
+    return;
+  }
+  if (f.IsZero(Q[2])) {
+    out[0] = P[0];
+    out[1] = P[1];
+    out[2] = P[2];
+    return;
+  }
+  C z1z1 = f.Mul(P[2], P[2]);
+  C z2z2 = f.Mul(Q[2], Q[2]);
+  C u1 = f.Mul(P[0], z2z2);
+  C u2 = f.Mul(Q[0], z1z1);
+  C s1 = f.Mul(f.Mul(P[1], Q[2]), z2z2);
+  C s2 = f.Mul(f.Mul(Q[1], P[2]), z1z1);
+  if (f.Equal(u1, u2) && f.Equal(s1, s2)) {  // P == Q
+    EcDoubleT<C, Ops>(f, P, out);
+    return;
+  }
+  C h = f.Sub(u2, u1);
+  C ii = f.Mul(f.MulInt(h, 2), f.MulInt(h, 2));
+  C j = f.Neg(f.Mul(h, ii));
+  C r = f.MulInt(f.Sub(s2, s1), 2);
+  C v = f.Mul(u1, ii);
+  C X3 = f.Sub(f.Add(f.Mul(r, r), j), f.MulInt(v, 2));  // r^2 + j - 2v
+  C Y3 = f.Add(f.Mul(r, f.Sub(v, X3)),
+               f.MulInt(f.Mul(s1, j), 2));          // r(v - X3) + 2 s1 j
+  C Z3 = f.MulInt(f.Mul(f.Mul(P[2], Q[2]), h), 2);  // 2 Z1 Z2 h
+  out[0] = X3;
+  out[1] = Y3;
+  out[2] = Z3;
+}
+
+// Cross-representative group equality; 1 / 0.
+template <typename C, typename Ops>
+int EcEqualT(const Ops& f, const C P[3], const C Q[3]) {
+  bool pz = f.IsZero(P[2]);
+  bool qz = f.IsZero(Q[2]);
+  if (pz || qz) return (pz && qz) ? 1 : 0;
+  C z1s = f.Mul(P[2], P[2]);
+  C z2s = f.Mul(Q[2], Q[2]);
+  bool xe = f.Equal(f.Mul(P[0], z2s), f.Mul(Q[0], z1s));
+  bool ye =
+      f.Equal(f.Mul(P[1], f.Mul(z2s, Q[2])), f.Mul(Q[1], f.Mul(z1s, P[2])));
+  return (xe && ye) ? 1 : 0;
+}
+
+// ret = scalar * point, MSB-first double-and-add (point/ret as typed coords).
+template <typename C, typename Ops>
+void EcScalarMulT(const Ops& f, const C point[3], const unsigned char* sbytes,
+                  int nbits, C ret[3]) {
+  ret[0] = f.One();  // Jacobian zero = (1, 1, 0)
+  ret[1] = f.One();
+  ret[2] = f.Zero();
+  for (int i = nbits - 1; i >= 0; --i) {
+    EcDoubleT<C, Ops>(f, ret, ret);
+    if ((sbytes[i >> 3] >> (i & 7)) & 1) EcAddT<C, Ops>(f, ret, point, ret);
+  }
+}
+
+// Build the typed 256-bit ops from the already-extracted CoordField constants.
+FqOpsBig<4> MakeFqOps(const CoordField& cf) {
+  FqOpsBig<4> f;
+  f.p = cf.fq.p256;
+  LoadCoord(f.one_mont, cf.one_le);
+  f.nprime = cf.fq.nprime_neg;
+  f.spare = cf.fq.spare;
+  f.no_carry = cf.fq.no_carry;
+  return f;
+}
+Fp2OpsBig<4> MakeFp2Ops(const CoordField& cf) {
+  Fp2OpsBig<4> f;
+  f.fq = MakeFqOps(cf);
+  LoadCoord(f.mont_nr, cf.mont_nr);
+  return f;
+}
+
+// Typed loop bodies (256-bit Jacobian). C = BigInt<4> (G1) or Fp2<4> (G2).
+template <typename C, typename Ops>
+void RunBinT(const Ops& f, bool sub, char* a, char* b, char* o, npy_intp n,
+             const npy_intp* st, int cb) {
+  for (npy_intp i = 0; i < n; ++i) {
+    C P[3], Q[3], R[3];
+    LoadPt<C>(P, reinterpret_cast<const unsigned char*>(a), cb);
+    LoadPt<C>(Q, reinterpret_cast<const unsigned char*>(b), cb);
+    if (sub) {
+      C nq[3] = {Q[0], f.Neg(Q[1]), Q[2]};
+      EcAddT<C, Ops>(f, P, nq, R);
+    } else {
+      EcAddT<C, Ops>(f, P, Q, R);
+    }
+    StorePt<C>(reinterpret_cast<unsigned char*>(o), R, cb);
+    a += st[0];
+    b += st[1];
+    o += st[2];
+  }
+}
+template <typename C, typename Ops>
+void RunNegT(const Ops& f, char* a, char* o, npy_intp n, const npy_intp* st,
+             int cb, int num_coords) {
+  for (npy_intp i = 0; i < n; ++i) {
+    for (int k = 0; k < num_coords; ++k) {
+      C c;
+      LoadCoord(c, reinterpret_cast<const unsigned char*>(a) + k * cb);
+      if (k == 1) c = f.Neg(c);
+      StoreCoord(reinterpret_cast<unsigned char*>(o) + k * cb, c);
+    }
+    a += st[0];
+    o += st[1];
+  }
+}
+template <typename C, typename Ops>
+void RunCmpT(const Ops& f, bool negate, char* a, char* b, char* o, npy_intp n,
+             const npy_intp* st, int cb) {
+  for (npy_intp i = 0; i < n; ++i) {
+    C P[3], Q[3];
+    LoadPt<C>(P, reinterpret_cast<const unsigned char*>(a), cb);
+    LoadPt<C>(Q, reinterpret_cast<const unsigned char*>(b), cb);
+    int eq = EcEqualT<C, Ops>(f, P, Q);
+    *reinterpret_cast<npy_bool*>(o) = (negate ? !eq : eq) ? 1 : 0;
+    a += st[0];
+    b += st[1];
+    o += st[2];
+  }
+}
+template <typename C, typename Ops>
+int RunScalarT(const Ops& f, PyArray_Descr* scalar_descr, char* s, char* pt,
+               char* o, npy_intp n, npy_intp s_stride, npy_intp pt_stride,
+               npy_intp o_stride, int cb) {
+  for (npy_intp i = 0; i < n; ++i) {
+    PyObject* scalar =
+        PrimeFieldValue(reinterpret_cast<PyObject*>(scalar_descr), s);
+    if (scalar == nullptr) return -1;
+    unsigned char buf[64];
+    Py_ssize_t nbits = ScalarToBytesLE(scalar, buf, sizeof(buf));
+    Py_DECREF(scalar);
+    if (nbits < 0) return -1;
+    C point[3], ret[3];
+    LoadPt<C>(point, reinterpret_cast<const unsigned char*>(pt), cb);
+    EcScalarMulT<C, Ops>(f, point, buf, static_cast<int>(nbits), ret);
+    StorePt<C>(reinterpret_cast<unsigned char*>(o), ret, cb);
+    s += s_stride;
+    pt += pt_stride;
+    o += o_stride;
+  }
+  return 0;
+}
+
 // --- descriptor lifecycle ------------------------------------------------
 
 PyArray_Descr* MakeDescr(PyObject* modulus, int base_width_bytes,
@@ -1349,6 +1629,17 @@ int BinLoop(PyArrayMethod_Context* context, char* const* data,
   char* b = data[1];
   char* o = data[2];
   CoordField cf = CoordField::Make(d);
+  if (cf.ok &&
+      cf.wb == 32) {  // typed-limb fast path (256-bit coordinate field)
+    if (cf.degree == 1) {
+      RunBinT<BigInt<4>>(MakeFqOps(cf), op == BinOp::kSub, a, b, o, n, strides,
+                         cf.cb);
+    } else {
+      RunBinT<Fp2<4>>(MakeFp2Ops(cf), op == BinOp::kSub, a, b, o, n, strides,
+                      cf.cb);
+    }
+    return 0;
+  }
   if (cf.ok) {  // num_coords == 3 guaranteed by BinResolve
     unsigned char neg_q[3 * kCoordBytes];
     for (npy_intp i = 0; i < n; ++i) {
@@ -1410,6 +1701,15 @@ int NegLoop(PyArrayMethod_Context* context, char* const* data,
   char* a = data[0];
   char* o = data[1];
   CoordField cf = CoordField::Make(d);
+  if (cf.ok &&
+      cf.wb == 32) {  // typed-limb fast path (negate flips Y per coord)
+    if (cf.degree == 1) {
+      RunNegT<BigInt<4>>(MakeFqOps(cf), a, o, n, strides, cf.cb, d->num_coords);
+    } else {
+      RunNegT<Fp2<4>>(MakeFp2Ops(cf), a, o, n, strides, cf.cb, d->num_coords);
+    }
+    return 0;
+  }
   if (cf.ok) {
     for (npy_intp i = 0; i < n; ++i) {
       EcNegate(cf, reinterpret_cast<const unsigned char*>(a),
@@ -1521,6 +1821,14 @@ int CmpLoop(PyArrayMethod_Context* context, char* const* data,
   char* b = data[1];
   char* o = data[2];
   CoordField cf = CoordField::Make(d);
+  if (cf.ok && cf.wb == 32) {  // typed-limb fast path (256-bit)
+    if (cf.degree == 1) {
+      RunCmpT<BigInt<4>>(MakeFqOps(cf), negate, a, b, o, n, strides, cf.cb);
+    } else {
+      RunCmpT<Fp2<4>>(MakeFp2Ops(cf), negate, a, b, o, n, strides, cf.cb);
+    }
+    return 0;
+  }
   if (cf.ok) {  // num_coords == 3 guaranteed by CmpResolve
     for (npy_intp i = 0; i < n; ++i) {
       int eq = EcEqual(cf, reinterpret_cast<const unsigned char*>(a),
@@ -1639,6 +1947,14 @@ int ScalarMulLoop(PyArrayMethod_Context* context, char* const* data,
   npy_intp s_stride = strides[scalar_first ? 0 : 1];
   npy_intp pt_stride = strides[scalar_first ? 1 : 0];
   CoordField cf = CoordField::Make(d);
+  if (cf.ok && d->num_coords == 3 && cf.wb == 32) {  // typed-limb fast path
+    if (cf.degree == 1) {
+      return RunScalarT<BigInt<4>>(MakeFqOps(cf), scalar_descr, s, pt, o, n,
+                                   s_stride, pt_stride, strides[2], cf.cb);
+    }
+    return RunScalarT<Fp2<4>>(MakeFp2Ops(cf), scalar_descr, s, pt, o, n,
+                              s_stride, pt_stride, strides[2], cf.cb);
+  }
   if (cf.ok && d->num_coords == 3) {
     for (npy_intp i = 0; i < n; ++i) {
       PyObject* scalar =
