@@ -17,10 +17,13 @@
 __version__ = "0.0.7"
 __all__ = [
     "__version__",
+    "binary_field",
     "ecinfo",
     "efinfo",
+    "extension_field",
     "iinfo",
     "pfinfo",
+    "prime_field",
     "int2",
     "int4",
     "int128",
@@ -92,6 +95,9 @@ from typing import Type
 
 from zk_dtypes._ecinfo import ecinfo
 from zk_dtypes._efinfo import efinfo
+from zk_dtypes._field_factory import binary_field
+from zk_dtypes._field_factory import extension_field
+from zk_dtypes._field_factory import prime_field
 from zk_dtypes._iinfo import iinfo
 from zk_dtypes._pfinfo import pfinfo
 from zk_dtypes._zk_dtypes_ext import int2

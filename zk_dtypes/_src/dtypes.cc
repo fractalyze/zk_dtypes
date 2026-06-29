@@ -28,7 +28,9 @@ limitations under the License.
 #include <Python.h>
 
 #include "zk_dtypes/_src/bigint_numpy.h"
+#include "zk_dtypes/_src/ec_point_dtype.h"
 #include "zk_dtypes/_src/ec_point_numpy.h"
+#include "zk_dtypes/_src/field_dtype.h"
 #include "zk_dtypes/_src/field_numpy.h"
 #include "zk_dtypes/_src/intn_numpy.h"
 #include "zk_dtypes/include/all_types.h"
@@ -740,6 +742,16 @@ extern "C" EXPORT_SYMBOL PyObject* PyInit__zk_dtypes_ext() {
   }
   ZK_DTYPES_PUBLIC_TYPE_LIST(INIT_MODULE_TYPE)
 #undef INIT_MODULE_TYPE
+
+  // Parametric field DType (user-defined prime + extension fields). Additive:
+  // registered alongside the legacy per-family field dtypes, which are
+  // untouched.
+  if (!RegisterFieldDType(/*numpy=*/nullptr, m.get())) {
+    return nullptr;
+  }
+  if (!RegisterEcPointDType(/*numpy=*/nullptr, m.get())) {
+    return nullptr;
+  }
 
 #ifdef Py_GIL_DISABLED
   PyUnstable_Module_SetGIL(m.get(), Py_MOD_GIL_NOT_USED);
