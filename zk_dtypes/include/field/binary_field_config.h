@@ -25,9 +25,10 @@ namespace zk_dtypes {
 // BinaryField Configs (Tower Field Structure)
 // =============================================================================
 // Binary tower fields: GF(2) -> GF(2²) -> GF(2⁴) -> ... -> GF(2¹²⁸)
-// Each level is a degree-2 extension of the previous level.
-// The extension is defined by the irreducible polynomial x^2 + x + alpha,
-// where alpha is the multiplicative generator of the subfield.
+// Each level is a degree-2 extension of the previous level, defined by the
+// irreducible polynomial x² + βₖ₋₁·x + 1 where βₖ₋₁ is the generator of the
+// subfield (the Fan-Paar/Binius tower — byte-compatible with Binius'
+// BinaryField*b). See binary_field_multiplication.h for the arithmetic.
 
 template <size_t TowerLevel>
 struct BinaryFieldConfig;

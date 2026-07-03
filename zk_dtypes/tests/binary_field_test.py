@@ -108,6 +108,61 @@ def _ghash_ref_mul(a: int, b: int) -> int:
   return prod & _GHASH_MASK
 
 
+# Reference multiply for the Fan-Paar / Binius tower, independent of the C++
+# implementation. Level k (k >= 1) is GF(2^{2^{k-1}})[X] / (X^2 + beta_{k-1}*X
+# + 1), where beta_{k-1} is the subfield generator; multiplying by it is the
+# recursive "multiply by generator" _tower_mulgen. Pins BinaryFieldT* to the
+# same tower Binius' BinaryField*b types use (byte-compatible).
+def _tower_mulgen(x: int, level: int) -> int:
+  if level == 0:
+    return x & 1  # generator of GF(2) is 1
+  h = 1 << (level - 1)
+  mask = (1 << h) - 1
+  a0, a1 = x & mask, (x >> h) & mask
+  return a1 | ((a0 ^ _tower_mulgen(a1, level - 1)) << h)
+
+
+def _tower_ref_mul(a: int, b: int, level: int) -> int:
+  if level == 0:
+    return a & b & 1
+  h = 1 << (level - 1)
+  mask = (1 << h) - 1
+  a0, a1 = a & mask, (a >> h) & mask
+  b0, b1 = b & mask, (b >> h) & mask
+  a0b0 = _tower_ref_mul(a0, b0, level - 1)
+  a1b1 = _tower_ref_mul(a1, b1, level - 1)
+  c0 = a0b0 ^ a1b1
+  cross = _tower_ref_mul(a0 ^ a1, b0 ^ b1, level - 1)
+  c1 = cross ^ a0b0 ^ a1b1 ^ _tower_mulgen(a1b1, level - 1)
+  return c0 | (c1 << h)
+
+
+# Tower level per type; the flat GHASH field is not a tower and is excluded.
+TOWER_LEVELS = {
+    binary_field_t0: 0,
+    binary_field_t1: 1,
+    binary_field_t2: 2,
+    binary_field_t3: 3,
+    binary_field_t4: 4,
+    binary_field_t5: 5,
+    binary_field_t6: 6,
+    binary_field_t7: 7,
+}
+
+# Known-answer products from Binius' canonical BinaryField{8,16,32}b (real
+# reference outputs, per issue #147). Pin byte-compatibility with Binius, which
+# the self-consistent oracle above cannot establish on its own.
+BINIUS_CANONICAL_KAT = {
+    binary_field_t3: [
+        (0x12, 0x34, 0x9B),
+        (0x2D, 0x2D, 0xCC),
+        (0x80, 0x80, 0x57),
+    ],
+    binary_field_t4: [(0x1234, 0x5678, 0x54FE), (0x8000, 0x8000, 0xA557)],
+    binary_field_t5: [(0x12345678, 0x9ABCDEF0, 0x9F77A270)],
+}
+
+
 @contextlib.contextmanager
 def ignore_warning(**kw):
   with warnings.catch_warnings():
@@ -458,6 +513,36 @@ class ArrayTest(parameterized.TestCase):
     y = x.astype(scalar_type)
     for i, v in enumerate(values):
       self.assertEqual(int(y[i]), v)
+
+
+@multi_threaded(num_workers=3)
+class TowerBasisTest(parameterized.TestCase):
+  """BinaryFieldT* must realize the Fan-Paar / Binius tower exactly."""
+
+  @parameterized.product(scalar_type=list(TOWER_LEVELS))
+  def testMultiplyMatchesTowerOracle(self, scalar_type):
+    level = TOWER_LEVELS[scalar_type]
+    bits = 1 << level
+    rng = random.Random(0xB1)
+    samples = [0, 1, VALUE_MASKS[scalar_type]] + [
+        rng.getrandbits(bits) for _ in range(64)
+    ]
+    for a in samples:
+      for b in samples:
+        self.assertEqual(
+            int(scalar_type(a) * scalar_type(b)),
+            _tower_ref_mul(a, b, level),
+            msg=(scalar_type.__name__, hex(a), hex(b)),
+        )
+
+  @parameterized.product(scalar_type=list(BINIUS_CANONICAL_KAT))
+  def testMatchesBiniusCanonicalVectors(self, scalar_type):
+    for a, b, want in BINIUS_CANONICAL_KAT[scalar_type]:
+      self.assertEqual(
+          int(scalar_type(a) * scalar_type(b)),
+          want,
+          msg=(scalar_type.__name__, hex(a), hex(b)),
+      )
 
 
 @multi_threaded(num_workers=3)

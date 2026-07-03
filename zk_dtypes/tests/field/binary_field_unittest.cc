@@ -185,6 +185,33 @@ TYPED_TEST(BinaryFieldTypedTest, SubfieldDecomposition) {
   }
 }
 
+// Fan-Paar / Binius tower known-answer vectors. Self-consistency (Square==a*a,
+// inverse round-trip) holds for any tower; these pin BinaryFieldT* to the SAME
+// tower Binius' canonical BinaryField*b types use, so stored bytes are
+// Binius-compatible. Values are real Binius reference outputs (issue #147).
+TEST(BinaryFieldTest, MatchesBiniusCanonicalTower) {
+  EXPECT_EQ(
+      (BinaryFieldT3::FromUnchecked(0x12) * BinaryFieldT3::FromUnchecked(0x34))
+          .value(),
+      0x9B);
+  EXPECT_EQ(
+      (BinaryFieldT3::FromUnchecked(0x80) * BinaryFieldT3::FromUnchecked(0x80))
+          .value(),
+      0x57);
+  EXPECT_EQ((BinaryFieldT4::FromUnchecked(0x1234) *
+             BinaryFieldT4::FromUnchecked(0x5678))
+                .value(),
+            0x54FE);
+  EXPECT_EQ((BinaryFieldT4::FromUnchecked(0x8000) *
+             BinaryFieldT4::FromUnchecked(0x8000))
+                .value(),
+            0xA557);
+  EXPECT_EQ((BinaryFieldT5::FromUnchecked(0x12345678) *
+             BinaryFieldT5::FromUnchecked(0x9ABCDEF0))
+                .value(),
+            0x9F77A270u);
+}
+
 // GHASH/POLYVAL basis known-answer vectors. Self-consistency tests (Square ==
 // a*a, inverse round-trip) hold for any irreducible polynomial; these pin the
 // basis to p(x) = x¹²⁸ + x⁷ + x² + x + 1, i.e. x¹²⁸ ≡ x⁷ + x² + x + 1 = 0x87.
