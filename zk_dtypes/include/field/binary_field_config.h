@@ -35,6 +35,8 @@ struct BinaryFieldConfig;
 template <size_t TowerLevel>
 struct BaseBinaryFieldConfig {
   constexpr static bool kUseMontgomery = false;
+  // Tower construction by default; a flat (e.g. GHASH) config overrides this.
+  constexpr static bool kIsTower = true;
   constexpr static size_t kTowerLevel = TowerLevel;
   constexpr static size_t kStorageBits = 1 << kTowerLevel;
   constexpr static size_t kModulusBits = kStorageBits + 1;
@@ -87,6 +89,17 @@ struct BinaryFieldConfig<6> : public BaseBinaryFieldConfig<6> {
 // GF(2¹²⁸) - Tower Level 7
 template <>
 struct BinaryFieldConfig<7> : public BaseBinaryFieldConfig<7> {};
+
+// GF(2¹²⁸) in the GHASH/POLYVAL basis — a FLAT (non-tower) construction with
+// irreducible p(x) = x¹²⁸ + x⁷ + x² + x + 1 (reduction constant 0x87), natural
+// (non-bit-reflected) bit order. Reuses the tower-level-7 sizing (128-bit
+// storage, BigInt<2>) but flips kIsTower so BinaryField dispatches to the GHASH
+// multiply instead of the tower multiply. Isomorphic to BinaryFieldConfig<7>
+// but NOT bit-compatible: this basis matches GHASH/POLYVAL byte-for-byte, which
+// consumers that hash raw field bytes depend on.
+struct GhashFieldConfig : public BaseBinaryFieldConfig<7> {
+  constexpr static bool kIsTower = false;
+};
 
 }  // namespace zk_dtypes
 

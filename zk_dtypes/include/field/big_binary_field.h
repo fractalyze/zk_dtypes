@@ -42,6 +42,7 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
     : public FiniteField<BinaryField<_Config>> {
  public:
   constexpr static bool kUseMontgomery = false;
+  constexpr static bool kIsTower = _Config::kIsTower;
   constexpr static size_t kTowerLevel = _Config::kTowerLevel;
   constexpr static size_t kStorageBits = _Config::kStorageBits;
   constexpr static size_t kLimbNums = (kStorageBits + 63) / 64;
@@ -129,10 +130,15 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   // Negation: Identity
   constexpr BinaryField operator-() const { return *this; }
 
-  // Multiplication: Tower field multiplication
-  // GF(2¹²⁸) = GF(2⁶⁴)[x] / (x² + x + α) where α = TowerAlpha<7>::value
+  // Multiplication: tower field multiply
+  // (GF(2¹²⁸) = GF(2⁶⁴)[x] / (x² + x + α), α = TowerAlpha<7>::value), or the
+  // flat GHASH multiply when the config is not a tower.
   constexpr BinaryField operator*(BinaryField other) const {
-    return FromUnchecked(BinaryMul<7>(value_, other.value_));
+    if constexpr (kIsTower) {
+      return FromUnchecked(BinaryMul<7>(value_, other.value_));
+    } else {
+      return FromUnchecked(GhashMul(value_, other.value_));
+    }
   }
 
   constexpr BinaryField& operator*=(BinaryField other) {
@@ -140,19 +146,31 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   }
 
   constexpr BinaryField Square() const {
-    return FromUnchecked(BinarySquare<7>(value_));
+    if constexpr (kIsTower) {
+      return FromUnchecked(BinarySquare<7>(value_));
+    } else {
+      return FromUnchecked(GhashSquare(value_));
+    }
   }
 
   // Multiply by X (extension generator)
   // X² = X + α where α = TowerAlpha<7>::value
   constexpr BinaryField MulX() const {
-    return FromUnchecked(BinaryMulX<7>(value_));
+    if constexpr (kIsTower) {
+      return FromUnchecked(BinaryMulX<7>(value_));
+    } else {
+      return FromUnchecked(GhashMulX(value_));
+    }
   }
 
   // Inverse using Fermat's Little Theorem: a⁻¹ = a^(2¹²⁸ - 2)
   // a^(2¹²⁸ - 2) = a² · a⁴ · a⁸ · ... · a^(2¹²⁷)
   constexpr BinaryField Inverse() const {
-    return FromUnchecked(BinaryInverse<7>(value_));
+    if constexpr (kIsTower) {
+      return FromUnchecked(BinaryInverse<7>(value_));
+    } else {
+      return FromUnchecked(GhashInverse(value_));
+    }
   }
 
   constexpr BinaryField operator/(BinaryField other) const {

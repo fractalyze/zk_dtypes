@@ -367,6 +367,89 @@ constexpr T BinaryInverse(T a) {
   return BinaryOps<TowerLevel>::Inverse(a);
 }
 
+// =============================================================================
+// GHASH / POLYVAL flat GF(2¹²⁸) multiplication (non-tower)
+// =============================================================================
+// GF(2¹²⁸) in the GHASH/POLYVAL basis: p(x) = x¹²⁸ + x⁷ + x² + x + 1 (reduction
+// constant 0x87), natural (non-bit-reflected) bit order. An element is a
+// BigInt<2> whose limb 0 holds x⁰..x⁶³ and limb 1 holds x⁶⁴..x¹²⁷. This is
+// isomorphic to the tower GF(2¹²⁸) but a DIFFERENT, bit-incompatible basis: it
+// matches the GHASH/POLYVAL representation byte-for-byte. These are the
+// reference (portable, constexpr) semantics; a hardware carryless-multiply
+// lowering (PCLMULQDQ) lives downstream in the compiler.
+
+// Carryless (GF(2)[x]) 64×64 → 128 product, portable bit-serial. Writes the low
+// and high 64 bits of the product to `lo`/`hi`.
+constexpr void GhashClmul64(uint64_t a, uint64_t b, uint64_t& lo,
+                            uint64_t& hi) {
+  lo = 0;
+  hi = 0;
+  for (size_t i = 0; i < 64; ++i) {
+    if ((a >> i) & uint64_t{1}) {
+      lo ^= b << i;
+      if (i != 0) hi ^= b >> (64 - i);  // i == 0 would be a shift-by-64 (UB)
+    }
+  }
+}
+
+// GF(2¹²⁸) multiply in the GHASH basis: schoolbook carryless 128×128 → 256
+// product, then reduction mod x¹²⁸ + x⁷ + x² + x + 1.
+constexpr BigInt<2> GhashMul(const BigInt<2>& a, const BigInt<2>& b) {
+  uint64_t a_lo = a[0], a_hi = a[1], b_lo = b[0], b_hi = b[1];
+
+  // Schoolbook 128×128 → 256 (unreduced): four 64×64 carryless products.
+  uint64_t ll_lo = 0, ll_hi = 0, lh_lo = 0, lh_hi = 0;
+  uint64_t hl_lo = 0, hl_hi = 0, hh_lo = 0, hh_hi = 0;
+  GhashClmul64(a_lo, b_lo, ll_lo, ll_hi);
+  GhashClmul64(a_lo, b_hi, lh_lo, lh_hi);
+  GhashClmul64(a_hi, b_lo, hl_lo, hl_hi);
+  GhashClmul64(a_hi, b_hi, hh_lo, hh_hi);
+  uint64_t cr_lo = lh_lo ^ hl_lo;
+  uint64_t cr_hi = lh_hi ^ hl_hi;
+  uint64_t r0 = ll_lo;
+  uint64_t r1 = ll_hi ^ cr_lo;
+  uint64_t r2 = hh_lo ^ cr_hi;
+  uint64_t r3 = hh_hi;
+
+  // Fold the high half (r2:r3) down via x¹²⁸ ≡ x⁷ + x² + x + 1, with a 7-bit
+  // overflow correction for coefficients pushed past x¹²⁷.
+  uint64_t s1_lo = r2 << 1;
+  uint64_t s1_hi = (r3 << 1) | (r2 >> 63);
+  uint64_t s2_lo = r2 << 2;
+  uint64_t s2_hi = (r3 << 2) | (r2 >> 62);
+  uint64_t s7_lo = r2 << 7;
+  uint64_t s7_hi = (r3 << 7) | (r2 >> 57);
+  uint64_t t_lo = r2 ^ s1_lo ^ s2_lo ^ s7_lo;
+  uint64_t t_hi = r3 ^ s1_hi ^ s2_hi ^ s7_hi;
+  uint64_t ov = (r3 >> 63) ^ (r3 >> 62) ^ (r3 >> 57);
+  uint64_t corr = ov ^ (ov << 1) ^ (ov << 2) ^ (ov << 7);
+  return BigInt<2>({r0 ^ t_lo ^ corr, r1 ^ t_hi});
+}
+
+constexpr BigInt<2> GhashSquare(const BigInt<2>& a) { return GhashMul(a, a); }
+
+// Multiply by the generator x: shift coefficients up by one and reduce the
+// x¹²⁸ overflow via x¹²⁸ ≡ x⁷ + x² + x + 1 (= 0x87).
+constexpr BigInt<2> GhashMulX(const BigInt<2>& a) {
+  uint64_t lo = a[0], hi = a[1];
+  uint64_t overflow = hi >> 63;
+  uint64_t new_hi = (hi << 1) | (lo >> 63);
+  uint64_t new_lo = (lo << 1) ^ (overflow ? uint64_t{0x87} : uint64_t{0});
+  return BigInt<2>({new_lo, new_hi});
+}
+
+// Inverse via Fermat: a⁻¹ = a^(2¹²⁸ − 2) = a² · a⁴ · a⁸ · … · a^(2¹²⁷).
+constexpr BigInt<2> GhashInverse(const BigInt<2>& a) {
+  if (a.IsZero()) return BigInt<2>(0);
+  BigInt<2> result = GhashSquare(a);
+  BigInt<2> power = result;
+  for (size_t i = 2; i < 128; ++i) {
+    power = GhashSquare(power);
+    result = GhashMul(result, power);
+  }
+  return result;
+}
+
 }  // namespace zk_dtypes
 
 #endif  // ZK_DTYPES_INCLUDE_FIELD_BINARY_FIELD_MULTIPLICATION_H_

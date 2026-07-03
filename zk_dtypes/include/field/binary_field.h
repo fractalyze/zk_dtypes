@@ -54,7 +54,9 @@ using BinaryFieldT3 = BinaryField<BinaryFieldConfig<3>>;  // GF(2⁸)
 using BinaryFieldT4 = BinaryField<BinaryFieldConfig<4>>;  // GF(2¹⁶)
 using BinaryFieldT5 = BinaryField<BinaryFieldConfig<5>>;  // GF(2³²)
 using BinaryFieldT6 = BinaryField<BinaryFieldConfig<6>>;  // GF(2⁶⁴)
-using BinaryFieldT7 = BinaryField<BinaryFieldConfig<7>>;  // GF(2¹²⁸)
+using BinaryFieldT7 = BinaryField<BinaryFieldConfig<7>>;  // GF(2¹²⁸) tower
+// GF(2¹²⁸) in the GHASH/POLYVAL basis (p(x) = x¹²⁸ + x⁷ + x² + x + 1).
+using BinaryFieldGhash = BinaryField<GhashFieldConfig>;
 
 }  // namespace zk_dtypes
 

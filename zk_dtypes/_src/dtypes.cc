@@ -361,6 +361,15 @@ struct TypeDescriptorBase<BinaryFieldT7> : FieldTypeDescriptor<BinaryFieldT7> {
   static constexpr char kNpyDescrType = 'w';
 };
 
+template <>
+struct TypeDescriptorBase<BinaryFieldGhash>
+    : FieldTypeDescriptor<BinaryFieldGhash> {
+  static constexpr const char* kTpDoc =
+      "GF(2¹²⁸) binary field values in the GHASH/POLYVAL basis "
+      "(p(x) = x¹²⁸ + x⁷ + x² + x + 1)";
+  static constexpr char kNpyDescrType = 'h';
+};
+
 //===----------------------------------------------------------------------===//
 // EcPoint TypeDescriptorBase
 //===----------------------------------------------------------------------===//

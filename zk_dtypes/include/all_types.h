@@ -61,7 +61,8 @@ V(::zk_dtypes::BinaryFieldT3, BinaryFieldT3, BINARY_FIELD_T3, binary_field_t3) \
 V(::zk_dtypes::BinaryFieldT4, BinaryFieldT4, BINARY_FIELD_T4, binary_field_t4) \
 V(::zk_dtypes::BinaryFieldT5, BinaryFieldT5, BINARY_FIELD_T5, binary_field_t5) \
 V(::zk_dtypes::BinaryFieldT6, BinaryFieldT6, BINARY_FIELD_T6, binary_field_t6) \
-V(::zk_dtypes::BinaryFieldT7, BinaryFieldT7, BINARY_FIELD_T7, binary_field_t7)
+V(::zk_dtypes::BinaryFieldT7, BinaryFieldT7, BINARY_FIELD_T7, binary_field_t7) \
+V(::zk_dtypes::BinaryFieldGhash, BinaryFieldGhash, BINARY_FIELD_GHASH, binary_field_ghash)
 
 #define ZK_DTYPES_ALL_BINARY_FIELD_TYPE_LIST(V) \
 ZK_DTYPES_PUBLIC_BINARY_FIELD_TYPE_LIST(V)      \
