@@ -27,18 +27,24 @@ namespace zk_dtypes {
 // =============================================================================
 // Tower Field Multiplication
 // =============================================================================
-// Binary tower fields use degree-2 extensions at each level.
-// GF(2²ⁿ) is constructed as GF(2ⁿ)[X] / (X² + X + α)
-// where α is the primitive element (multiplicative generator) of GF(2ⁿ).
+// Binary tower fields use degree-2 extensions at each level, following the
+// Fan-Paar / Wiedemann tower (Diamond–Posen 2023 §2.3) that Binius' canonical
+// BinaryField*b types use. Choosing this tower makes stored bit patterns
+// byte-compatible with Binius: the same u8/u16/u32/… value denotes the same
+// field element, and products agree (e.g. GF(2⁸): 0x12·0x34 = 0x9B).
 //
-// For (a₀ + a₁·X) * (b₀ + b₁·X) in GF(2²ⁿ):
-//   = a₀·b₀ + (a₀·b₁ + a₁·b₀)·X + a₁·b₁·X²
-// Using X² = X + α:
-//   = a₀·b₀ + a₁·b₁·α + (a₀·b₁ + a₁·b₀ + a₁·b₁)·X
+// Level k (k ≥ 2) is GF(2^{2^{k-1}})[X] / (X² + βₖ₋₁·X + 1), where βₖ₋₁ is the
+// generator of the subfield (bit pattern 2^{2^{k-2}}, i.e. the subfield element
+// (0,1)). This is NOT a constant-α tower: the linear coefficient is the
+// subfield GENERATOR, not a fixed subfield constant. Multiplying a subfield
+// element by βₖ₋₁ is exactly the recursive "multiply by generator" — BinaryMulX
+// one level down. (At k = 1, β₀ = 1, so X² + X + 1 — the base GF(4) case.)
 //
-// With Karatsuba optimization:
-//   c₀ = a₀·b₀ + a₁·b₁·α
-//   c₁ = (a₀+a₁)·(b₀+b₁) + a₀·b₀  (characteristic 2: subtraction = addition)
+// For (a₀ + a₁·X) * (b₀ + b₁·X), using X² = βₖ₋₁·X + 1:
+//   = a₀·b₀ + a₁·b₁ + [(a₀·b₁ + a₁·b₀) + βₖ₋₁·a₁·b₁]·X
+// With Karatsuba (characteristic 2, subtraction = addition):
+//   c₀ = a₀·b₀ + a₁·b₁
+//   c₁ = (a₀+a₁)·(b₀+b₁) + a₀·b₀ + a₁·b₁ + βₖ₋₁·(a₁·b₁)
 
 // =============================================================================
 // Tower Traits - Defines type mappings for each tower level
@@ -108,58 +114,9 @@ struct TowerTraits<7> : public BaseTowerTraits<7, BigInt<2>> {
   static constexpr ValueType kMask = BigInt<2>::Max();
 };
 
-// =============================================================================
-// Tower Polynomial Constants (α for each level)
-// =============================================================================
-// At each tower level n, we extend GF(2^(2ⁿ⁻¹)) to GF(2^(2ⁿ)) using
-// the irreducible polynomial X² + X + αₙ = 0.
-// The αₙ value must be chosen such that X² + X + αₙ is irreducible.
-// This means αₙ must NOT be in the image of the map a → a² + a.
-
-template <size_t TowerLevel>
-struct TowerAlpha;
-
-template <>
-struct TowerAlpha<1> {
-  // GF(2²): X² + X + 1
-  static constexpr uint8_t value = 1;
-};
-
-template <>
-struct TowerAlpha<2> {
-  // GF(2⁴): X² + X + 2
-  static constexpr uint8_t value = 2;
-};
-
-template <>
-struct TowerAlpha<3> {
-  // GF(2⁸): X² + X + 8
-  static constexpr uint8_t value = 8;
-};
-
-template <>
-struct TowerAlpha<4> {
-  // GF(2¹⁶): X² + X + 128
-  static constexpr uint8_t value = 128;
-};
-
-template <>
-struct TowerAlpha<5> {
-  // GF(2³²): X² + X + 0x8000
-  static constexpr uint16_t value = 32768;
-};
-
-template <>
-struct TowerAlpha<6> {
-  // GF(2⁶⁴): X² + X + 0x80000000
-  static constexpr uint32_t value = 2147483648u;
-};
-
-template <>
-struct TowerAlpha<7> {
-  // GF(2¹²⁸)
-  static constexpr uint64_t value = 0x8000000000000000ull;
-};
+// The tower's per-level linear coefficient βₖ₋₁ is the subfield generator, not
+// a stored constant: "multiply by βₖ₋₁" is the recursive BinaryMulX below, so
+// no TowerAlpha table is needed.
 
 // =============================================================================
 // Forward declarations
@@ -298,15 +255,15 @@ struct BinaryOps<TowerLevel,
     auto a0b0 = BinaryMul<TowerLevel - 1>(a0, b0);
     auto a1b1 = BinaryMul<TowerLevel - 1>(a1, b1);
 
-    // c₀ = a₀·b₀ + α·a₁·b₁
-    auto alpha_a1b1 =
-        BinaryMul<TowerLevel - 1>(a1b1, TowerAlpha<TowerLevel>::value);
-    auto c0 = SubXor<TowerLevel>(a0b0, alpha_a1b1);
-    // c1 = (a₀ + a₁)(b₀ + b₁) + a₀·b₀
+    // X² = βₖ₋₁·X + 1  ⇒  c₀ = a₀·b₀ + a₁·b₁
+    auto c0 = SubXor<TowerLevel>(a0b0, a1b1);
+    // c₁ = (a₀ + a₁)(b₀ + b₁) + a₀·b₀ + a₁·b₁ + βₖ₋₁·(a₁·b₁), where βₖ₋₁·(·) is
+    // multiply-by-generator one level down (BinaryMulX).
+    auto cross = BinaryMul<TowerLevel - 1>(SubXor<TowerLevel>(a0, a1),
+                                           SubXor<TowerLevel>(b0, b1));
     auto c1 = SubXor<TowerLevel>(
-        BinaryMul<TowerLevel - 1>(SubXor<TowerLevel>(a0, a1),
-                                  SubXor<TowerLevel>(b0, b1)),
-        a0b0);
+        SubXor<TowerLevel>(SubXor<TowerLevel>(cross, a0b0), a1b1),
+        BinaryMulX<TowerLevel - 1>(a1b1));
 
     return Combine<TowerLevel>(c0, c1);
   }
@@ -315,19 +272,17 @@ struct BinaryOps<TowerLevel,
     auto a0 = ExtractLo<TowerLevel>(a), a1 = ExtractHi<TowerLevel>(a);
     auto a0_sq = BinarySquare<TowerLevel - 1>(a0);
     auto a1_sq = BinarySquare<TowerLevel - 1>(a1);
-    // c₀ = a₀² + α·a1²
-    auto alpha_a1_sq =
-        BinaryMul<TowerLevel - 1>(a1_sq, TowerAlpha<TowerLevel>::value);
-    return Combine<TowerLevel>(SubXor<TowerLevel>(a0_sq, alpha_a1_sq), a1_sq);
+    // c₀ = a₀² + a₁²,  c₁ = βₖ₋₁·a₁²
+    return Combine<TowerLevel>(SubXor<TowerLevel>(a0_sq, a1_sq),
+                               BinaryMulX<TowerLevel - 1>(a1_sq));
   }
 
   static constexpr T MulX(T a) {
-    // a·X = (a₀ + a₁·X)·X = a₀·X + a₁·X² = a₀·X + a₁·(X + α)
-    //     = α·a₁ + (a₀ + a₁)·X
+    // a·X = (a₀ + a₁·X)·X = a₀·X + a₁·X² = a₀·X + a₁·(βₖ₋₁·X + 1)
+    //     = a₁ + (a₀ + βₖ₋₁·a₁)·X
     auto a0 = ExtractLo<TowerLevel>(a), a1 = ExtractHi<TowerLevel>(a);
-    auto alpha_a1 =
-        BinaryMul<TowerLevel - 1>(a1, TowerAlpha<TowerLevel>::value);
-    return Combine<TowerLevel>(alpha_a1, SubXor<TowerLevel>(a0, a1));
+    return Combine<TowerLevel>(
+        a1, SubXor<TowerLevel>(a0, BinaryMulX<TowerLevel - 1>(a1)));
   }
 
   static constexpr T Inverse(T a) {

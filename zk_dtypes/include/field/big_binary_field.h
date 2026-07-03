@@ -131,7 +131,7 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   constexpr BinaryField operator-() const { return *this; }
 
   // Multiplication: tower field multiply
-  // (GF(2¹²⁸) = GF(2⁶⁴)[x] / (x² + x + α), α = TowerAlpha<7>::value), or the
+  // (GF(2¹²⁸) = GF(2⁶⁴)[x] / (x² + β₆·x + 1), Fan-Paar/Binius tower), or the
   // flat GHASH multiply when the config is not a tower.
   constexpr BinaryField operator*(BinaryField other) const {
     if constexpr (kIsTower) {
@@ -154,7 +154,7 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits > 64)>>
   }
 
   // Multiply by X (extension generator)
-  // X² = X + α where α = TowerAlpha<7>::value
+  // X² = β₆·X + 1, β₆ = generator of GF(2⁶⁴) (Fan-Paar/Binius tower)
   constexpr BinaryField MulX() const {
     if constexpr (kIsTower) {
       return FromUnchecked(BinaryMulX<7>(value_));
