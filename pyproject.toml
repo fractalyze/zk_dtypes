@@ -55,6 +55,14 @@ test-command = "pytest {project}/zk_dtypes/tests"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
+# numpy >= 2.3.5 (our runtime floor) ships manylinux_2_28 wheels only, so in
+# the default manylinux2014 container the test phase falls back to building
+# numpy from its sdist — which numpy 2.5 broke by raising its compiler floor
+# to GCC >= 10.3 (the 2014 image carries 10.2). Building in the 2_28 image
+# lets the test env install the numpy wheel directly and tags our wheels
+# manylinux_2_28, matching numpy's own platform baseline.
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
 environment = { LDFLAGS = "-Wl,-s" }
 before-all = """
     ARCH="$(uname -m)"
