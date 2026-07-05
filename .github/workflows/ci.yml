@@ -17,6 +17,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # TEMPORARY (draft-PR only, do not merge): fan 6 copies across the runner
+  # pool so at least one lands on each build-server-3 slot. Fingerprints the
+  # box toolchain and reruns the GoldilocksX3 Pil2 goldens 20x — the tests
+  # that fail deterministically on build-server-3-cpu-* and pass on gpu1-*.
+  diagnose-runner:
+    strategy:
+      fail-fast: false
+      matrix:
+        idx: [1, 2, 3, 4, 5, 6]
+    runs-on: [self-hosted, cpu]
+    continue-on-error: true
+    steps:
+      - name: Checkout zk_dtypes
+        uses: actions/checkout@v4
+
+      - name: Toolchain fingerprint
+        run: |
+          echo "runner: ${{ runner.name }}"
+          uname -a
+          head -3 /etc/os-release
+          gcc --version | head -1
+          g++ --version | head -1
+          ld --version | head -1
+          python3 --version
+          ls /usr/lib/python3.*/EXTERNALLY-MANAGED 2>/dev/null || echo "(no PEP 668 marker)"
+          nproc
+          free -h | head -2
+
+      - name: Repro GoldilocksX3 Pil2 goldens 20x
+        run: |
+          bazel --bazelrc=.bazelrc.ci test \
+            --config=ci \
+            --test_filter='GoldilocksX3Test.*' \
+            --runs_per_test=20 \
+            --cache_test_results=no \
+            --test_output=errors \
+            //zk_dtypes:field_unittests
+
   build-and-test:
     runs-on: [self-hosted, cpu]
     steps:
