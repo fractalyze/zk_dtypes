@@ -295,7 +295,7 @@ template <>
 struct TypeDescriptorBase<GoldilocksX3> : FieldTypeDescriptor<GoldilocksX3> {
   static constexpr const char* kTpDoc =
       "goldilocks cubic extension field values on standard domain";
-  static constexpr char kNpyDescrType = 'T';
+  static constexpr char kNpyDescrType = 'W';
 };
 
 template <>

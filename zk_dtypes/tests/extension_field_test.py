@@ -230,6 +230,22 @@ class ExtensionFieldArrayTest(parameterized.TestCase):
     self.assertEqual(scalar_type, np.dtype(scalar_type))
 
   @parameterized.product(scalar_type=EXT_FIELD_TYPES)
+  def testDescrCharIsNotAReferenceType(self, scalar_type):
+    # A descr char colliding with a numpy reference/flexible dtype (e.g.
+    # 'T' -> StringDType) segfaults on char-based dtype resolution.
+    char = np.dtype(scalar_type).char
+    try:
+      resolved = np.dtype(char)
+    except TypeError:
+      return  # unclaimed by numpy -> safe
+    self.assertNotIn(
+        resolved.kind,
+        "TOUSV",
+        msg=f"{scalar_type.__name__} descr char {char!r} collides with the "
+        f"numpy reference/flexible dtype {resolved!r}",
+    )
+
+  @parameterized.product(scalar_type=EXT_FIELD_TYPES)
   def testHash(self, scalar_type):
     h = hash(np.dtype(scalar_type))
     self.assertEqual(h, hash(np.dtype(scalar_type.dtype)))
