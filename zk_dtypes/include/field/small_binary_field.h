@@ -54,6 +54,7 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
 
   constexpr static bool kUseMontgomery =
       false;  // Binary fields don't use Montgomery
+  constexpr static bool kIsTower = Config::kIsTower;
   constexpr static size_t kTowerLevel = Config::kTowerLevel;
   constexpr static size_t kStorageBits = Config::kStorageBits;
   constexpr static size_t kLimbNums = 1;
@@ -137,10 +138,15 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   // Negation: Identity in characteristic 2 (-a = a)
   constexpr BinaryField operator-() const { return *this; }
 
-  // Multiplication: Tower field multiplication
+  // Multiplication: tower field multiply, or the flat AES multiply when the
+  // config is not a tower (the only flat small field is Gf8AesFieldConfig).
   constexpr BinaryField operator*(BinaryField other) const {
-    return FromUnchecked(
-        BinaryMul<kTowerLevel, UnderlyingType>(value_, other.value_));
+    if constexpr (kIsTower) {
+      return FromUnchecked(
+          BinaryMul<kTowerLevel, UnderlyingType>(value_, other.value_));
+    } else {
+      return FromUnchecked(Gf8AesMul(value_, other.value_));
+    }
   }
 
   constexpr BinaryField& operator*=(BinaryField other) {
@@ -148,17 +154,29 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
   }
 
   constexpr BinaryField Square() const {
-    return FromUnchecked(BinarySquare<kTowerLevel, UnderlyingType>(value_));
+    if constexpr (kIsTower) {
+      return FromUnchecked(BinarySquare<kTowerLevel, UnderlyingType>(value_));
+    } else {
+      return FromUnchecked(Gf8AesSquare(value_));
+    }
   }
 
   // Multiply by X (extension generator)
   constexpr BinaryField MulX() const {
-    return FromUnchecked(BinaryMulX<kTowerLevel, UnderlyingType>(value_));
+    if constexpr (kIsTower) {
+      return FromUnchecked(BinaryMulX<kTowerLevel, UnderlyingType>(value_));
+    } else {
+      return FromUnchecked(Gf8AesMulX(value_));
+    }
   }
 
   // Inverse: Returns Zero() if not invertible (i.e., input is zero)
   constexpr BinaryField Inverse() const {
-    return FromUnchecked(BinaryInverse<kTowerLevel, UnderlyingType>(value_));
+    if constexpr (kIsTower) {
+      return FromUnchecked(BinaryInverse<kTowerLevel, UnderlyingType>(value_));
+    } else {
+      return FromUnchecked(Gf8AesInverse(value_));
+    }
   }
 
   constexpr BinaryField operator/(BinaryField other) const {

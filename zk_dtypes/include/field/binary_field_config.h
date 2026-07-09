@@ -102,6 +102,17 @@ struct GhashFieldConfig : public BaseBinaryFieldConfig<7> {
   constexpr static bool kIsTower = false;
 };
 
+// GF(2⁸) in the AES/Rijndael basis — a FLAT (non-tower) construction with
+// irreducible p(x) = x⁸ + x⁴ + x³ + x + 1 (reduction constant 0x1B), natural
+// bit order. Reuses the tower-level-3 sizing (8-bit storage, uint8, and
+// kValueMask = 0xFF inherited from BinaryFieldConfig<3>) but flips kIsTower so
+// BinaryField dispatches to the AES multiply instead of the tower multiply.
+// Isomorphic to BinaryFieldConfig<3> but NOT bit-compatible: this basis matches
+// AES and flock's φ₈ univariate skip byte-for-byte.
+struct Gf8AesFieldConfig : public BinaryFieldConfig<3> {
+  constexpr static bool kIsTower = false;
+};
+
 }  // namespace zk_dtypes
 
 #endif  // ZK_DTYPES_INCLUDE_FIELD_BINARY_FIELD_CONFIG_H_

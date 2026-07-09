@@ -405,6 +405,57 @@ constexpr BigInt<2> GhashInverse(const BigInt<2>& a) {
   return result;
 }
 
+// =============================================================================
+// AES / Rijndael flat GF(2⁸) multiplication (non-tower)
+// =============================================================================
+// GF(2⁸) in the AES basis: p(x) = x⁸ + x⁴ + x³ + x + 1 (reduction constant
+// 0x1B), natural bit order. An element is a uint8_t whose bit i is the
+// coefficient of xⁱ. Isomorphic to the tower GF(2⁸) but a DIFFERENT,
+// bit-incompatible basis matching AES and flock's φ₈ univariate skip. These are
+// the reference (portable, constexpr) semantics; a hardware GFNI/PTX lowering
+// lives downstream in the compiler.
+
+// Reduce a degree-≤14 product (uint16) mod x⁸ + x⁴ + x³ + x + 1. Two folds
+// (x⁸ ≡ x⁴ + x³ + x + 1 = 0x1B); the first fold can re-overflow bit 8, so a
+// second pass is required.
+constexpr uint8_t Gf8AesReduce(uint16_t p) {
+  uint16_t h = p >> 8;
+  uint16_t t = (p & 0xFF) ^ h ^ (h << 1) ^ (h << 3) ^ (h << 4);
+  uint16_t h2 = t >> 8;
+  return static_cast<uint8_t>((t & 0xFF) ^ h2 ^ (h2 << 1) ^ (h2 << 3) ^
+                              (h2 << 4));
+}
+
+// GF(2⁸) multiply in the AES basis: carryless 8×8 → 16 product, then reduce.
+constexpr uint8_t Gf8AesMul(uint8_t a, uint8_t b) {
+  uint16_t acc = 0;
+  for (size_t i = 0; i < 8; ++i) {
+    if ((a >> i) & 1) acc ^= static_cast<uint16_t>(b) << i;
+  }
+  return Gf8AesReduce(acc);
+}
+
+constexpr uint8_t Gf8AesSquare(uint8_t a) { return Gf8AesMul(a, a); }
+
+// Multiply by the generator x: shift up by one and reduce the x⁸ overflow via
+// x⁸ ≡ x⁴ + x³ + x + 1 (= 0x1B).
+constexpr uint8_t Gf8AesMulX(uint8_t a) {
+  uint8_t overflow = a >> 7;
+  return static_cast<uint8_t>((a << 1) ^ (overflow ? 0x1B : 0x00));
+}
+
+// Inverse via Fermat: a⁻¹ = a^(2⁸ − 2) = a² · a⁴ · a⁸ · … · a^(2⁷).
+constexpr uint8_t Gf8AesInverse(uint8_t a) {
+  if (a == 0) return 0;
+  uint8_t result = Gf8AesSquare(a);
+  uint8_t power = result;
+  for (size_t i = 2; i < 8; ++i) {
+    power = Gf8AesSquare(power);
+    result = Gf8AesMul(result, power);
+  }
+  return result;
+}
+
 }  // namespace zk_dtypes
 
 #endif  // ZK_DTYPES_INCLUDE_FIELD_BINARY_FIELD_MULTIPLICATION_H_

@@ -52,7 +52,7 @@ class BinaryFieldTypedTest : public testing::Test {};
 using BinaryFieldTypes =
     testing::Types<BinaryFieldT0, BinaryFieldT1, BinaryFieldT2, BinaryFieldT3,
                    BinaryFieldT4, BinaryFieldT5, BinaryFieldT6, BinaryFieldT7,
-                   BinaryFieldGhash>;
+                   BinaryFieldGhash, BinaryFieldGf8Aes>;
 
 TYPED_TEST_SUITE(BinaryFieldTypedTest, BinaryFieldTypes);
 
@@ -224,6 +224,19 @@ TEST(BinaryFieldGhashTest, KnownAnswerReduction) {
   EXPECT_EQ(E(0, 1) * E(0, 1), E(0x87, 0));  // x⁶⁴·x⁶⁴ = x¹²⁸ ≡ 0x87
   EXPECT_EQ(E(0, uint64_t{1} << 63) * E(2, 0), E(0x87, 0));  // x¹²⁷·x = x¹²⁸
   EXPECT_EQ(E(0, uint64_t{1} << 63).MulX(), E(0x87, 0));     // MulX at top bit
+}
+
+// AES/Rijndael basis known-answer vectors. Self-consistency tests (Square ==
+// a*a, inverse round-trip) hold for any irreducible polynomial; these pin the
+// basis to p(x) = x⁸ + x⁴ + x³ + x + 1, i.e. x⁸ ≡ x⁴ + x³ + x + 1 = 0x1B.
+TEST(BinaryFieldGf8AesTest, KnownAnswerReduction) {
+  using F = BinaryFieldGf8Aes;
+  auto E = [](uint8_t v) { return F::FromUnchecked(v); };
+  EXPECT_EQ(E(0x02) * E(0x02), E(0x04));  // x·x = x² (no reduction)
+  EXPECT_EQ(E(0x10) * E(0x10), E(0x1B));  // x⁴·x⁴ = x⁸ ≡ 0x1B
+  EXPECT_EQ(E(0x80) * E(0x02), E(0x1B));  // x⁷·x = x⁸ ≡ 0x1B
+  EXPECT_EQ(E(0x80).MulX(), E(0x1B));     // MulX at the top bit
+  EXPECT_EQ(E(0x57) * E(0x83), E(0xC1));  // FIPS-197 §4.2 worked example
 }
 
 }  // namespace
