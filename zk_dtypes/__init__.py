@@ -62,6 +62,7 @@ __all__ = [
     "binary_field_t6",
     "binary_field_t7",
     "binary_field_ghash",
+    "binary_field_gf8_aes",
     # Elliptic curve types
     "bn254_g1_affine",
     "bn254_g1_affine_mont",
@@ -132,6 +133,7 @@ from zk_dtypes._zk_dtypes_ext import binary_field_t5
 from zk_dtypes._zk_dtypes_ext import binary_field_t6
 from zk_dtypes._zk_dtypes_ext import binary_field_t7
 from zk_dtypes._zk_dtypes_ext import binary_field_ghash
+from zk_dtypes._zk_dtypes_ext import binary_field_gf8_aes
 from zk_dtypes._zk_dtypes_ext import bn254_g1_affine
 from zk_dtypes._zk_dtypes_ext import bn254_g1_affine_mont
 from zk_dtypes._zk_dtypes_ext import bn254_g1_jacobian
@@ -196,6 +198,7 @@ binary_field_t5: Type[np.generic]
 binary_field_t6: Type[np.generic]
 binary_field_t7: Type[np.generic]
 binary_field_ghash: Type[np.generic]
+binary_field_gf8_aes: Type[np.generic]
 bn254_g1_affine: Type[np.generic]
 bn254_g1_affine_mont: Type[np.generic]
 bn254_g1_jacobian: Type[np.generic]

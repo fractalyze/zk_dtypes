@@ -37,6 +37,7 @@ binary_field_t5 = zk_dtypes.binary_field_t5
 binary_field_t6 = zk_dtypes.binary_field_t6
 binary_field_t7 = zk_dtypes.binary_field_t7
 binary_field_ghash = zk_dtypes.binary_field_ghash
+binary_field_gf8_aes = zk_dtypes.binary_field_gf8_aes
 
 BINARY_FIELD_TYPES = [
     binary_field_t0,
@@ -48,6 +49,7 @@ BINARY_FIELD_TYPES = [
     binary_field_t6,
     binary_field_t7,
     binary_field_ghash,
+    binary_field_gf8_aes,
 ]
 
 # Small binary fields (fit in 64 bits) for tests that need int conversion
@@ -59,6 +61,7 @@ SMALL_BINARY_FIELD_TYPES = [
     binary_field_t4,
     binary_field_t5,
     binary_field_t6,
+    binary_field_gf8_aes,
 ]
 
 # Value masks for each binary field type
@@ -72,6 +75,7 @@ VALUE_MASKS = {
     binary_field_t6: (1 << 64) - 1,
     binary_field_t7: (1 << 128) - 1,
     binary_field_ghash: (1 << 128) - 1,
+    binary_field_gf8_aes: (1 << 8) - 1,
 }
 
 # Test values for each binary field type (within valid range)
@@ -85,6 +89,7 @@ VALUES = {
     binary_field_t6: random.sample(range(0, 2**16), 4),
     binary_field_t7: random.sample(range(0, 2**16), 4),
     binary_field_ghash: random.sample(range(0, 2**16), 4),
+    binary_field_gf8_aes: random.sample(range(0, 256), 4),
 }
 
 
@@ -106,6 +111,26 @@ def _ghash_ref_mul(a: int, b: int) -> int:
     if (prod >> i) & 1:
       prod ^= (1 << i) | (_GHASH_REDUCE << (i - 128))
   return prod & _GHASH_MASK
+
+
+# Reference GF(2^8) multiply in the flat AES/Rijndael basis
+# (p(x) = x^8 + x^4 + x^3 + x + 1), independent of the C++ implementation:
+# a schoolbook carryless product then bit-by-bit reduction. Bit i of each 8-bit
+# int is the coefficient of x^i. Pins binary_field_gf8_aes to the AES basis that
+# flock's phi8 univariate skip depends on.
+_AES_MASK = (1 << 8) - 1
+_AES_REDUCE = (1 << 4) | (1 << 3) | (1 << 1) | 1  # x^4 + x^3 + x + 1 = 0x1B
+
+
+def _aes_ref_mul(a: int, b: int) -> int:
+  prod = 0
+  for i in range(8):
+    if (a >> i) & 1:
+      prod ^= b << i
+  for i in range(15, 7, -1):
+    if (prod >> i) & 1:
+      prod ^= (1 << i) | (_AES_REDUCE << (i - 8))
+  return prod & _AES_MASK
 
 
 # Reference multiply for the Fan-Paar / Binius tower, independent of the C++
@@ -601,6 +626,53 @@ class GhashBasisTest(parameterized.TestCase):
           lo.to_bytes(8, "little") + hi.to_bytes(8, "little"),
           msg=hex(a),
       )
+
+
+@multi_threaded(num_workers=3)
+class Gf8AesBasisTest(parameterized.TestCase):
+  """binary_field_gf8_aes must realize the flat AES/Rijndael basis exactly."""
+
+  GF = binary_field_gf8_aes
+  EDGE = [0, 1, 2, 0x10, 0x80, 0x53, 0xCA, 0xFF]
+
+  def _samples(self, n=256):
+    rng = random.Random(20260709)
+    return self.EDGE + [rng.getrandbits(8) for _ in range(n)]
+
+  def testFullWidthRoundTrip(self):
+    for a in self._samples(50):
+      self.assertEqual(int(self.GF(a)), a, msg=hex(a))
+
+  def testMultiplyMatchesReference(self):
+    rng = random.Random(7)
+    for a in self._samples():
+      b = rng.getrandbits(8)
+      self.assertEqual(
+          int(self.GF(a) * self.GF(b)),
+          _aes_ref_mul(a, b),
+          msg=(hex(a), hex(b)),
+      )
+
+  def testSquareMatchesReference(self):
+    for a in self._samples():
+      self.assertEqual(
+          int(self.GF(a) * self.GF(a)), _aes_ref_mul(a, a), msg=hex(a)
+      )
+
+  def testInverseIsMultiplicative(self):
+    for a in self._samples(100):
+      if a == 0:
+        continue
+      self.assertEqual(int(self.GF(a) * (self.GF(a) ** -1)), 1, msg=hex(a))
+
+  def testByteLayoutIsSingleByte(self):
+    for a in self.EDGE:
+      arr = np.array([a], dtype=self.GF)
+      self.assertEqual(arr.tobytes(), a.to_bytes(1, "little"), msg=hex(a))
+
+  def testMatchesFipsExample(self):
+    # FIPS-197 §4.2 worked example: {57} · {83} = {c1}.
+    self.assertEqual(int(self.GF(0x57) * self.GF(0x83)), 0xC1)
 
 
 if __name__ == "__main__":

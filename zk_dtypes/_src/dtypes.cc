@@ -370,6 +370,17 @@ struct TypeDescriptorBase<BinaryFieldGhash>
   static constexpr char kNpyDescrType = 'h';
 };
 
+template <>
+struct TypeDescriptorBase<BinaryFieldGf8Aes>
+    : FieldTypeDescriptor<BinaryFieldGf8Aes> {
+  static constexpr const char* kTpDoc =
+      "GF(2⁸) binary field values in the AES/Rijndael basis "
+      "(p(x) = x⁸ + x⁴ + x³ + x + 1)";
+  // Reuses t3's descr char (both GF(2⁸)); 'f' would collide with numpy's
+  // builtin float32 typecode.
+  static constexpr char kNpyDescrType = '8';
+};
+
 //===----------------------------------------------------------------------===//
 // EcPoint TypeDescriptorBase
 //===----------------------------------------------------------------------===//

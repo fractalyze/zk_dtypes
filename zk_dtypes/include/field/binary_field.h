@@ -57,6 +57,8 @@ using BinaryFieldT6 = BinaryField<BinaryFieldConfig<6>>;  // GF(2⁶⁴)
 using BinaryFieldT7 = BinaryField<BinaryFieldConfig<7>>;  // GF(2¹²⁸) tower
 // GF(2¹²⁸) in the GHASH/POLYVAL basis (p(x) = x¹²⁸ + x⁷ + x² + x + 1).
 using BinaryFieldGhash = BinaryField<GhashFieldConfig>;
+// GF(2⁸) in the AES/Rijndael basis (p(x) = x⁸ + x⁴ + x³ + x + 1).
+using BinaryFieldGf8Aes = BinaryField<Gf8AesFieldConfig>;
 
 }  // namespace zk_dtypes
 

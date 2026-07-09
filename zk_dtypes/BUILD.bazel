@@ -1245,6 +1245,17 @@ py_test(
 )
 
 py_test(
+    name = "descr_char_test",
+    srcs = ["tests/descr_char_test.py"],
+    main = "tests/descr_char_test.py",
+    deps = [
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
     name = "ec_point_test",
     srcs = ["tests/ec_point_test.py"],
     main = "tests/ec_point_test.py",
