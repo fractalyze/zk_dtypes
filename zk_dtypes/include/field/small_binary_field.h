@@ -145,6 +145,9 @@ class BinaryField<_Config, std::enable_if_t<(_Config::kStorageBits <= 64)>>
       return FromUnchecked(
           BinaryMul<kTowerLevel, UnderlyingType>(value_, other.value_));
     } else {
+      static_assert(std::is_same_v<Config, Gf8AesFieldConfig>,
+                    "flat small binary field arithmetic only supports "
+                    "Gf8AesFieldConfig");
       return FromUnchecked(Gf8AesMul(value_, other.value_));
     }
   }
