@@ -19,6 +19,9 @@ from absl.testing import absltest
 from absl.testing import parameterized
 import numpy as np
 import zk_dtypes
+import warnings
+
+from zk_dtypes._field_factory import _GOLDILOCKS_MODULUS
 from zk_dtypes._field_factory import _is_probable_prime
 from zk_dtypes._field_factory import _storage_width
 from zk_dtypes._pfinfo import pfinfo
@@ -499,6 +502,19 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     info = pfinfo(legacy)
     storage = "mont" if info.is_montgomery else "canonical"
     self.assertEqual(zk_dtypes.prime_field(info.modulus, storage), legacy)
+
+  def test_goldilocks_montgomery_deprecation_warning(self):
+    # Montgomery goldilocks is inefficient (Solinas reduction); the factory
+    # warns and steers to canonical. Other fields and canonical goldilocks
+    # stay quiet.
+    with self.assertWarnsRegex(DeprecationWarning, "Goldilocks"):
+      zk_dtypes.prime_field(_GOLDILOCKS_MODULUS, "mont")
+    with self.assertWarnsRegex(DeprecationWarning, "Goldilocks"):
+      zk_dtypes.extension_field(_GOLDILOCKS_MODULUS, 2, 7, "mont")
+    with warnings.catch_warnings():
+      warnings.simplefilter("error")
+      zk_dtypes.prime_field(_GOLDILOCKS_MODULUS, "canonical")
+      zk_dtypes.prime_field(2013265921, "mont")  # babybear stays fine in mont
 
   def test_novel_canonical_extension_multiply(self):
     # A canonical (non-Montgomery) extension multiply must not run the
