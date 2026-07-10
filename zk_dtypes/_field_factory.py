@@ -271,18 +271,18 @@ def binary_field(level: int) -> np.dtype:
   """Resolves a binary tower field GF(2^(2^level)) to a numpy dtype.
 
   Levels 0..7 are curated families (binary_field_t0..t7) and resolve to their
-  legacy dtype; higher levels mint a parametric ``BinaryFieldDType``. Addition is
+  legacy dtype; levels 8..12 mint a parametric ``BinaryFieldDType``. Addition is
   XOR; multiplication is the recursive Karatsuba tower product.
 
   Args:
-    level: tower level >= 0; the field is GF(2^(2^level)).
+    level: tower level in [0, 12]; the field is GF(2^(2^level)).
 
   Returns:
     The numpy dtype for the binary tower field.
 
   Raises:
     TypeError: level is not an int.
-    ValueError: level is negative.
+    ValueError: level is negative or exceeds the widest tower level (12).
   """
   if isinstance(level, bool) or not isinstance(level, int):
     raise TypeError(f"level must be an int, got {type(level).__name__}")
