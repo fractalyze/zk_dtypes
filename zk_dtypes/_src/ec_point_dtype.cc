@@ -1268,7 +1268,45 @@ PyArray_Descr* DiscoverDescrFromPyobject(PyArray_DTypeMeta* /*cls*/,
   return nullptr;
 }
 
-// setitem accepts a length-num_coords sequence of coordinate integers.
+// Normalizes one setitem coordinate into the form EncodeCoord expects, the
+// mirror of what GetItem/DecodeCoord produce: a canonical int for a degree-1
+// (Fq) coordinate, or a `coord_degree`-tuple of ints for an Fp2 coordinate
+// (G2). Returns a new reference, or NULL with an exception set.
+PyObject* CoordFromPy(EcPointDescr* d, PyObject* item) {
+  if (d->coord_degree == 1) {
+    return PyNumber_Index(item);
+  }
+  PyObject* seq = PySequence_Fast(item, "Fp2 coordinate needs (c0, c1)");
+  if (seq == nullptr) {
+    return nullptr;
+  }
+  if (PySequence_Fast_GET_SIZE(seq) != d->coord_degree) {
+    PyErr_Format(PyExc_ValueError,
+                 "Fp2 coordinate needs %d components, got %zd", d->coord_degree,
+                 PySequence_Fast_GET_SIZE(seq));
+    Py_DECREF(seq);
+    return nullptr;
+  }
+  PyObject* tuple = PyTuple_New(d->coord_degree);
+  if (tuple == nullptr) {
+    Py_DECREF(seq);
+    return nullptr;
+  }
+  for (int k = 0; k < d->coord_degree; ++k) {
+    PyObject* c = PyNumber_Index(PySequence_Fast_GET_ITEM(seq, k));
+    if (c == nullptr) {
+      Py_DECREF(seq);
+      Py_DECREF(tuple);
+      return nullptr;
+    }
+    PyTuple_SET_ITEM(tuple, k, c);
+  }
+  Py_DECREF(seq);
+  return tuple;
+}
+
+// setitem accepts a length-num_coords sequence of coordinates; each coordinate
+// is an int (G1) or an (c0, c1) pair (G2 Fp2), matching getitem's output.
 int SetItem(PyArray_Descr* descr, PyObject* obj, char* dataptr) {
   EcPointDescr* d = AsEc(descr);
   PyObject* seq = PySequence_Fast(obj, "EC point needs a coordinate sequence");
@@ -1284,7 +1322,7 @@ int SetItem(PyArray_Descr* descr, PyObject* obj, char* dataptr) {
   PyObject* coords[kMaxCoords] = {nullptr};
   int rc = -1;
   for (int i = 0; i < d->num_coords; ++i) {
-    coords[i] = PyNumber_Index(PySequence_Fast_GET_ITEM(seq, i));
+    coords[i] = CoordFromPy(d, PySequence_Fast_GET_ITEM(seq, i));
     if (coords[i] == nullptr) {
       goto done;
     }

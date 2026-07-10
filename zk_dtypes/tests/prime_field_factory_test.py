@@ -487,6 +487,32 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     b = np.array([0x12345], dtype=bf)
     self.assertEqual(int(b[0]), 0x12345)
 
+  def test_ec_setitem_getitem_roundtrip_g1_and_g2(self):
+    # setitem must accept the coordinate shape getitem returns: a bare int per
+    # Fq coordinate (G1), or a (c0, c1) pair per Fp2 coordinate (G2). Regression:
+    # G2 setitem forced PyNumber_Index on each coordinate, rejecting the tuple.
+    q = self._BN254_FQ
+    r = (1 << 256) % q
+    g1 = self._ec_param(3)  # Jacobian G1, Montgomery
+    a = np.zeros(1, dtype=g1)
+    a[0] = (11, 22, 33)
+    self.assertEqual(tuple(int(c) for c in a[0]), (11, 22, 33))
+
+    g2 = np.dtype(
+        zk_dtypes._zk_dtypes_ext.ec_point_descr(
+            q, 256, 3, 1, r, pow(r, -1, q), 2, q - 1
+        )
+    )
+    b = np.zeros(1, dtype=g2)
+    b[0] = ((11, 12), (22, 23), (1, 0))
+    self.assertEqual(
+        tuple(tuple(int(x) for x in coord) for coord in b[0]),
+        ((11, 12), (22, 23), (1, 0)),
+    )
+    # A wrong-width Fp2 coordinate is rejected.
+    with self.assertRaisesRegex(ValueError, "Fp2 coordinate needs"):
+      b[0] = ((1, 2, 3), (1, 0), (1, 0))
+
   def test_mont_canonical_astype_reencodes(self):
     # astype between the Montgomery and canonical forms of one field must
     # re-encode the value, not raw-copy the bytes.
