@@ -500,6 +500,30 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     storage = "mont" if info.is_montgomery else "canonical"
     self.assertEqual(zk_dtypes.prime_field(info.modulus, storage), legacy)
 
+  def test_novel_canonical_extension_multiply(self):
+    # A canonical (non-Montgomery) extension multiply must not run the
+    # Montgomery kernel; check the product against a plain-int reference.
+    # Montgomery extensions are covered by the byte-match-legacy tests.
+    p = 2**61 - 1  # single-word canonical base
+    nr = 5
+    ef = zk_dtypes.extension_field(p, 3, nr, "canonical")
+    a = np.zeros(2, dtype=ef)
+    v = a.view(np.uint64).reshape(2, 3)
+    v[0] = [1, 2, 3]
+    v[1] = [4, 5, 6]
+    got = tuple(int(c) for c in (a[0:1] * a[1:2])[0])
+
+    def ref(x, y):
+      c = [0] * 5
+      for i in range(3):
+        for j in range(3):
+          c[i + j] = (c[i + j] + x[i] * y[j]) % p
+      for i in (4, 3):
+        c[i - 3] = (c[i - 3] + nr * c[i]) % p
+      return tuple(c[:3])
+
+    self.assertEqual(got, ref([1, 2, 3], [4, 5, 6]))
+
   def test_ec_setitem_getitem_roundtrip_g1_and_g2(self):
     # setitem must accept the coordinate shape getitem returns: a bare int per
     # Fq coordinate (G1), or a (c0, c1) pair per Fp2 coordinate (G2). Regression:
