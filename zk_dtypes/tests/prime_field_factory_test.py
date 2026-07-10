@@ -631,5 +631,224 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
       self.assertFalse(_is_probable_prime(n), n)
 
 
+# --- systematic parametric-kernel coverage --------------------------------
+# These tests build the dtype directly through field_descr / binary_field_descr,
+# bypassing the factory's curated resolution, so the *parametric* kernels run
+# even for production moduli (goldilocks, bn254, ...) — the curated path resolves
+# those to legacy dtypes and never exercises this code. Every result is checked
+# against an independent pure-Python reference, not against the legacy dtype, so
+# a bug shared by both the kernel and the legacy path could not hide (and a
+# canonical-only or width-specific kernel bug is caught regardless of storage).
+
+_EXT_MOD = zk_dtypes._zk_dtypes_ext
+
+
+def _r_mod_p(width_bits, p):
+  return (1 << width_bits) % p
+
+
+def _param_prime(p, width_bits, is_mont):
+  if is_mont:
+    r = _r_mod_p(width_bits, p)
+    return np.dtype(
+        _EXT_MOD.field_descr(p, 1, 0, width_bits, 1, r, pow(r, -1, p))
+    )
+  return np.dtype(_EXT_MOD.field_descr(p, 1, 0, width_bits, 0))
+
+
+def _param_ext(p, degree, nr, width_bits, is_mont):
+  if is_mont:
+    r = _r_mod_p(width_bits, p)
+    return np.dtype(
+        _EXT_MOD.field_descr(p, degree, nr, width_bits, 1, r, pow(r, -1, p))
+    )
+  return np.dtype(_EXT_MOD.field_descr(p, degree, nr, width_bits, 0))
+
+
+def _encode_elems(elems, p, width_bits, is_mont):
+  """Packs coefficient-lists (one per array element) into stored little-endian
+  bytes, applying the Montgomery factor R = 2^width_bits — an encoder written
+  independently of the C++ setitem so a shared bug cannot mask a wrong kernel.
+  """
+  wb = width_bits // 8
+  r = _r_mod_p(width_bits, p) if is_mont else 1
+  out = bytearray()
+  for coeffs in elems:
+    for c in coeffs:
+      v = (c % p) * r % p if is_mont else c % p
+      out += (v).to_bytes(wb, "little")
+  return np.frombuffer(bytes(out), np.uint8).copy()
+
+
+def _decode_elem(raw_u8, p, width_bits, is_mont, degree):
+  wb = width_bits // 8
+  rinv = pow(_r_mod_p(width_bits, p), -1, p) if is_mont else None
+  out = []
+  for k in range(degree):
+    v = int.from_bytes(bytes(raw_u8[k * wb : (k + 1) * wb]), "little")
+    out.append(v * rinv % p if is_mont else v % p)
+  return out
+
+
+def _ref_prime(op, a, b, p):
+  return {"add": (a + b) % p, "sub": (a - b) % p, "mul": a * b % p}[op]
+
+
+def _ref_ext(op, ca, cb, p, degree, nr):
+  if op != "mul":
+    s = 1 if op == "add" else -1
+    return [(ca[i] + s * cb[i]) % p for i in range(degree)]
+  prod = [0] * (2 * degree - 1)
+  for i in range(degree):
+    for j in range(degree):
+      prod[i + j] = (prod[i + j] + ca[i] * cb[j]) % p
+  for i in range(2 * degree - 2, degree - 1, -1):
+    prod[i - degree] = (prod[i - degree] + nr * prod[i]) % p
+  return [prod[i] % p for i in range(degree)]
+
+
+_OPS = {"add": np.add, "sub": np.subtract, "mul": np.multiply}
+
+# (label, modulus, storage width bits) spanning every native width and both the
+# single-word and BigInt kernels; curated production moduli plus novel ones.
+_PRIME_MATRIX = (
+    ("babybear", 2013265921, 32),
+    ("mersenne31", 2147483647, 32),
+    ("novel30", 10**9 + 7, 32),
+    ("goldilocks", 2**64 - 2**32 + 1, 64),
+    ("mersenne61", 2**61 - 1, 64),
+    ("mersenne127", 2**127 - 1, 128),
+    (
+        "bn254_fr",
+        21888242871839275222246405745257275088548364400416034343698204186575808495617,
+        256,
+    ),
+    (
+        "pallas",
+        0x40000000000000000000000000000000224698FC0994A8DD8C46EB2100000001,
+        256,
+    ),
+)
+
+# (label, base modulus, degree, non_residue, base width bits). The non-residue
+# need not be irreducible — the ring Fp[X]/(X^d - nr) multiply is well-defined
+# either way, which is what the kernel computes.
+_EXT_MATRIX = (
+    ("babybear_d4", 2013265921, 4, 11, 32),
+    ("koalabear_d4", 2130706433, 4, 3, 32),
+    ("mersenne31_d2", 2147483647, 2, 5, 32),
+    ("goldilocks_d2", 2**64 - 2**32 + 1, 2, 7, 64),
+    ("goldilocks_d3", 2**64 - 2**32 + 1, 3, 7, 64),
+    ("mersenne61_d3", 2**61 - 1, 3, 5, 64),
+)
+
+
+class ParametricFieldMatrixTest(parameterized.TestCase):
+
+  @parameterized.parameters(
+      *(
+          (lbl, p, w, mont, op)
+          for (lbl, p, w) in _PRIME_MATRIX
+          for mont in (False, True)
+          for op in ("add", "sub", "mul")
+      )
+  )
+  def test_prime_kernel(self, label, p, width_bits, is_mont, op):
+    dt = _param_prime(p, width_bits, is_mont)
+    av = [0, 1, 2, p - 1, p // 2, 7, p - 3, p - 1]
+    bv = [0, p - 1, 3, p - 1, p // 3, 7, 5, 1]
+    a = np.zeros(len(av), dtype=dt)
+    b = np.zeros(len(bv), dtype=dt)
+    a.view(np.uint8)[:] = _encode_elems(
+        [[v] for v in av], p, width_bits, is_mont
+    )
+    b.view(np.uint8)[:] = _encode_elems(
+        [[v] for v in bv], p, width_bits, is_mont
+    )
+    got = _OPS[op](a, b).view(np.uint8).reshape(len(av), width_bits // 8)
+    for i in range(len(av)):
+      dec = _decode_elem(got[i], p, width_bits, is_mont, 1)[0]
+      self.assertEqual(
+          dec,
+          _ref_prime(op, av[i], bv[i], p),
+          f"{label} {op} mont={is_mont} i={i}",
+      )
+
+  @parameterized.parameters(
+      *(
+          (lbl, p, d, nr, w, mont, op)
+          for (lbl, p, d, nr, w) in _EXT_MATRIX
+          for mont in (False, True)
+          for op in ("add", "sub", "mul")
+      )
+  )
+  def test_extension_kernel(
+      self, label, p, degree, nr, width_bits, is_mont, op
+  ):
+    dt = _param_ext(p, degree, nr, width_bits, is_mont)
+    ea = [[(i * 7 + 5 + j * 3) % p for j in range(degree)] for i in range(4)]
+    eb = [[(i * 11 + 2 + j * 9) % p for j in range(degree)] for i in range(4)]
+    a = np.zeros(len(ea), dtype=dt)
+    b = np.zeros(len(eb), dtype=dt)
+    a.view(np.uint8)[:] = _encode_elems(ea, p, width_bits, is_mont)
+    b.view(np.uint8)[:] = _encode_elems(eb, p, width_bits, is_mont)
+    got = (
+        _OPS[op](a, b).view(np.uint8).reshape(len(ea), degree * width_bits // 8)
+    )
+    for i in range(len(ea)):
+      dec = _decode_elem(got[i], p, width_bits, is_mont, degree)
+      self.assertEqual(
+          dec,
+          _ref_ext(op, ea[i], eb[i], p, degree, nr),
+          f"{label} {op} mont={is_mont} i={i}",
+      )
+
+  @parameterized.parameters(*range(0, 13))
+  def test_binary_tower_kernel(self, level):
+    bf = np.dtype(_EXT_MOD.binary_field_descr(level))
+    wb = bf.itemsize
+    mask = (1 << (1 << level)) - 1
+
+    def arr(vals):
+      out = np.zeros(len(vals), dtype=bf)
+      out.view(np.uint8).reshape(len(vals), wb)[:] = [
+          list((v & mask).to_bytes(wb, "little")) for v in vals
+      ]
+      return out
+
+    xs = [0, 1, mask, (mask ^ (mask >> 1)) & mask, 0xA5, mask // 3, 0xDEADBEEF]
+    ys = [0, mask, 2, 1, 0x5A, mask // 7, 0x1234567]
+    a, b, c = arr(xs), arr(ys), arr(ys[::-1])
+    one = arr([1] * len(xs))
+
+    # Addition is XOR (characteristic 2).
+    for i, (x, y) in enumerate(zip(xs, ys)):
+      self.assertEqual(
+          int((a + b)[i]), (x & mask) ^ (y & mask), f"L{level} xor {i}"
+      )
+
+    if level <= 7:
+      # Authoritative cross-check: an independent C++ kernel (the legacy tower
+      # dtype) multiplies the same bytes to the same result.
+      legacy = np.dtype(getattr(zk_dtypes, f"binary_field_t{level}"))
+      la, lb = np.zeros(len(xs), dtype=legacy), np.zeros(len(ys), dtype=legacy)
+      la.view(np.uint8)[:] = a.view(np.uint8)
+      lb.view(np.uint8)[:] = b.view(np.uint8)
+      np.testing.assert_array_equal(
+          (a * b).view(np.uint8), (la * lb).view(np.uint8)
+      )
+
+    # Basis-independent field axioms — the only reference available for levels
+    # > 7 (no legacy dtype), and enough to catch a wrong Karatsuba recombination
+    # or reduction: identity, commutativity, distributivity over XOR.
+    np.testing.assert_array_equal((a * one).view(np.uint8), a.view(np.uint8))
+    np.testing.assert_array_equal(
+        (a * b).view(np.uint8), (b * a).view(np.uint8)
+    )
+    np.testing.assert_array_equal(
+        (a * (b + c)).view(np.uint8), ((a * b) + (a * c)).view(np.uint8)
+    )
+
+
 if __name__ == "__main__":
   absltest.main()
