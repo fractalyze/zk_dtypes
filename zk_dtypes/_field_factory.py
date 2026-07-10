@@ -27,6 +27,8 @@ nor the verifier can check primality, and a composite modulus silently produces
 garbage (every field operation assumes Z/pZ is a field, not just a ring).
 """
 
+import warnings
+
 import numpy as np
 
 from zk_dtypes import _zk_dtypes_ext as _ext
@@ -79,6 +81,23 @@ def _is_probable_prime(n: int) -> bool:
     else:
       return False
   return True
+
+
+_GOLDILOCKS_MODULUS = 2**64 - 2**32 + 1
+
+
+def _warn_if_inefficient_montgomery(modulus: int, is_montgomery: bool) -> None:
+  # Goldilocks (2^64 - 2^32 + 1) has a fast Solinas reduction and no spare bit
+  # in its 64-bit storage, so its Montgomery form is slower than canonical for
+  # host arithmetic. Steer callers to canonical storage.
+  if is_montgomery and modulus == _GOLDILOCKS_MODULUS:
+    warnings.warn(
+        "Montgomery storage for the Goldilocks field (2^64 - 2^32 + 1) is "
+        "inefficient; its Solinas reduction favors canonical storage. Use "
+        "storage='canonical'.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
 
 
 def _storage_width(modulus_bits: int) -> int:
@@ -208,6 +227,7 @@ def prime_field(modulus: int, storage: str = "mont") -> np.dtype:
     raise ValueError(
         f"modulus {modulus} is not prime; Z/{modulus}Z is a ring, not a field"
     )
+  _warn_if_inefficient_montgomery(modulus, is_montgomery)
   width = _storage_width(modulus.bit_length())
   curated = _CURATED_PRIME.get((modulus, is_montgomery))
   if curated is not None:
@@ -254,6 +274,7 @@ def extension_field(
         f"base_modulus {base_modulus} is not prime; the base must be a field"
     )
   is_montgomery = _STORAGE_ALIASES[storage]
+  _warn_if_inefficient_montgomery(base_modulus, is_montgomery)
   non_residue %= base_modulus
   base_width = _storage_width(base_modulus.bit_length())
   curated = _CURATED_EXT.get((base_modulus, degree, non_residue, is_montgomery))
