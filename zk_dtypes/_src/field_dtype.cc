@@ -1053,10 +1053,13 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
       }
       return 0;
     }
-    if (k > 1 && op == Op::kMul && pf.ext_native) {  // binomial polynomial mul
-      // ext_native ⟹ base width 4 or 8 (PrimeField::Make); dispatch the typed
-      // Montgomery-space schoolbook (coefficients stay in storage form, so the
-      // result is byte-identical to the decode/compute/encode path).
+    if (k > 1 && op == Op::kMul && pf.ext_native && pf.is_mont) {
+      // Binomial polynomial mul. ext_native ⟹ base width 4 or 8
+      // (PrimeField::Make); dispatch the typed Montgomery-space schoolbook
+      // (coefficients stay in storage form, so the result is byte-identical to
+      // the decode/compute/encode path). EfMulTyped runs the Montgomery kernel,
+      // so it is Montgomery-only — a canonical extension falls through to the
+      // Python-int path below (which decodes to canonical and is storage-safe).
       if (wb == 4) {
         uint32_t nr = 0;
         if (_PyLong_AsByteArray(reinterpret_cast<PyLongObject*>(d->non_residue),
