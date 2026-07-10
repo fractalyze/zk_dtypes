@@ -1221,6 +1221,7 @@ py_library(
         "__init__.py",
         "_ecinfo.py",
         "_efinfo.py",
+        "_field_factory.py",
         "_iinfo.py",
         "_pfinfo.py",
     ],
@@ -1312,6 +1313,18 @@ py_test(
     name = "bigintn_test",
     srcs = ["tests/bigintn_test.py"],
     main = "tests/bigintn_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "prime_field_factory_test",
+    srcs = ["tests/prime_field_factory_test.py"],
+    main = "tests/prime_field_factory_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",
