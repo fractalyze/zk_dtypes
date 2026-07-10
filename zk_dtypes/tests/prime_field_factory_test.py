@@ -21,6 +21,7 @@ import numpy as np
 import zk_dtypes
 from zk_dtypes._field_factory import _is_probable_prime
 from zk_dtypes._field_factory import _storage_width
+from zk_dtypes._pfinfo import pfinfo
 
 # Modulus / storage / expected curated scalar type.
 _CURATED_CASES = (
@@ -486,6 +487,18 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     bf = np.dtype(zk_dtypes._zk_dtypes_ext.binary_field_descr(5))
     b = np.array([0x12345], dtype=bf)
     self.assertEqual(int(b[0]), 0x12345)
+
+  @parameterized.parameters(
+      "pallas_sf", "pallas_sf_mont", "vesta_sf", "vesta_sf_mont"
+  )
+  def test_curated_family_added_after_factory_resolves_to_legacy(self, name):
+    # The curated maps are built by probing every registered dtype, so a family
+    # added to the legacy stack after this factory (pallas/vesta) resolves to
+    # its legacy dtype instead of minting a duplicate parametric one.
+    legacy = np.dtype(getattr(zk_dtypes, name))
+    info = pfinfo(legacy)
+    storage = "mont" if info.is_montgomery else "canonical"
+    self.assertEqual(zk_dtypes.prime_field(info.modulus, storage), legacy)
 
   def test_ec_setitem_getitem_roundtrip_g1_and_g2(self):
     # setitem must accept the coordinate shape getitem returns: a bare int per

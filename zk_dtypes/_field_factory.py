@@ -40,22 +40,6 @@ from zk_dtypes._zk_dtypes_ext import binary_field_t4
 from zk_dtypes._zk_dtypes_ext import binary_field_t5
 from zk_dtypes._zk_dtypes_ext import binary_field_t6
 from zk_dtypes._zk_dtypes_ext import binary_field_t7
-from zk_dtypes._zk_dtypes_ext import babybear
-from zk_dtypes._zk_dtypes_ext import babybear_mont
-from zk_dtypes._zk_dtypes_ext import babybearx4
-from zk_dtypes._zk_dtypes_ext import babybearx4_mont
-from zk_dtypes._zk_dtypes_ext import bn254_sf
-from zk_dtypes._zk_dtypes_ext import bn254_sf_mont
-from zk_dtypes._zk_dtypes_ext import goldilocks
-from zk_dtypes._zk_dtypes_ext import goldilocks_mont
-from zk_dtypes._zk_dtypes_ext import goldilocksx3
-from zk_dtypes._zk_dtypes_ext import goldilocksx3_mont
-from zk_dtypes._zk_dtypes_ext import koalabear
-from zk_dtypes._zk_dtypes_ext import koalabear_mont
-from zk_dtypes._zk_dtypes_ext import koalabearx4
-from zk_dtypes._zk_dtypes_ext import koalabearx4_mont
-from zk_dtypes._zk_dtypes_ext import mersenne31
-from zk_dtypes._zk_dtypes_ext import mersenne31x2
 
 # Storage width classes the parametric stack materializes (base) fields into;
 # modulus bit length rounds up to the smallest that fits (xla_fork FIELD32/64/
@@ -130,43 +114,56 @@ def _field_descr(
   )
 
 
-def _curated_prime_map() -> dict[tuple[int, bool], type]:
-  out: dict[tuple[int, bool], type] = {}
-  # Both storage forms are curated where the legacy stack registers them
-  # (Mersenne uses canonical reduction, so it has no Montgomery variant). The
-  # (modulus, is_montgomery) key keeps the two forms distinct.
-  for family in (
-      babybear,
-      babybear_mont,
-      koalabear,
-      koalabear_mont,
-      goldilocks,
-      goldilocks_mont,
-      mersenne31,
-      bn254_sf,
-      bn254_sf_mont,
-  ):
-    info = pfinfo(np.dtype(family))
-    out[(info.modulus, info.is_montgomery)] = family
+def _registered_field_dtypes() -> list[np.dtype]:
+  """Every dtype the native extension registers, probed by attribute name.
+
+  Non-dtype attributes (the field_descr / ec_point_descr factories, the
+  Register* hooks) are ``np.dtype``-unconvertible and skipped.
+  """
+  out: list[np.dtype] = []
+  for name in dir(_ext):
+    if name.startswith("_"):
+      continue
+    try:
+      out.append(np.dtype(getattr(_ext, name)))
+    except TypeError:
+      continue
   return out
 
 
-def _curated_ext_map() -> dict[tuple[int, int, int, bool], type]:
-  out: dict[tuple[int, int, int, bool], type] = {}
-  for family in (
-      babybearx4,
-      babybearx4_mont,
-      koalabearx4,
-      koalabearx4_mont,
-      goldilocksx3,
-      goldilocksx3_mont,
-      mersenne31x2,
-  ):
-    info = efinfo(np.dtype(family))
+def _curated_prime_map() -> dict[tuple[int, bool], np.dtype]:
+  # Resolve a curated modulus back to its legacy prime-field dtype so it keeps
+  # its enum identity. Built by probing every registered dtype (pfinfo raises on
+  # non-prime-fields) rather than a hardcoded family list, so a newly-added
+  # family (pallas/vesta, ...) is picked up without editing this file. Both
+  # storage forms are curated where the legacy stack registers them (Mersenne
+  # has only a canonical form); the (modulus, is_montgomery) key keeps them
+  # distinct.
+  out: dict[tuple[int, bool], np.dtype] = {}
+  for dt in _registered_field_dtypes():
+    try:
+      info = pfinfo(dt)
+    except ValueError:
+      continue
+    out[(info.modulus, info.is_montgomery)] = dt
+  return out
+
+
+def _curated_ext_map() -> dict[tuple[int, int, int, bool], np.dtype]:
+  # Same dynamic probe as the prime map, for binomial extension fields. A
+  # non-binomial legacy extension (e.g. goldilocksx3, X^3 = X + 1, whose efinfo
+  # non_residue is None) has no binomial spelling for the factory to mint, so it
+  # is skipped — only its legacy dtype exists.
+  out: dict[tuple[int, int, int, bool], np.dtype] = {}
+  for dt in _registered_field_dtypes():
+    try:
+      info = efinfo(dt)
+    except (ValueError, TypeError):
+      continue
+    if info.non_residue is None:
+      continue
     base_modulus = pfinfo(info.base_field_dtype).modulus
-    out[(base_modulus, info.degree, info.non_residue, info.is_montgomery)] = (
-        family
-    )
+    out[(base_modulus, info.degree, info.non_residue, info.is_montgomery)] = dt
   return out
 
 
