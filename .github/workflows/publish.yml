@@ -16,12 +16,19 @@ concurrency:
   group: publish
   cancel-in-progress: false
 
+# Least privilege: build jobs only read source and upload artifacts. The
+# publish job overrides this with id-token: write for OIDC trusted publishing.
+permissions:
+  contents: read
+
 jobs:
   build-linux-x86_64:
     name: Build / Linux x86_64
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v4.7.0
@@ -40,10 +47,32 @@ jobs:
           path: wheelhouse/*.whl
           retention-days: 3
 
+  build-macos-arm64:
+    name: Build / macOS arm64
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22
+        env:
+          # Pin the arm64-only release contract instead of relying on
+          # macos-latest defaulting to Apple Silicon.
+          CIBW_ARCHS_MACOS: arm64
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-arm64
+          path: wheelhouse/*.whl
+          retention-days: 3
+
   publish:
     name: Publish
     if: inputs.target != 'build-only'
-    needs: [build-linux-x86_64]
+    needs: [build-linux-x86_64, build-macos-arm64]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -61,7 +90,10 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
 
       - name: Publish to PyPI
         if: inputs.target == 'pypi'
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
