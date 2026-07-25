@@ -14,16 +14,19 @@ limitations under the License.
 ==============================================================================*/
 
 // Parametric elliptic-curve point numpy DType (NEP-42). An EC point group is a
-// Module, not a Field: the ops are point add / subtract / negate (and, later,
-// scalar multiplication) — there is no point*point. This first cut covers
-// short-Weierstrass G1 (a=0) Jacobian points over a prime coordinate field.
+// Module, not a Field: the ops are point add / subtract / negate and scalar
+// multiplication — there is no point*point. Covers short-Weierstrass (a=0)
+// Jacobian points over a prime (G1) or Fp2 (G2) coordinate field.
 //
 // A point is `num_coords` coordinate-field elements (X, Y, Z for Jacobian),
 // stored exactly as the coordinate field stores them (canonical or per-coord
-// Montgomery, little-endian). The add/double formulas (EFD add-2007-bl /
-// dbl-2009-l) are R-linear, so we decode coordinates to canonical, run the
-// group law with prime-field arithmetic, and re-encode — byte-identical to the
-// legacy Montgomery formulas because the resulting representative is the same.
+// Montgomery, little-endian). The group-law formulas live once, in
+// ec_group_law.h, and are instantiated here for three execution tiers that
+// differ only in their coordinate ops (see `Tier`): CPython ints (any config;
+// decode to canonical, compute, re-encode — the EFD formulas are R-linear, so
+// this is byte-identical to computing in Montgomery space), native Montgomery
+// kernels on the stored bytes, and 256-bit typed limbs. The tier is chosen
+// once per descriptor at creation.
 
 // numpy.h must precede every other numpy header (it sets the API symbol) and
 // NPY_TARGET_VERSION must precede numpyconfig.h; the associated header pulls in
@@ -36,6 +39,7 @@ limitations under the License.
 #include <cstdint>
 #include <cstring>
 
+#include "zk_dtypes/_src/ec_group_law.h"
 #include "zk_dtypes/_src/field_dtype.h"
 #include "zk_dtypes/_src/field_modarith.h"
 #include "zk_dtypes/_src/numpy.h"
@@ -48,6 +52,17 @@ namespace {
 
 constexpr int kMaxCoords = 4;
 
+struct CoordField;
+
+// Which group-law arithmetic serves a descriptor. Decided once at descriptor
+// creation from the coordinate field's width and storage; the ufunc loops
+// only switch on it.
+enum class Tier : uint8_t {
+  kPy,        // CPython-int arithmetic; any width, storage, and degree
+  kByte,      // native Montgomery kernels on the stored bytes
+  kTyped256,  // typed-limb BigInt<4> / Fp2<4> locals (256-bit base field)
+};
+
 struct EcPointDescr {
   PyArray_Descr base;
   PyObject* modulus;  // owned: base prime field modulus
@@ -55,10 +70,12 @@ struct EcPointDescr {
   PyObject* rinv_mod_p;  // owned (Montgomery): R^-1 mod p; else NULL
   // Coordinate field: prime (G1, degree 1) or Fp2 (G2, degree 2, u^2 = nr).
   PyObject* non_residue;  // owned (degree 2): the Fp2 non-residue; else NULL
+  CoordField* native;     // owned: native-kernel constants; may have ok=false
   uint8_t coord_degree;   // 1 = G1 (Fq), 2 = G2 (Fp2)
   uint8_t base_width_bytes;
   uint8_t num_coords;  // 2 affine, 3 Jacobian, 4 xyzz
   uint8_t is_montgomery;
+  Tier tier;
 };
 
 PyArray_DTypeMeta EcPointDType = {};
@@ -327,47 +344,121 @@ PyObject* CInv(EcPointDescr* d, PyObject* a) {
   return MakeFp2(c0, c1);
 }
 
-// Jacobian doubling, a == 0 (EFD dbl-2009-l). in/out: 3 canonical coords.
-int JacDouble(EcPointDescr* ec, PyObject* const* in, PyObject** out) {
-  PyObject* X = in[0];
-  PyObject* Y = in[1];
-  PyObject* Z = in[2];
-  PyObject* xx = CMul(ec, X, X);
-  PyObject* yy = CMul(ec, Y, Y);
-  PyObject* yyyy = yy ? CMul(ec, yy, yy) : nullptr;
-  PyObject* xyy = (xx && yy) ? CMul(ec, X, yy) : nullptr;
-  PyObject* d = xyy ? CMulInt(ec, xyy, 4) : nullptr;  // d = 4*X*yy
-  PyObject* e = xx ? CMulInt(ec, xx, 3) : nullptr;    // e = 3*xx
-  PyObject* ee = e ? CMul(ec, e, e) : nullptr;
-  PyObject* twod = d ? CMulInt(ec, d, 2) : nullptr;
-  PyObject* X2 = (ee && twod) ? CSub(ec, ee, twod) : nullptr;  // e^2 - 2d
-  PyObject* dmx = (d && X2) ? CSub(ec, d, X2) : nullptr;
-  PyObject* edmx = (e && dmx) ? CMul(ec, e, dmx) : nullptr;
-  PyObject* eightyyyy = yyyy ? CMulInt(ec, yyyy, 8) : nullptr;
-  PyObject* Y2 = (edmx && eightyyyy) ? CSub(ec, edmx, eightyyyy) : nullptr;
-  PyObject* yz = CMul(ec, Y, Z);
-  PyObject* Z2 = yz ? CMulInt(ec, yz, 2) : nullptr;
-  Py_XDECREF(xx);
-  Py_XDECREF(yy);
-  Py_XDECREF(yyyy);
-  Py_XDECREF(xyy);
-  Py_XDECREF(d);
-  Py_XDECREF(e);
-  Py_XDECREF(ee);
-  Py_XDECREF(twod);
-  Py_XDECREF(dmx);
-  Py_XDECREF(edmx);
-  Py_XDECREF(eightyyyy);
-  Py_XDECREF(yz);
-  if (!X2 || !Y2 || !Z2) {
-    Py_XDECREF(X2);
-    Py_XDECREF(Y2);
-    Py_XDECREF(Z2);
-    return -1;
+// --- CPython-int instantiation of the shared group law -------------------
+// `PyRef` is the value-semantic coordinate (copy = INCREF) and `PyCoordOps`
+// adapts the C* helpers to the ec_law Ops concept. A failing CPython call
+// (allocation, comparison) poisons the ops: the failing helper has already set
+// the exception, every later operation no-ops on the null value, and the Jac*
+// wrappers translate the poisoned flag into their usual -1.
+
+class PyRef {
+ public:
+  PyRef() = default;
+  explicit PyRef(PyObject* p) : p_(p) {}  // steals
+  PyRef(const PyRef& o) : p_(o.p_) { Py_XINCREF(p_); }
+  PyRef(PyRef&& o) noexcept : p_(o.p_) { o.p_ = nullptr; }
+  PyRef& operator=(const PyRef& o) {
+    if (this != &o) {
+      Py_XINCREF(o.p_);
+      Py_XDECREF(p_);
+      p_ = o.p_;
+    }
+    return *this;
   }
-  out[0] = X2;
-  out[1] = Y2;
-  out[2] = Z2;
+  PyRef& operator=(PyRef&& o) noexcept {
+    if (this != &o) {
+      Py_XDECREF(p_);
+      p_ = o.p_;
+      o.p_ = nullptr;
+    }
+    return *this;
+  }
+  ~PyRef() { Py_XDECREF(p_); }
+  PyObject* get() const { return p_; }
+  PyObject* release() {
+    PyObject* r = p_;
+    p_ = nullptr;
+    return r;
+  }
+  static PyRef Borrow(PyObject* p) {
+    Py_XINCREF(p);
+    return PyRef(p);
+  }
+
+ private:
+  PyObject* p_ = nullptr;
+};
+
+struct PyCoordOps {
+  EcPointDescr* d;
+  mutable bool failed = false;
+  PyRef Wrap(PyObject* r) const {
+    if (r == nullptr) failed = true;
+    return PyRef(r);
+  }
+  bool Bad(const PyRef& a) const { return failed || a.get() == nullptr; }
+  PyRef One() const { return Wrap(COne(d)); }
+  PyRef Zero() const { return Wrap(CZero(d)); }
+  PyRef Add(const PyRef& a, const PyRef& b) const {
+    if (Bad(a) || Bad(b)) {
+      failed = true;
+      return PyRef();
+    }
+    return Wrap(CAdd(d, a.get(), b.get()));
+  }
+  PyRef Sub(const PyRef& a, const PyRef& b) const {
+    if (Bad(a) || Bad(b)) {
+      failed = true;
+      return PyRef();
+    }
+    return Wrap(CSub(d, a.get(), b.get()));
+  }
+  PyRef Mul(const PyRef& a, const PyRef& b) const {
+    if (Bad(a) || Bad(b)) {
+      failed = true;
+      return PyRef();
+    }
+    return Wrap(CMul(d, a.get(), b.get()));
+  }
+  PyRef Neg(const PyRef& a) const {
+    if (Bad(a)) {
+      failed = true;
+      return PyRef();
+    }
+    return Wrap(CNeg(d, a.get()));
+  }
+  PyRef MulInt(const PyRef& a, int k) const {
+    if (Bad(a)) {
+      failed = true;
+      return PyRef();
+    }
+    return Wrap(CMulInt(d, a.get(), k));
+  }
+  bool IsZero(const PyRef& a) const {
+    if (Bad(a)) return false;
+    return CIsZero(d, a.get());
+  }
+  bool Equal(const PyRef& a, const PyRef& b) const {
+    if (Bad(a) || Bad(b)) return false;
+    int r = PyObject_RichCompareBool(a.get(), b.get(), Py_EQ);
+    if (r < 0) {
+      failed = true;
+      return false;
+    }
+    return r == 1;
+  }
+};
+
+// Jacobian addition; in1/in2/out: 3 canonical coords. -1 on CPython failure.
+int JacAdd(EcPointDescr* ec, PyObject* const* P, PyObject* const* Q,
+           PyObject** out) {
+  PyCoordOps f{ec};
+  PyRef Pr[3] = {PyRef::Borrow(P[0]), PyRef::Borrow(P[1]), PyRef::Borrow(P[2])};
+  PyRef Qr[3] = {PyRef::Borrow(Q[0]), PyRef::Borrow(Q[1]), PyRef::Borrow(Q[2])};
+  PyRef R[3];
+  ec_law::EcAddT<PyRef, PyCoordOps>(f, Pr, Qr, R);
+  if (f.failed) return -1;
+  for (int i = 0; i < 3; ++i) out[i] = R[i].release();
   return 0;
 }
 
@@ -378,99 +469,6 @@ void CopyPoint(PyObject* const* in, PyObject** out, int n) {
   }
 }
 
-// Jacobian addition (EFD add-2007-bl), a == 0. in1/in2/out: 3 canonical coords.
-int JacAdd(EcPointDescr* ec, PyObject* const* P, PyObject* const* Q,
-           PyObject** out) {
-  if (CIsZero(ec, P[2])) {  // P is infinity
-    CopyPoint(Q, out, 3);
-    return 0;
-  }
-  if (CIsZero(ec, Q[2])) {  // Q is infinity
-    CopyPoint(P, out, 3);
-    return 0;
-  }
-  PyObject *X1 = P[0], *Y1 = P[1], *Z1 = P[2];
-  PyObject *X2 = Q[0], *Y2 = Q[1], *Z2 = Q[2];
-  PyObject* z1z1 = CMul(ec, Z1, Z1);
-  PyObject* z2z2 = CMul(ec, Z2, Z2);
-  PyObject* u1 = z2z2 ? CMul(ec, X1, z2z2) : nullptr;
-  PyObject* u2 = z1z1 ? CMul(ec, X2, z1z1) : nullptr;
-  PyObject* yz2 = z2z2 ? CMul(ec, Y1, Z2) : nullptr;
-  PyObject* s1 = yz2 ? CMul(ec, yz2, z2z2) : nullptr;
-  PyObject* yz1 = z1z1 ? CMul(ec, Y2, Z1) : nullptr;
-  PyObject* s2 = yz1 ? CMul(ec, yz1, z1z1) : nullptr;
-  int rc = -1;
-  if (!u1 || !u2 || !s1 || !s2) goto cleanup;
-  if (PyObject_RichCompareBool(u1, u2, Py_EQ) == 1 &&
-      PyObject_RichCompareBool(s1, s2, Py_EQ) == 1) {
-    rc = JacDouble(ec, P, out);
-    goto cleanup;
-  }
-  {
-    PyObject* h = CSub(ec, u2, u1);
-    PyObject* twoh = h ? CMulInt(ec, h, 2) : nullptr;
-    PyObject* i = twoh ? CMul(ec, twoh, twoh) : nullptr;  // (2h)^2
-    PyObject* hi = (h && i) ? CMul(ec, h, i) : nullptr;
-    PyObject* j = hi ? CNeg(ec, hi) : nullptr;  // j = -(h*i)
-    PyObject* sdiff = CSub(ec, s2, s1);
-    PyObject* r = sdiff ? CMulInt(ec, sdiff, 2) : nullptr;  // 2(s2-s1)
-    PyObject* v = i ? CMul(ec, u1, i) : nullptr;
-    PyObject* rr = r ? CMul(ec, r, r) : nullptr;
-    PyObject* twov = v ? CMulInt(ec, v, 2) : nullptr;
-    PyObject* rrj = (rr && j) ? CAdd(ec, rr, j) : nullptr;
-    PyObject* X3 =
-        (rrj && twov) ? CSub(ec, rrj, twov) : nullptr;  // r^2 + j - 2v
-    PyObject* vmx = (v && X3) ? CSub(ec, v, X3) : nullptr;
-    PyObject* rvmx = (r && vmx) ? CMul(ec, r, vmx) : nullptr;
-    PyObject* s1j = (s1 && j) ? CMul(ec, s1, j) : nullptr;
-    PyObject* twos1j = s1j ? CMulInt(ec, s1j, 2) : nullptr;
-    PyObject* Y3 =
-        (rvmx && twos1j) ? CAdd(ec, rvmx, twos1j) : nullptr;  // r(v-X3)+2*s1*j
-    PyObject* z1z2 = CMul(ec, Z1, Z2);
-    PyObject* z1z2h = (z1z2 && h) ? CMul(ec, z1z2, h) : nullptr;
-    PyObject* Z3 = z1z2h ? CMulInt(ec, z1z2h, 2) : nullptr;  // 2*Z1*Z2*h
-    Py_XDECREF(h);
-    Py_XDECREF(twoh);
-    Py_XDECREF(i);
-    Py_XDECREF(hi);
-    Py_XDECREF(sdiff);
-    Py_XDECREF(r);
-    Py_XDECREF(v);
-    Py_XDECREF(rr);
-    Py_XDECREF(twov);
-    Py_XDECREF(rrj);
-    Py_XDECREF(vmx);
-    Py_XDECREF(rvmx);
-    Py_XDECREF(s1j);
-    Py_XDECREF(twos1j);
-    Py_XDECREF(z1z2);
-    Py_XDECREF(z1z2h);
-    if (!X3 || !Y3 || !Z3 || !j) {
-      Py_XDECREF(X3);
-      Py_XDECREF(Y3);
-      Py_XDECREF(Z3);
-      Py_XDECREF(j);
-      goto cleanup;
-    }
-    Py_DECREF(j);
-    out[0] = X3;
-    out[1] = Y3;
-    out[2] = Z3;
-    rc = 0;
-  }
-cleanup:
-  Py_XDECREF(z1z1);
-  Py_XDECREF(z2z2);
-  Py_XDECREF(u1);
-  Py_XDECREF(u2);
-  Py_XDECREF(yz2);
-  Py_XDECREF(s1);
-  Py_XDECREF(yz1);
-  Py_XDECREF(s2);
-  return rc;
-}
-
-// Negate: flip Y only.
 // Negate flips Y (coordinate 1) and copies the rest — rep-safe for affine /
 // Jacobian / xyzz alike (Y is coordinate 1 in every representation).
 int JacNegate(EcPointDescr* ec, PyObject* const* in, PyObject** out) {
@@ -489,48 +487,13 @@ int JacNegate(EcPointDescr* ec, PyObject* const* in, PyObject** out) {
   return 0;
 }
 
-// Group equality (cross-representative): a Jacobian point has many byte
-// encodings for one group element. Returns 1 if P == Q as group elements,
-// 0 if not, -1 on error. Both infinity -> equal; one infinity -> not equal;
-// else x1*z2^2 == x2*z1^2 and y1*z2^3 == y2*z1^3.
+// Group equality (cross-representative): 1 equal, 0 not, -1 on error.
 int JacEqual(EcPointDescr* ec, PyObject* const* P, PyObject* const* Q) {
-  bool pz = CIsZero(ec, P[2]);
-  bool qz = CIsZero(ec, Q[2]);
-  if (pz || qz) {
-    return (pz && qz) ? 1 : 0;
-  }
-  int result = -1;
-  PyObject* z1s = CMul(ec, P[2], P[2]);
-  PyObject* z2s = CMul(ec, Q[2], Q[2]);
-  PyObject* lx = z2s ? CMul(ec, P[0], z2s) : nullptr;
-  PyObject* rx = z1s ? CMul(ec, Q[0], z1s) : nullptr;
-  PyObject* z1c = z1s ? CMul(ec, z1s, P[2]) : nullptr;
-  PyObject* z2c = z2s ? CMul(ec, z2s, Q[2]) : nullptr;
-  PyObject* ly = z2c ? CMul(ec, P[1], z2c) : nullptr;
-  PyObject* ry = z1c ? CMul(ec, Q[1], z1c) : nullptr;
-  if (lx && rx && ly && ry) {
-    int xe = PyObject_RichCompareBool(lx, rx, Py_EQ);
-    int ye = PyObject_RichCompareBool(ly, ry, Py_EQ);
-    if (xe >= 0 && ye >= 0) {
-      result = (xe == 1 && ye == 1) ? 1 : 0;
-    }
-  }
-  Py_XDECREF(z1s);
-  Py_XDECREF(z2s);
-  Py_XDECREF(lx);
-  Py_XDECREF(rx);
-  Py_XDECREF(z1c);
-  Py_XDECREF(z2c);
-  Py_XDECREF(ly);
-  Py_XDECREF(ry);
-  return result;
-}
-
-void MovePoint(PyObject** dst, PyObject* const* src, int n) {
-  for (int i = 0; i < n; ++i) {
-    Py_DECREF(dst[i]);
-    dst[i] = src[i];
-  }
+  PyCoordOps f{ec};
+  PyRef Pr[3] = {PyRef::Borrow(P[0]), PyRef::Borrow(P[1]), PyRef::Borrow(P[2])};
+  PyRef Qr[3] = {PyRef::Borrow(Q[0]), PyRef::Borrow(Q[1]), PyRef::Borrow(Q[2])};
+  int r = ec_law::EcEqualT<PyRef, PyCoordOps>(f, Pr, Qr);
+  return f.failed ? -1 : r;
 }
 
 // Decodes a canonical scalar int into `buf` (little-endian, zero-padded) and
@@ -552,57 +515,33 @@ Py_ssize_t ScalarToBytesLE(PyObject* scalar, unsigned char* buf,
   return static_cast<Py_ssize_t>(nbits);
 }
 
-// MSB-first double-and-add: ret = scalar * point (canonical Jacobian coords).
-// The scalar is a canonical integer (Montgomery already decoded by the caller),
-// matching the legacy curve operator* which de-Montgomery's the scalar first.
+// ret = scalar * point (canonical Jacobian coords). The scalar is a canonical
+// integer (Montgomery already decoded by the caller), matching the legacy
+// curve operator* which de-Montgomery's the scalar first.
 int JacScalarMul(EcPointDescr* ec, PyObject* scalar, PyObject* const* point,
                  PyObject** out) {
-  PyObject* ret[3] = {COne(ec), COne(ec), CZero(ec)};  // Zero = (1, 1, 0)
-  if (!ret[0] || !ret[1] || !ret[2]) {
-    for (int j = 0; j < 3; ++j) Py_XDECREF(ret[j]);
-    return -1;
-  }
   unsigned char buf[64];
   Py_ssize_t nbits = ScalarToBytesLE(scalar, buf, sizeof(buf));
-  if (nbits < 0) {
-    for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
-    return -1;
-  }
-  for (Py_ssize_t i = nbits - 1; i >= 0; --i) {
-    PyObject* tmp[3];
-    if (JacDouble(ec, ret, tmp) < 0) {
-      for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
-      return -1;
-    }
-    MovePoint(ret, tmp, 3);
-    if ((buf[i >> 3] >> (i & 7)) & 1) {
-      if (JacAdd(ec, ret, point, tmp) < 0) {
-        for (int j = 0; j < 3; ++j) Py_DECREF(ret[j]);
-        return -1;
-      }
-      MovePoint(ret, tmp, 3);
-    }
-  }
-  out[0] = ret[0];
-  out[1] = ret[1];
-  out[2] = ret[2];
+  if (nbits < 0) return -1;
+  PyCoordOps f{ec};
+  PyRef P[3] = {PyRef::Borrow(point[0]), PyRef::Borrow(point[1]),
+                PyRef::Borrow(point[2])};
+  PyRef R[3];
+  ec_law::EcScalarMulT<PyRef, PyCoordOps>(f, P, buf, static_cast<int>(nbits),
+                                          R);
+  if (f.failed) return -1;
+  for (int i = 0; i < 3; ++i) out[i] = R[i].release();
   return 0;
 }
 
-// --- native fixed-width group law ----------------------------------------
-// The Python-int group law above is correct but allocates a CPython int per
-// coordinate operation. For Montgomery-stored points over a coordinate field
-// whose base width the native kernels handle, run the identical EFD formulas in
-// Montgomery space directly on the stored bytes (mont(x)*mont(y)*R^-1 =
-// mont(x*y); add/sub are linear; X^... = non_residue folds with mont(nr)), so
-// no decode/encode and no Python ints — byte-identical to the path above.
-//
-// These are byte-space twins of the PyObject Jac* functions: EcDouble<->
-// JacDouble, EcAdd<->JacAdd, EcNegate<->JacNegate, EcEqual<->JacEqual,
-// EcScalarMul<->JacScalarMul, CoordField::Mul (Fp2) <-> CMul. The two MUST stay
-// in lockstep — the Jac* versions are the canonical spec; a formula change must
-// be made in both (the byte-identity tests only catch divergence on the cases
-// they exercise).
+// --- native fixed-width coordinate field ---------------------------------
+// The CPython-int ops above allocate an int per coordinate operation. For
+// Montgomery-stored points over a coordinate field whose base width the native
+// kernels handle, run the same shared formulas in Montgomery space directly on
+// the stored bytes (mont(x)*mont(y)*R^-1 = mont(x*y); add/sub are linear;
+// non_residue folds with mont(nr)), so no decode/encode and no Python ints —
+// byte-identical to the CPython tier because both instantiate the one
+// ec_law formula body.
 
 constexpr int kCoordBytes = 64;  // max coordinate: Fp2 over 256-bit base
 
@@ -719,166 +658,70 @@ struct CoordField {
   }
 };
 
-// Jacobian doubling (EFD dbl-2009-l, a == 0); 3 coords. out may alias in.
-void EcDouble(const CoordField& cf, const unsigned char* in,
-              unsigned char* out) {
-  const int cb = cf.cb;
-  const unsigned char* X = in;
-  const unsigned char* Y = in + cb;
-  const unsigned char* Z = in + 2 * cb;
-  unsigned char xx[kCoordBytes], yy[kCoordBytes], yyyy[kCoordBytes];
-  unsigned char xyy[kCoordBytes], dd[kCoordBytes], e[kCoordBytes];
-  unsigned char ee[kCoordBytes], twod[kCoordBytes], X2[kCoordBytes];
-  unsigned char dmx[kCoordBytes], edmx[kCoordBytes], eightyyyy[kCoordBytes];
-  unsigned char Y2[kCoordBytes], yz[kCoordBytes], Z2[kCoordBytes];
-  cf.Mul(X, X, xx);
-  cf.Mul(Y, Y, yy);
-  cf.Mul(yy, yy, yyyy);
-  cf.Mul(X, yy, xyy);
-  cf.MulInt(xyy, 4, dd);
-  cf.MulInt(xx, 3, e);
-  cf.Mul(e, e, ee);
-  cf.MulInt(dd, 2, twod);
-  cf.Sub(ee, twod, X2);
-  cf.Sub(dd, X2, dmx);
-  cf.Mul(e, dmx, edmx);
-  cf.MulInt(yyyy, 8, eightyyyy);
-  cf.Sub(edmx, eightyyyy, Y2);
-  cf.Mul(Y, Z, yz);
-  cf.MulInt(yz, 2, Z2);
-  std::memcpy(out, X2, cb);
-  std::memcpy(out + cb, Y2, cb);
-  std::memcpy(out + 2 * cb, Z2, cb);
-}
+// ec_law instantiation over the stored bytes: `ByteCoord` is one coordinate
+// (fixed max-width buffer; only the descriptor's cb bytes are meaningful) and
+// `ByteOps` adapts CoordField's kernels to the Ops concept.
+struct ByteCoord {
+  unsigned char b[kCoordBytes] = {};
+};
 
-// Jacobian addition (EFD add-2007-bl, a == 0); 3 coords. `out` may alias an
-// input: every read of P/Q completes into stack temporaries before the result
-// is written, and the infinity copies below skip a no-op self-copy.
-void EcAdd(const CoordField& cf, const unsigned char* P, const unsigned char* Q,
-           unsigned char* out) {
-  const int cb = cf.cb;
-  const unsigned char* Z1 = P + 2 * cb;
-  const unsigned char* Z2 = Q + 2 * cb;
-  if (cf.IsZero(Z1)) {
-    if (out != Q) std::memcpy(out, Q, 3 * cb);
-    return;
+struct ByteOps {
+  const CoordField* cf;
+  int coord_bytes() const { return cf->cb; }
+  void Load(ByteCoord& c, const unsigned char* p) const {
+    std::memcpy(c.b, p, cf->cb);
   }
-  if (cf.IsZero(Z2)) {
-    if (out != P) std::memcpy(out, P, 3 * cb);
-    return;
+  void Store(unsigned char* p, const ByteCoord& c) const {
+    std::memcpy(p, c.b, cf->cb);
   }
-  const unsigned char* X1 = P;
-  const unsigned char* Y1 = P + cb;
-  const unsigned char* X2 = Q;
-  const unsigned char* Y2 = Q + cb;
-  unsigned char z1z1[kCoordBytes], z2z2[kCoordBytes], u1[kCoordBytes];
-  unsigned char u2[kCoordBytes], yz2[kCoordBytes], s1[kCoordBytes];
-  unsigned char yz1[kCoordBytes], s2[kCoordBytes];
-  cf.Mul(Z1, Z1, z1z1);
-  cf.Mul(Z2, Z2, z2z2);
-  cf.Mul(X1, z2z2, u1);
-  cf.Mul(X2, z1z1, u2);
-  cf.Mul(Y1, Z2, yz2);
-  cf.Mul(yz2, z2z2, s1);
-  cf.Mul(Y2, Z1, yz1);
-  cf.Mul(yz1, z1z1, s2);
-  if (cf.Equal(u1, u2) && cf.Equal(s1, s2)) {  // P == Q
-    EcDouble(cf, P, out);
-    return;
+  ByteCoord One() const {
+    ByteCoord o;
+    cf->SetOne(o.b);
+    return o;
   }
-  unsigned char h[kCoordBytes], twoh[kCoordBytes], ii[kCoordBytes];
-  unsigned char hi[kCoordBytes], j[kCoordBytes], sdiff[kCoordBytes];
-  unsigned char r[kCoordBytes], v[kCoordBytes], rr[kCoordBytes];
-  unsigned char twov[kCoordBytes], rrj[kCoordBytes], X3[kCoordBytes];
-  unsigned char vmx[kCoordBytes], rvmx[kCoordBytes], s1j[kCoordBytes];
-  unsigned char twos1j[kCoordBytes], Y3[kCoordBytes], z1z2[kCoordBytes];
-  unsigned char z1z2h[kCoordBytes], Z3[kCoordBytes];
-  cf.Sub(u2, u1, h);
-  cf.MulInt(h, 2, twoh);
-  cf.Mul(twoh, twoh, ii);
-  cf.Mul(h, ii, hi);
-  cf.Neg(hi, j);
-  cf.Sub(s2, s1, sdiff);
-  cf.MulInt(sdiff, 2, r);
-  cf.Mul(u1, ii, v);
-  cf.Mul(r, r, rr);
-  cf.MulInt(v, 2, twov);
-  cf.Add(rr, j, rrj);
-  cf.Sub(rrj, twov, X3);  // r^2 + j - 2v
-  cf.Sub(v, X3, vmx);
-  cf.Mul(r, vmx, rvmx);
-  cf.Mul(s1, j, s1j);
-  cf.MulInt(s1j, 2, twos1j);
-  cf.Add(rvmx, twos1j, Y3);  // r(v - X3) + 2 s1 j
-  cf.Mul(Z1, Z2, z1z2);
-  cf.Mul(z1z2, h, z1z2h);
-  cf.MulInt(z1z2h, 2, Z3);  // 2 Z1 Z2 h
-  std::memcpy(out, X3, cb);
-  std::memcpy(out + cb, Y3, cb);
-  std::memcpy(out + 2 * cb, Z3, cb);
-}
+  ByteCoord Zero() const {
+    ByteCoord o;
+    cf->SetZero(o.b);
+    return o;
+  }
+  ByteCoord Add(const ByteCoord& a, const ByteCoord& b) const {
+    ByteCoord o;
+    cf->Add(a.b, b.b, o.b);
+    return o;
+  }
+  ByteCoord Sub(const ByteCoord& a, const ByteCoord& b) const {
+    ByteCoord o;
+    cf->Sub(a.b, b.b, o.b);
+    return o;
+  }
+  ByteCoord Neg(const ByteCoord& a) const {
+    ByteCoord o;
+    cf->Neg(a.b, o.b);
+    return o;
+  }
+  ByteCoord Mul(const ByteCoord& a, const ByteCoord& b) const {
+    ByteCoord o;
+    cf->Mul(a.b, b.b, o.b);
+    return o;
+  }
+  ByteCoord MulInt(const ByteCoord& a, int k) const {
+    ByteCoord o;
+    cf->MulInt(a.b, k, o.b);
+    return o;
+  }
+  bool IsZero(const ByteCoord& a) const { return cf->IsZero(a.b); }
+  bool Equal(const ByteCoord& a, const ByteCoord& b) const {
+    return cf->Equal(a.b, b.b);
+  }
+};
 
-void EcNegate(const CoordField& cf, const unsigned char* in, unsigned char* out,
-              int num_coords) {
-  const int cb = cf.cb;
-  for (int i = 0; i < num_coords; ++i) {
-    if (i == 1) {
-      cf.Neg(in + cb, out + cb);
-    } else {
-      std::memcpy(out + i * cb, in + i * cb, cb);
-    }
-  }
-}
-
-// Cross-representative group equality of two Jacobian points; 1 / 0.
-int EcEqual(const CoordField& cf, const unsigned char* P,
-            const unsigned char* Q) {
-  const int cb = cf.cb;
-  bool pz = cf.IsZero(P + 2 * cb);
-  bool qz = cf.IsZero(Q + 2 * cb);
-  if (pz || qz) return (pz && qz) ? 1 : 0;
-  unsigned char z1s[kCoordBytes], z2s[kCoordBytes], lx[kCoordBytes];
-  unsigned char rx[kCoordBytes], z1c[kCoordBytes], z2c[kCoordBytes];
-  unsigned char ly[kCoordBytes], ry[kCoordBytes];
-  cf.Mul(P + 2 * cb, P + 2 * cb, z1s);
-  cf.Mul(Q + 2 * cb, Q + 2 * cb, z2s);
-  cf.Mul(P, z2s, lx);
-  cf.Mul(Q, z1s, rx);
-  cf.Mul(z1s, P + 2 * cb, z1c);
-  cf.Mul(z2s, Q + 2 * cb, z2c);
-  cf.Mul(P + cb, z2c, ly);
-  cf.Mul(Q + cb, z1c, ry);
-  return (cf.Equal(lx, rx) && cf.Equal(ly, ry)) ? 1 : 0;
-}
-
-// ret = scalar * point, MSB-first double-and-add; scalar as little-endian
-// bytes.
-void EcScalarMul(const CoordField& cf, const unsigned char* point,
-                 const unsigned char* sbytes, int nbits, unsigned char* out) {
-  const int cb = cf.cb;
-  unsigned char ret[3 * kCoordBytes];
-  cf.SetOne(ret);  // Jacobian zero = (1, 1, 0)
-  cf.SetOne(ret + cb);
-  cf.SetZero(ret + 2 * cb);
-  // EcDouble/EcAdd read all of their inputs before writing the result, so they
-  // accept out == in1 in place; no scratch point is needed.
-  for (int i = nbits - 1; i >= 0; --i) {
-    EcDouble(cf, ret, ret);
-    if ((sbytes[i >> 3] >> (i & 7)) & 1) {
-      EcAdd(cf, ret, point, ret);
-    }
-  }
-  std::memcpy(out, ret, 3 * cb);
-}
-
-// --- typed-limb group law (256-bit coordinate field) ---------------------
-// The byte-space Ec* above re-memcpy every coordinate in and out of every field
-// operation. For the dominant case — a 256-bit Montgomery coordinate field
-// (bn254 / bls12-381 / secp256k1 Fq, G1 and G2) — run the *same* formulas on
+// --- typed-limb coordinate field (256-bit) --------------------------------
+// ByteOps round-trips every coordinate through memory per field operation. For
+// the dominant case — a 256-bit Montgomery coordinate field (bn254 /
+// bls12-381 / secp256k1 Fq, G1 and G2) — instantiate the same formulas on
 // BigInt<4> values held in locals: load each coordinate from the stored bytes
-// once, compute, store once. Same MontMul<4>/ModAdd/ModSub kernels as the byte
-// path, so the result is byte-identical. Twins of the Jac*/Ec* spec — keep in
-// lockstep.
+// once, compute, store once. Same MontMul<4>/ModAdd/ModSub kernels as
+// CoordField, so the result is byte-identical.
 
 template <size_t N>
 struct FqOpsBig {
@@ -912,6 +755,13 @@ struct FqOpsBig {
   }
   bool IsZero(const BigInt<N>& a) const { return a == BigInt<N>(0); }
   bool Equal(const BigInt<N>& a, const BigInt<N>& b) const { return a == b; }
+  int coord_bytes() const { return static_cast<int>(N * 8); }
+  void Load(BigInt<N>& c, const unsigned char* p) const {
+    std::memcpy(&c[0], p, N * 8);
+  }
+  void Store(unsigned char* p, const BigInt<N>& c) const {
+    std::memcpy(p, &c[0], N * 8);
+  }
 };
 
 template <size_t N>
@@ -949,125 +799,22 @@ struct Fp2OpsBig {
   bool Equal(const Fp2<N>& a, const Fp2<N>& b) const {
     return fq.Equal(a.c0, b.c0) && fq.Equal(a.c1, b.c1);
   }
+  int coord_bytes() const { return static_cast<int>(2 * N * 8); }
+  void Load(Fp2<N>& c, const unsigned char* p) const {
+    fq.Load(c.c0, p);
+    fq.Load(c.c1, p + N * 8);
+  }
+  void Store(unsigned char* p, const Fp2<N>& c) const {
+    fq.Store(p, c.c0);
+    fq.Store(p + N * 8, c.c1);
+  }
 };
-
-template <size_t N>
-void LoadCoord(BigInt<N>& c, const unsigned char* p) {
-  std::memcpy(&c[0], p, N * 8);
-}
-template <size_t N>
-void StoreCoord(unsigned char* p, const BigInt<N>& c) {
-  std::memcpy(p, &c[0], N * 8);
-}
-template <size_t N>
-void LoadCoord(Fp2<N>& c, const unsigned char* p) {
-  LoadCoord(c.c0, p);
-  LoadCoord(c.c1, p + N * 8);
-}
-template <size_t N>
-void StoreCoord(unsigned char* p, const Fp2<N>& c) {
-  StoreCoord(p, c.c0);
-  StoreCoord(p + N * 8, c.c1);
-}
-template <typename C>
-void LoadPt(C out[3], const unsigned char* p, int cb) {
-  for (int i = 0; i < 3; ++i) LoadCoord(out[i], p + i * cb);
-}
-template <typename C>
-void StorePt(unsigned char* p, const C in[3], int cb) {
-  for (int i = 0; i < 3; ++i) StoreCoord(p + i * cb, in[i]);
-}
-
-// Jacobian doubling (EFD dbl-2009-l, a == 0). out may alias in.
-template <typename C, typename Ops>
-void EcDoubleT(const Ops& f, const C in[3], C out[3]) {
-  const C& X = in[0];
-  const C& Y = in[1];
-  const C& Z = in[2];
-  C xx = f.Mul(X, X);
-  C yy = f.Mul(Y, Y);
-  C yyyy = f.Mul(yy, yy);
-  C dd = f.MulInt(f.Mul(X, yy), 4);
-  C e = f.MulInt(xx, 3);
-  C X2 = f.Sub(f.Mul(e, e), f.MulInt(dd, 2));
-  C Y2 = f.Sub(f.Mul(e, f.Sub(dd, X2)), f.MulInt(yyyy, 8));
-  C Z2 = f.MulInt(f.Mul(Y, Z), 2);
-  out[0] = X2;
-  out[1] = Y2;
-  out[2] = Z2;
-}
-
-// Jacobian addition (EFD add-2007-bl, a == 0). out may alias an input.
-template <typename C, typename Ops>
-void EcAddT(const Ops& f, const C P[3], const C Q[3], C out[3]) {
-  if (f.IsZero(P[2])) {
-    out[0] = Q[0];
-    out[1] = Q[1];
-    out[2] = Q[2];
-    return;
-  }
-  if (f.IsZero(Q[2])) {
-    out[0] = P[0];
-    out[1] = P[1];
-    out[2] = P[2];
-    return;
-  }
-  C z1z1 = f.Mul(P[2], P[2]);
-  C z2z2 = f.Mul(Q[2], Q[2]);
-  C u1 = f.Mul(P[0], z2z2);
-  C u2 = f.Mul(Q[0], z1z1);
-  C s1 = f.Mul(f.Mul(P[1], Q[2]), z2z2);
-  C s2 = f.Mul(f.Mul(Q[1], P[2]), z1z1);
-  if (f.Equal(u1, u2) && f.Equal(s1, s2)) {  // P == Q
-    EcDoubleT<C, Ops>(f, P, out);
-    return;
-  }
-  C h = f.Sub(u2, u1);
-  C ii = f.Mul(f.MulInt(h, 2), f.MulInt(h, 2));
-  C j = f.Neg(f.Mul(h, ii));
-  C r = f.MulInt(f.Sub(s2, s1), 2);
-  C v = f.Mul(u1, ii);
-  C X3 = f.Sub(f.Add(f.Mul(r, r), j), f.MulInt(v, 2));  // r^2 + j - 2v
-  C Y3 = f.Add(f.Mul(r, f.Sub(v, X3)),
-               f.MulInt(f.Mul(s1, j), 2));          // r(v - X3) + 2 s1 j
-  C Z3 = f.MulInt(f.Mul(f.Mul(P[2], Q[2]), h), 2);  // 2 Z1 Z2 h
-  out[0] = X3;
-  out[1] = Y3;
-  out[2] = Z3;
-}
-
-// Cross-representative group equality; 1 / 0.
-template <typename C, typename Ops>
-int EcEqualT(const Ops& f, const C P[3], const C Q[3]) {
-  bool pz = f.IsZero(P[2]);
-  bool qz = f.IsZero(Q[2]);
-  if (pz || qz) return (pz && qz) ? 1 : 0;
-  C z1s = f.Mul(P[2], P[2]);
-  C z2s = f.Mul(Q[2], Q[2]);
-  bool xe = f.Equal(f.Mul(P[0], z2s), f.Mul(Q[0], z1s));
-  bool ye =
-      f.Equal(f.Mul(P[1], f.Mul(z2s, Q[2])), f.Mul(Q[1], f.Mul(z1s, P[2])));
-  return (xe && ye) ? 1 : 0;
-}
-
-// ret = scalar * point, MSB-first double-and-add (point/ret as typed coords).
-template <typename C, typename Ops>
-void EcScalarMulT(const Ops& f, const C point[3], const unsigned char* sbytes,
-                  int nbits, C ret[3]) {
-  ret[0] = f.One();  // Jacobian zero = (1, 1, 0)
-  ret[1] = f.One();
-  ret[2] = f.Zero();
-  for (int i = nbits - 1; i >= 0; --i) {
-    EcDoubleT<C, Ops>(f, ret, ret);
-    if ((sbytes[i >> 3] >> (i & 7)) & 1) EcAddT<C, Ops>(f, ret, point, ret);
-  }
-}
 
 // Build the typed 256-bit ops from the already-extracted CoordField constants.
 FqOpsBig<4> MakeFqOps(const CoordField& cf) {
   FqOpsBig<4> f;
   f.p = cf.fq.p256;
-  LoadCoord(f.one_mont, cf.one_le);
+  std::memcpy(&f.one_mont[0], cf.one_le, 4 * 8);
   f.nprime = cf.fq.nprime_neg;
   f.spare = cf.fq.spare;
   f.no_carry = cf.fq.no_carry;
@@ -1076,25 +823,37 @@ FqOpsBig<4> MakeFqOps(const CoordField& cf) {
 Fp2OpsBig<4> MakeFp2Ops(const CoordField& cf) {
   Fp2OpsBig<4> f;
   f.fq = MakeFqOps(cf);
-  LoadCoord(f.mont_nr, cf.mont_nr);
+  std::memcpy(&f.mont_nr[0], cf.mont_nr, 4 * 8);
   return f;
 }
 
-// Typed loop bodies (256-bit Jacobian). C = BigInt<4> (G1) or Fp2<4> (G2).
+// Strided loop bodies over any ec_law Ops with Load/Store (ByteOps and the
+// typed 256-bit ops alike).
+template <typename C, typename Ops>
+void LoadPt(const Ops& f, C out[3], const char* p) {
+  const auto* u = reinterpret_cast<const unsigned char*>(p);
+  for (int i = 0; i < 3; ++i) f.Load(out[i], u + i * f.coord_bytes());
+}
+template <typename C, typename Ops>
+void StorePt(const Ops& f, char* p, const C in[3]) {
+  auto* u = reinterpret_cast<unsigned char*>(p);
+  for (int i = 0; i < 3; ++i) f.Store(u + i * f.coord_bytes(), in[i]);
+}
+
 template <typename C, typename Ops>
 void RunBinT(const Ops& f, bool sub, char* a, char* b, char* o, npy_intp n,
-             const npy_intp* st, int cb) {
+             const npy_intp* st) {
   for (npy_intp i = 0; i < n; ++i) {
     C P[3], Q[3], R[3];
-    LoadPt<C>(P, reinterpret_cast<const unsigned char*>(a), cb);
-    LoadPt<C>(Q, reinterpret_cast<const unsigned char*>(b), cb);
+    LoadPt<C>(f, P, a);
+    LoadPt<C>(f, Q, b);
     if (sub) {
       C nq[3] = {Q[0], f.Neg(Q[1]), Q[2]};
-      EcAddT<C, Ops>(f, P, nq, R);
+      ec_law::EcAddT<C, Ops>(f, P, nq, R);
     } else {
-      EcAddT<C, Ops>(f, P, Q, R);
+      ec_law::EcAddT<C, Ops>(f, P, Q, R);
     }
-    StorePt<C>(reinterpret_cast<unsigned char*>(o), R, cb);
+    StorePt<C>(f, o, R);
     a += st[0];
     b += st[1];
     o += st[2];
@@ -1102,13 +861,14 @@ void RunBinT(const Ops& f, bool sub, char* a, char* b, char* o, npy_intp n,
 }
 template <typename C, typename Ops>
 void RunNegT(const Ops& f, char* a, char* o, npy_intp n, const npy_intp* st,
-             int cb, int num_coords) {
+             int num_coords) {
   for (npy_intp i = 0; i < n; ++i) {
     for (int k = 0; k < num_coords; ++k) {
       C c;
-      LoadCoord(c, reinterpret_cast<const unsigned char*>(a) + k * cb);
+      f.Load(c,
+             reinterpret_cast<const unsigned char*>(a) + k * f.coord_bytes());
       if (k == 1) c = f.Neg(c);
-      StoreCoord(reinterpret_cast<unsigned char*>(o) + k * cb, c);
+      f.Store(reinterpret_cast<unsigned char*>(o) + k * f.coord_bytes(), c);
     }
     a += st[0];
     o += st[1];
@@ -1116,12 +876,12 @@ void RunNegT(const Ops& f, char* a, char* o, npy_intp n, const npy_intp* st,
 }
 template <typename C, typename Ops>
 void RunCmpT(const Ops& f, bool negate, char* a, char* b, char* o, npy_intp n,
-             const npy_intp* st, int cb) {
+             const npy_intp* st) {
   for (npy_intp i = 0; i < n; ++i) {
     C P[3], Q[3];
-    LoadPt<C>(P, reinterpret_cast<const unsigned char*>(a), cb);
-    LoadPt<C>(Q, reinterpret_cast<const unsigned char*>(b), cb);
-    int eq = EcEqualT<C, Ops>(f, P, Q);
+    LoadPt<C>(f, P, a);
+    LoadPt<C>(f, Q, b);
+    int eq = ec_law::EcEqualT<C, Ops>(f, P, Q);
     *reinterpret_cast<npy_bool*>(o) = (negate ? !eq : eq) ? 1 : 0;
     a += st[0];
     b += st[1];
@@ -1131,7 +891,7 @@ void RunCmpT(const Ops& f, bool negate, char* a, char* b, char* o, npy_intp n,
 template <typename C, typename Ops>
 int RunScalarT(const Ops& f, PyArray_Descr* scalar_descr, char* s, char* pt,
                char* o, npy_intp n, npy_intp s_stride, npy_intp pt_stride,
-               npy_intp o_stride, int cb) {
+               npy_intp o_stride) {
   for (npy_intp i = 0; i < n; ++i) {
     PyObject* scalar =
         PrimeFieldValue(reinterpret_cast<PyObject*>(scalar_descr), s);
@@ -1141,9 +901,9 @@ int RunScalarT(const Ops& f, PyArray_Descr* scalar_descr, char* s, char* pt,
     Py_DECREF(scalar);
     if (nbits < 0) return -1;
     C point[3], ret[3];
-    LoadPt<C>(point, reinterpret_cast<const unsigned char*>(pt), cb);
-    EcScalarMulT<C, Ops>(f, point, buf, static_cast<int>(nbits), ret);
-    StorePt<C>(reinterpret_cast<unsigned char*>(o), ret, cb);
+    LoadPt<C>(f, point, pt);
+    ec_law::EcScalarMulT<C, Ops>(f, point, buf, static_cast<int>(nbits), ret);
+    StorePt<C>(f, o, ret);
     s += s_stride;
     pt += pt_stride;
     o += o_stride;
@@ -1174,6 +934,11 @@ PyArray_Descr* MakeDescr(PyObject* modulus, int base_width_bytes,
   d->base_width_bytes = static_cast<uint8_t>(base_width_bytes);
   d->num_coords = static_cast<uint8_t>(num_coords);
   d->is_montgomery = static_cast<uint8_t>(is_montgomery ? 1 : 0);
+  // Group-law tier: decided once here; the ufunc loops only switch on it.
+  d->native = new CoordField(CoordField::Make(d));
+  d->tier = !d->native->ok        ? Tier::kPy
+            : d->native->wb == 32 ? Tier::kTyped256
+                                  : Tier::kByte;
   PyArray_Descr* base = &d->base;
   base->kind = 'V';
   base->type = 'j';
@@ -1190,6 +955,7 @@ void Descr_dealloc(PyObject* self) {
   Py_XDECREF(d->r_mod_p);
   Py_XDECREF(d->rinv_mod_p);
   Py_XDECREF(d->non_residue);
+  delete d->native;
   PyArrayDescr_Type.tp_dealloc(self);
 }
 
@@ -1666,34 +1432,17 @@ int BinLoop(PyArrayMethod_Context* context, char* const* data,
   char* a = data[0];
   char* b = data[1];
   char* o = data[2];
-  CoordField cf = CoordField::Make(d);
-  if (cf.ok &&
-      cf.wb == 32) {  // typed-limb fast path (256-bit coordinate field)
+  const CoordField& cf = *d->native;
+  if (d->tier == Tier::kTyped256) {
     if (cf.degree == 1) {
-      RunBinT<BigInt<4>>(MakeFqOps(cf), op == BinOp::kSub, a, b, o, n, strides,
-                         cf.cb);
+      RunBinT<BigInt<4>>(MakeFqOps(cf), op == BinOp::kSub, a, b, o, n, strides);
     } else {
-      RunBinT<Fp2<4>>(MakeFp2Ops(cf), op == BinOp::kSub, a, b, o, n, strides,
-                      cf.cb);
+      RunBinT<Fp2<4>>(MakeFp2Ops(cf), op == BinOp::kSub, a, b, o, n, strides);
     }
     return 0;
   }
-  if (cf.ok) {  // num_coords == 3 guaranteed by BinResolve
-    unsigned char neg_q[3 * kCoordBytes];
-    for (npy_intp i = 0; i < n; ++i) {
-      const auto* ua = reinterpret_cast<const unsigned char*>(a);
-      const auto* ub = reinterpret_cast<const unsigned char*>(b);
-      auto* uo = reinterpret_cast<unsigned char*>(o);
-      if (op == BinOp::kSub) {
-        EcNegate(cf, ub, neg_q, 3);
-        EcAdd(cf, ua, neg_q, uo);
-      } else {
-        EcAdd(cf, ua, ub, uo);
-      }
-      a += strides[0];
-      b += strides[1];
-      o += strides[2];
-    }
+  if (d->tier == Tier::kByte) {  // num_coords == 3 guaranteed by BinResolve
+    RunBinT<ByteCoord>(ByteOps{&cf}, op == BinOp::kSub, a, b, o, n, strides);
     return 0;
   }
   for (npy_intp i = 0; i < n; ++i) {
@@ -1738,23 +1487,17 @@ int NegLoop(PyArrayMethod_Context* context, char* const* data,
   npy_intp n = dimensions[0];
   char* a = data[0];
   char* o = data[1];
-  CoordField cf = CoordField::Make(d);
-  if (cf.ok &&
-      cf.wb == 32) {  // typed-limb fast path (negate flips Y per coord)
+  const CoordField& cf = *d->native;
+  if (d->tier == Tier::kTyped256) {  // negate flips Y per coord
     if (cf.degree == 1) {
-      RunNegT<BigInt<4>>(MakeFqOps(cf), a, o, n, strides, cf.cb, d->num_coords);
+      RunNegT<BigInt<4>>(MakeFqOps(cf), a, o, n, strides, d->num_coords);
     } else {
-      RunNegT<Fp2<4>>(MakeFp2Ops(cf), a, o, n, strides, cf.cb, d->num_coords);
+      RunNegT<Fp2<4>>(MakeFp2Ops(cf), a, o, n, strides, d->num_coords);
     }
     return 0;
   }
-  if (cf.ok) {
-    for (npy_intp i = 0; i < n; ++i) {
-      EcNegate(cf, reinterpret_cast<const unsigned char*>(a),
-               reinterpret_cast<unsigned char*>(o), d->num_coords);
-      a += strides[0];
-      o += strides[1];
-    }
+  if (d->tier == Tier::kByte) {
+    RunNegT<ByteCoord>(ByteOps{&cf}, a, o, n, strides, d->num_coords);
     return 0;
   }
   for (npy_intp i = 0; i < n; ++i) {
@@ -1858,24 +1601,17 @@ int CmpLoop(PyArrayMethod_Context* context, char* const* data,
   char* a = data[0];
   char* b = data[1];
   char* o = data[2];
-  CoordField cf = CoordField::Make(d);
-  if (cf.ok && cf.wb == 32) {  // typed-limb fast path (256-bit)
+  const CoordField& cf = *d->native;
+  if (d->tier == Tier::kTyped256) {
     if (cf.degree == 1) {
-      RunCmpT<BigInt<4>>(MakeFqOps(cf), negate, a, b, o, n, strides, cf.cb);
+      RunCmpT<BigInt<4>>(MakeFqOps(cf), negate, a, b, o, n, strides);
     } else {
-      RunCmpT<Fp2<4>>(MakeFp2Ops(cf), negate, a, b, o, n, strides, cf.cb);
+      RunCmpT<Fp2<4>>(MakeFp2Ops(cf), negate, a, b, o, n, strides);
     }
     return 0;
   }
-  if (cf.ok) {  // num_coords == 3 guaranteed by CmpResolve
-    for (npy_intp i = 0; i < n; ++i) {
-      int eq = EcEqual(cf, reinterpret_cast<const unsigned char*>(a),
-                       reinterpret_cast<const unsigned char*>(b));
-      *reinterpret_cast<npy_bool*>(o) = (negate ? !eq : eq) ? 1 : 0;
-      a += strides[0];
-      b += strides[1];
-      o += strides[2];
-    }
+  if (d->tier == Tier::kByte) {  // num_coords == 3 guaranteed by CmpResolve
+    RunCmpT<ByteCoord>(ByteOps{&cf}, negate, a, b, o, n, strides);
     return 0;
   }
   for (npy_intp i = 0; i < n; ++i) {
@@ -1984,31 +1720,18 @@ int ScalarMulLoop(PyArrayMethod_Context* context, char* const* data,
   char* o = data[2];
   npy_intp s_stride = strides[scalar_first ? 0 : 1];
   npy_intp pt_stride = strides[scalar_first ? 1 : 0];
-  CoordField cf = CoordField::Make(d);
-  if (cf.ok && d->num_coords == 3 && cf.wb == 32) {  // typed-limb fast path
+  const CoordField& cf = *d->native;
+  if (d->tier == Tier::kTyped256 && d->num_coords == 3) {
     if (cf.degree == 1) {
       return RunScalarT<BigInt<4>>(MakeFqOps(cf), scalar_descr, s, pt, o, n,
-                                   s_stride, pt_stride, strides[2], cf.cb);
+                                   s_stride, pt_stride, strides[2]);
     }
     return RunScalarT<Fp2<4>>(MakeFp2Ops(cf), scalar_descr, s, pt, o, n,
-                              s_stride, pt_stride, strides[2], cf.cb);
+                              s_stride, pt_stride, strides[2]);
   }
-  if (cf.ok && d->num_coords == 3) {
-    for (npy_intp i = 0; i < n; ++i) {
-      PyObject* scalar =
-          PrimeFieldValue(reinterpret_cast<PyObject*>(scalar_descr), s);
-      if (scalar == nullptr) return -1;
-      unsigned char buf[64];
-      Py_ssize_t nbits = ScalarToBytesLE(scalar, buf, sizeof(buf));
-      Py_DECREF(scalar);
-      if (nbits < 0) return -1;
-      EcScalarMul(cf, reinterpret_cast<const unsigned char*>(pt), buf,
-                  static_cast<int>(nbits), reinterpret_cast<unsigned char*>(o));
-      s += s_stride;
-      pt += pt_stride;
-      o += strides[2];
-    }
-    return 0;
+  if (d->tier == Tier::kByte && d->num_coords == 3) {
+    return RunScalarT<ByteCoord>(ByteOps{&cf}, scalar_descr, s, pt, o, n,
+                                 s_stride, pt_stride, strides[2]);
   }
   for (npy_intp i = 0; i < n; ++i) {
     PyObject* scalar =
