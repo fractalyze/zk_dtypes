@@ -113,6 +113,15 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.modulus_bits = 255
       self.modulus = _VESTA_SF_MODULUS
       self.is_montgomery = pf_type == _vesta_sf_mont_dtype
+    elif getattr(pf_type, "modulus", None) is not None and (
+        getattr(pf_type, "degree", None) == 1
+    ):
+      # Parametric FieldDType descriptor: read the parameters it carries.
+      self.dtype = pf_type
+      self.storage_bits = pf_type.base_width_bits
+      self.modulus = pf_type.modulus
+      self.modulus_bits = self.modulus.bit_length()
+      self.is_montgomery = pf_type.is_montgomery
     else:
       raise ValueError(f"Unknown prime field type: {pf_type}")
     # Calculate the 2-adicity of `modulus - 1`, which is the number of

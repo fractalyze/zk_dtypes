@@ -1179,13 +1179,21 @@ cc_library(
         "_src/bigint_numpy.h",
         "_src/common.h",
         "_src/dtypes.cc",
+        "_src/ec_group_law.h",
+        "_src/ec_point_dtype.cc",
+        "_src/ec_point_dtype.h",
         "_src/ec_point_numpy.h",
+        "_src/field_dtype.cc",
+        "_src/field_dtype.h",
+        "_src/field_modarith.h",
         "_src/field_numpy.h",
         "_src/int_caster.cc",
         "_src/int_caster.h",
         "_src/intn_numpy.h",
+        "_src/nep42_common.h",
         "_src/numpy.cc",
         "_src/numpy.h",
+        "_src/pyfield_ops.h",
         "_src/ufuncs.h",
     ],
     deps = [
@@ -1216,6 +1224,7 @@ py_library(
         "__init__.py",
         "_ecinfo.py",
         "_efinfo.py",
+        "_field_factory.py",
         "_iinfo.py",
         "_pfinfo.py",
     ],
@@ -1307,6 +1316,18 @@ py_test(
     name = "bigintn_test",
     srcs = ["tests/bigintn_test.py"],
     main = "tests/bigintn_test.py",
+    deps = [
+        ":test_utils",
+        ":zk_dtypes_py",
+        "@pypi//absl_py",
+        "@pypi//numpy",
+    ],
+)
+
+py_test(
+    name = "prime_field_factory_test",
+    srcs = ["tests/prime_field_factory_test.py"],
+    main = "tests/prime_field_factory_test.py",
     deps = [
         ":test_utils",
         ":zk_dtypes_py",
