@@ -1224,6 +1224,7 @@ py_library(
         "__init__.py",
         "_ecinfo.py",
         "_efinfo.py",
+        "_field_factory.py",
         "_iinfo.py",
         "_pfinfo.py",
     ],
