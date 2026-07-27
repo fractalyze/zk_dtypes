@@ -1,0 +1,297 @@
+# Official releases of zk-dtypes (native wheels, built with cibuildwheel).
+#
+# Two entry points, one pipeline:
+#   * Publishing a GitHub Release (non-prerelease) — builds the tagged commit,
+#     checks the tag against the packaged version, attaches the wheels to the
+#     Release, and publishes to PyPI.
+#   * workflow_dispatch — the same pipeline aimed at TestPyPI or at nothing at
+#     all (build-only), for rehearsing a release or debugging the build.
+#
+# zk_dtypes intentionally has no dev-release.yml sibling. The org-wide campaign
+# gives most repos one, but it exists to feed the Fractalyze simple index with a
+# per-green-main prerelease wheel, and this project has no entry on that index
+# at all: consumers take it from PyPI by pinned version. A nightly channel here
+# would publish wheels nobody resolves, so the official channel is the only one
+# — and for the same reason there is no index to rebuild after a release.
+#
+# The two build jobs are not a matrix on purpose: they share no step. The Linux
+# wheels are built inside a manylinux container that has to be handed a bazel
+# toolchain (see [tool.cibuildwheel.linux] in pyproject.toml), the macOS ones
+# run natively on the runner. zk_dtypes is the only native dependency in the
+# stack that already ships macOS arm64 wheels, and the current macOS push
+# depends on that continuing — CIBW_ARCHS_MACOS below is what pins it.
+#
+# Upload uses OIDC trusted publishing, which needs a one-time registration in
+# the PyPI web UI (there is no API for it). A trusted publisher is the tuple
+# (project, owner, repo, workflow filename, environment) — the filename is part
+# of the identity, so renaming publish.yml to release.yml invalidated the old
+# registration. Until a publisher naming `release.yml` exists for project
+# `zk-dtypes` on BOTH test.pypi.org and pypi.org (environments `testpypi` and
+# `pypi` respectively), every upload here fails with 403 invalid-publisher.
+
+name: Release
+
+on:
+  # `released` rather than `published`: `published` also fires for prereleases,
+  # and a prerelease that reaches an immutable index cannot be withdrawn. The
+  # event filter is what enforces this, not a condition further down — there is
+  # no if-guard anyone can delete to let a prerelease through.
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      # `pypi` is deliberately not offered. The tag-versus-packaged-version
+      # check below can only run against a release's tag, so a dispatch reaches
+      # the upload with nothing validated — from any branch, at any version,
+      # already published or not. Since PyPI uploads are irreversible, the
+      # release event is the only route to it; a dispatch rehearses on TestPyPI
+      # or stops at the build. Retrying a failed production upload is
+      # "Re-run failed jobs" on the release-triggered run.
+      target:
+        description: "Publish target"
+        type: choice
+        options:
+          - testpypi
+          - build-only
+        default: testpypi
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+# Least privilege: most jobs only read source and pass an artifact along. The
+# jobs that need more widen it themselves (attach: contents: write, publish:
+# id-token: write for OIDC).
+permissions:
+  contents: read
+
+jobs:
+  validate-tag:
+    name: Resolve target and validate tag
+    runs-on: ubuntu-latest
+    # Exposed as job outputs, not workflow-level `env`: a downstream job's `if:`
+    # and `environment:` are evaluated before that job starts and cannot read
+    # the `env` context, so the resolved target has to travel as an output.
+    outputs:
+      target: ${{ steps.resolve.outputs.target }}
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      # Check out the tagged commit, not the branch head: a Release can be cut
+      # from an older tag long after main has moved on, and the version check
+      # below has to read that tag's files.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+          persist-credentials: false
+
+      # Pinned rather than ambient: this job decides whether an irreversible
+      # upload may proceed. The gate happens to work on today's ubuntu-latest,
+      # but a gate that depends on the runner image is a gate that can disappear
+      # under one.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Resolve target
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TARGET: ${{ inputs.target }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          # A release has exactly one destination, so there is no choice to
+          # offer; only a manual dispatch picks one.
+          if [ "$EVENT_NAME" = "release" ]; then
+            target=pypi
+          else
+            target="$INPUT_TARGET"
+          fi
+          echo "target=$target" >>"$GITHUB_OUTPUT"
+          echo "tag=$RELEASE_TAG" >>"$GITHUB_OUTPUT"
+
+      # PyPI uploads are immutable: a version published against the wrong tag
+      # can never be replaced, only yanked. So a tag that disagrees with the
+      # packaged version must stop the run before anything is built or shipped.
+      # Only meaningful for releases — a dispatch has no tag to compare.
+      - name: Check tag matches packaged version
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          tag = os.environ["RELEASE_TAG"]
+          tag_version = tag[1:] if tag.startswith("v") else tag
+
+          # One comparison, not two. pyproject.toml carries
+          # `version = { attr = "zk_dtypes.__version__" }`, so it holds no
+          # version literal of its own and derives the one below; reading it
+          # back would only compare this string to itself.
+          with open("zk_dtypes/__init__.py", encoding="utf-8") as fp:
+              match = re.search(
+                  r'^__version__\s*=\s*["\']([^"\']+)["\']', fp.read(), re.MULTILINE
+              )
+          init_version = match.group(1) if match else None
+
+          if tag_version != init_version:
+              sys.exit(
+                  "version mismatch — refusing to release:\n"
+                  f"  tag                    {tag} (-> {tag_version})\n"
+                  f"  zk_dtypes/__init__.py  {init_version}\n"
+                  "Bump __version__ to the tag, then re-cut the release."
+              )
+
+          # `types: [released]` keeps prereleases out, but that flag is a
+          # checkbox on the Release form, independent of the version string:
+          # cutting v0.1.0rc1 without ticking it fires `released` and the
+          # comparison above is satisfied. Assert the shape of the version too,
+          # so the only thing standing between an rc and immutable PyPI is not a
+          # human remembering a checkbox.
+          if not re.fullmatch(r"\d+(\.\d+)*", tag_version):
+              sys.exit(
+                  f"{tag_version} is not a final release version — refusing to "
+                  "release. Pre-release, post-release and dev versions belong "
+                  "on a prerelease (which does not fire this workflow) or on "
+                  "TestPyPI via workflow_dispatch."
+              )
+
+          print(f"tag {tag} matches packaged final version {tag_version}")
+          PY
+
+  build-linux-x86_64:
+    name: Build / Linux x86_64
+    needs: [validate-tag]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Build the tree whose version validate-tag just vouched for. Without
+          # the ref the wheel would come from the branch head, which for a
+          # release cut off an older tag is a different tree than the one
+          # checked — and the mismatch would only surface once the wheel is
+          # already on an immutable index.
+          ref: ${{ github.event.release.tag_name || github.ref }}
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v4.7.0
+        with:
+          python-version: "3.11"
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22
+        env:
+          CIBW_ARCHS_LINUX: x86_64
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-x86_64
+          path: wheelhouse/*.whl
+          retention-days: 3
+
+  build-macos-arm64:
+    name: Build / macOS arm64
+    needs: [validate-tag]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+          persist-credentials: false
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22
+        env:
+          # Pin the arm64-only release contract instead of relying on
+          # macos-latest defaulting to Apple Silicon.
+          CIBW_ARCHS_MACOS: arm64
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-arm64
+          path: wheelhouse/*.whl
+          retention-days: 3
+
+  # Attaching to the Release as well as PyPI, because a PyPI file can be yanked
+  # or deleted and then nothing ties a tag to the bytes that shipped for it —
+  # and consumers behind a proxy that cannot reach PyPI still need a download.
+  attach:
+    name: Attach wheels to the release
+    if: github.event_name == 'release'
+    needs: [validate-tag, build-linux-x86_64, build-macos-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wheels-*
+          merge-multiple: true
+
+      - name: Attach wheels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.validate-tag.outputs.tag }}
+        # --clobber so re-running the workflow on the same release replaces the
+        # assets instead of failing on the names already there. That is not in
+        # tension with the publish job refusing an existing version: a Release
+        # asset is mutable and can be corrected in place, a PyPI file never can,
+        # so re-runnability is free here and unsafe there. --repo because this
+        # job never checks out, so gh has no remote to infer from.
+        run: |
+          gh release upload "$RELEASE_TAG" dist/* \
+            --clobber --repo "$GITHUB_REPOSITORY"
+
+  publish:
+    name: Publish
+    # Ordered after `attach`, not alongside it: attaching an asset is reversible
+    # and re-runnable, a PyPI upload is neither. Running the reversible step
+    # first means a GitHub API hiccup costs a re-run, rather than leaving a
+    # version published on PyPI that no Release accounts for.
+    #
+    # `attach` is skipped on a dispatch, and a skipped `needs` entry would
+    # cascade into skipping this job, so the guard names the results it accepts
+    # instead of relying on the default.
+    needs: [validate-tag, build-linux-x86_64, build-macos-arm64, attach]
+    if: >-
+      !cancelled()
+      && needs.build-linux-x86_64.result == 'success'
+      && needs.build-macos-arm64.result == 'success'
+      && (needs.attach.result == 'success' || needs.attach.result == 'skipped')
+      && needs.validate-tag.outputs.target != 'build-only'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment: ${{ needs.validate-tag.outputs.target }}
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wheels-*
+          merge-multiple: true
+
+      # Neither step tolerates a version that is already on the index: PyPI
+      # uploads are immutable, so an existing version can never be corrected.
+      # Silently accepting it would turn a forgotten version bump into a green
+      # run that shipped nothing and left consumers on the stale wheel, so the
+      # upload is left to fail loudly instead. 0.0.11 is already on both
+      # indexes, so the next run that does not bump __version__ will hit exactly
+      # that failure — the check working, not a regression to route around.
+      - name: Publish to TestPyPI
+        if: needs.validate-tag.outputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish to PyPI
+        if: needs.validate-tag.outputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
