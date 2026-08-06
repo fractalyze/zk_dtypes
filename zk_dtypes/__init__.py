@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-__version__ = "0.0.11"
+__version__ = "0.0.13"
 __all__ = [
     "__version__",
     "binary_field",
