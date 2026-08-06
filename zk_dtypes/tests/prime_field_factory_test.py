@@ -45,10 +45,13 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
   @parameterized.parameters(*_CURATED_CASES)
   def test_curated_resolves_to_existing_type(self, modulus, storage, expected):
     # A curated prime keeps its legacy dtype so the non-parametric stack still
-    # recognizes it.
-    self.assertEqual(
-        zk_dtypes.prime_field(modulus, storage), np.dtype(expected)
-    )
+    # recognizes it. Storage-efficiency advisories are orthogonal to which
+    # dtype comes back, so they do not bear on this assertion.
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore", DeprecationWarning)
+      self.assertEqual(
+          zk_dtypes.prime_field(modulus, storage), np.dtype(expected)
+      )
 
   def test_storage_aliases_agree(self):
     self.assertEqual(
