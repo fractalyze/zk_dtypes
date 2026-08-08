@@ -40,7 +40,7 @@ limitations under the License.
 #include <vector>
 #include <cstring>
 
-#include "zk_dtypes/_src/field_modarith.h"
+#include "zk_dtypes/include/field/runtime_field.h"
 #include "zk_dtypes/_src/nep42_common.h"
 #include "zk_dtypes/_src/numpy.h"
 #include "zk_dtypes/_src/pyfield_ops.h"

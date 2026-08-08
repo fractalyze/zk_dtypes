@@ -13,17 +13,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef ZK_DTYPES__SRC_FIELD_MODARITH_H_
-#define ZK_DTYPES__SRC_FIELD_MODARITH_H_
+#ifndef ZK_DTYPES_INCLUDE_FIELD_RUNTIME_FIELD_H_
+#define ZK_DTYPES_INCLUDE_FIELD_RUNTIME_FIELD_H_
 
-// Native fixed-width modular arithmetic for the parametric numpy DTypes, with
-// the modulus supplied at runtime (the loops in field_dtype.cc / ec_point_dtype
-// .cc can't bake it at compile time). It reuses zk_dtypes' own Montgomery and
-// modular-add/sub kernels (field/mont_multiplication.h,
-// field/modular_operations .h) — the same code the legacy compile-time field
-// configs use — so a native result is byte-identical to the legacy dtype by
-// construction. The only piece not provided by those headers is n' = -p^-1 mod
-// 2^w, computed here by Newton-Hensel lifting.
+// Native fixed-width modular arithmetic with the modulus supplied at runtime,
+// for callers that cannot bake it in at compile time: the parametric numpy
+// DTypes (the loops in field_dtype.cc / ec_point_dtype.cc), and compilers
+// materializing constants for a field chosen by a user rather than curated
+// here.
+//
+// It reuses zk_dtypes' own Montgomery and modular-add/sub kernels
+// (field/mont_multiplication.h, field/modular_operations.h) — the same code the
+// compile-time field configs use — so a runtime result is byte-identical to the
+// corresponding curated type by construction, not by testing. That equivalence
+// is the point: a consumer can serve an arbitrary modulus without its curated
+// results changing. The only piece not provided by those headers is
+// n' = -p^-1 mod 2^w, computed here by Newton-Hensel lifting.
 //
 // Storage matches the legacy types: a base-field element is `width_bytes`
 // little-endian, Montgomery-encoded (c*R mod p, R = 2^(width_bytes*8)) for the
@@ -355,4 +360,4 @@ inline bool BinaryTowerMul(int level, const unsigned char* a,
 }  // namespace modarith
 }  // namespace zk_dtypes
 
-#endif  // ZK_DTYPES__SRC_FIELD_MODARITH_H_
+#endif  // ZK_DTYPES_INCLUDE_FIELD_RUNTIME_FIELD_H_

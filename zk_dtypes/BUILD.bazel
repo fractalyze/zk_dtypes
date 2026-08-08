@@ -462,6 +462,19 @@ cc_library(
     ],
 )
 
+# Deliberately free of numpy and the Python C API: the parametric DTypes are one
+# consumer, a compiler materializing field constants is another.
+cc_library(
+    name = "runtime_field",
+    hdrs = ["include/field/runtime_field.h"],
+    deps = [
+        ":big_int",
+        ":binary_field_multiplication",
+        ":modular_operations",
+        ":mont_multiplication",
+    ],
+)
+
 cc_library(
     name = "karatsuba_operation",
     hdrs = ["include/field/karatsuba_operation.h"],
@@ -1185,7 +1198,6 @@ cc_library(
         "_src/ec_point_numpy.h",
         "_src/field_dtype.cc",
         "_src/field_dtype.h",
-        "_src/field_modarith.h",
         "_src/field_numpy.h",
         "_src/int_caster.cc",
         "_src/int_caster.h",
@@ -1199,6 +1211,7 @@ cc_library(
     deps = [
         ":all_types",
         ":intn",
+        ":runtime_field",
         ":signed_big_int",
         "//third_party/py/numpy:headers",
         "@com_google_absl//absl/log",

@@ -41,7 +41,7 @@ limitations under the License.
 
 #include "zk_dtypes/_src/ec_group_law.h"
 #include "zk_dtypes/_src/field_dtype.h"
-#include "zk_dtypes/_src/field_modarith.h"
+#include "zk_dtypes/include/field/runtime_field.h"
 #include "zk_dtypes/_src/nep42_common.h"
 #include "zk_dtypes/_src/pyfield_ops.h"
 #include "zk_dtypes/_src/numpy.h"
