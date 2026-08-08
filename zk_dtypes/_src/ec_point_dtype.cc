@@ -483,7 +483,7 @@ constexpr int kCoordBytes = 64;  // max coordinate: Fp2 over 256-bit base
 
 // One coordinate field (Fq for G1, Fp2 for G2) over a Montgomery base field.
 struct CoordField {
-  modarith::PrimeField fq;
+  runtime_field::RuntimeField fq;
   int degree = 1;                   // 1 = Fq, 2 = Fp2
   int wb = 0;                       // base-field width in bytes
   int cb = 0;                       // coordinate width = degree * wb
@@ -503,7 +503,7 @@ struct CoordField {
       PyErr_Clear();
       return cf;
     }
-    cf.fq = modarith::PrimeField::Make(mod_le, cf.wb, /*is_mont=*/true);
+    cf.fq = runtime_field::RuntimeField::Make(mod_le, cf.wb, /*is_mont=*/true);
     if (!cf.fq.native) return cf;
     // The native EC temporaries are fixed kCoordBytes stack buffers (= 2*32,
     // the Fp2-over-256-bit max). degree<=2 and a native base width<=32 keep cb

@@ -27,32 +27,39 @@ limitations under the License.
 namespace zk_dtypes {
 namespace {
 
-using modarith::PrimeField;
+using runtime_field::RuntimeField;
 
 // The runtime field is only worth having if it agrees with the compile-time
 // configs bit for bit — that is what lets a consumer serve an arbitrary modulus
 // without changing any curated result. These tests compare against the curated
 // types rather than against a reimplementation of modular arithmetic.
 template <typename F>
-PrimeField RuntimeOf() {
+RuntimeField RuntimeOf() {
   const auto modulus = F::Config::kModulus;
-  unsigned char le[32] = {};
-  constexpr int kWidth = sizeof(typename F::UnderlyingType);
-  std::memcpy(le, &modulus, kWidth <= 8 ? kWidth : 8);
-  return PrimeField::Make(le, kWidth, F::Config::kUseMontgomery);
+  unsigned char le[RuntimeField::kMaxWidthBytes] = {};
+  std::memcpy(le, &modulus, sizeof(modulus));
+  return RuntimeField::Make(le, F::kByteWidth, F::Config::kUseMontgomery);
+}
+
+// A runtime field for an arbitrary 4-byte modulus — the case no curated config
+// covers, and the reason this type exists.
+RuntimeField RuntimeOfModulus(uint32_t q) {
+  unsigned char le[RuntimeField::kMaxWidthBytes] = {};
+  std::memcpy(le, &q, sizeof(q));
+  return RuntimeField::Make(le, sizeof(q), /*is_mont=*/true);
 }
 
 // Stored bytes of a curated element, which is what the runtime path produces.
 template <typename F>
 std::vector<unsigned char> StoredBytes(const F& v) {
-  std::vector<unsigned char> out(sizeof(typename F::UnderlyingType));
+  std::vector<unsigned char> out(F::kByteWidth);
   const auto raw = v.value();
   std::memcpy(out.data(), &raw, out.size());
   return out;
 }
 
 TEST(RuntimeFieldTest, MulMatchesTheCuratedConfig) {
-  const PrimeField rt = RuntimeOf<BabybearMont>();
+  const RuntimeField rt = RuntimeOf<BabybearMont>();
   ASSERT_TRUE(rt.native);
   for (uint64_t a = 1; a < 40; ++a) {
     for (uint64_t b = 1; b < 40; ++b) {
@@ -70,7 +77,7 @@ TEST(RuntimeFieldTest, MulMatchesTheCuratedConfig) {
 }
 
 TEST(RuntimeFieldTest, EncodeDecodeRoundTripsThroughTheStorageForm) {
-  for (const PrimeField rt :
+  for (const RuntimeField rt :
        {RuntimeOf<BabybearMont>(), RuntimeOf<KoalabearMont>()}) {
     ASSERT_TRUE(rt.native);
     for (uint64_t v = 0; v < 64; ++v) {
@@ -86,7 +93,7 @@ TEST(RuntimeFieldTest, EncodeDecodeRoundTripsThroughTheStorageForm) {
 // Encode has to agree with what the curated type stores, or a constant built
 // this way would be a different element than the same constant built there.
 TEST(RuntimeFieldTest, EncodeMatchesTheCuratedStorage) {
-  const PrimeField rt = RuntimeOf<BabybearMont>();
+  const RuntimeField rt = RuntimeOf<BabybearMont>();
   for (uint64_t v = 0; v < 64; ++v) {
     unsigned char canon[4] = {}, stored[4];
     std::memcpy(canon, &v, 4);
@@ -97,7 +104,7 @@ TEST(RuntimeFieldTest, EncodeMatchesTheCuratedStorage) {
 }
 
 TEST(RuntimeFieldTest, OneIsTheMultiplicativeIdentity) {
-  for (const PrimeField rt :
+  for (const RuntimeField rt :
        {RuntimeOf<BabybearMont>(), RuntimeOf<KoalabearMont>()}) {
     unsigned char one[4], x[4], got[4];
     rt.One(one);
@@ -112,7 +119,7 @@ TEST(RuntimeFieldTest, OneIsTheMultiplicativeIdentity) {
 }
 
 TEST(RuntimeFieldTest, PowMatchesTheCuratedConfig) {
-  const PrimeField rt = RuntimeOf<BabybearMont>();
+  const RuntimeField rt = RuntimeOf<BabybearMont>();
   for (uint64_t base = 2; base < 12; ++base) {
     for (uint64_t e = 0; e < 20; ++e) {
       unsigned char b[4], got[4];
@@ -132,15 +139,11 @@ TEST(RuntimeFieldTest, TwoAdicityMatchesTheCuratedConfig) {
             static_cast<int>(KoalabearMont::Config::kTwoAdicity));
 }
 
-// ML-KEM's 3329 is the reason a runtime field is needed at all: 2-adicity 8
-// means it has no 512th root of unity, so a length-256 negacyclic transform is
-// arithmetically impossible over it while a length-128 one is fine. No curated
-// config covers this modulus.
+// 3329 has 2-adicity 8, so it has no 512th root of unity and a length-256
+// negacyclic transform is arithmetically impossible over it while a length-128
+// one is fine. That bound is why ML-KEM's transform is two length-128 NTTs.
 TEST(RuntimeFieldTest, MlKemTwoAdicityBoundsTheTransformLength) {
-  unsigned char le[32] = {};
-  const uint32_t q = 3329;
-  std::memcpy(le, &q, 4);
-  const PrimeField rt = PrimeField::Make(le, 4, /*is_mont=*/true);
+  const RuntimeField rt = RuntimeOfModulus(3329);
   ASSERT_TRUE(rt.native);
   EXPECT_EQ(rt.TwoAdicity(), 8);
 
@@ -149,15 +152,11 @@ TEST(RuntimeFieldTest, MlKemTwoAdicityBoundsTheTransformLength) {
   EXPECT_FALSE(rt.RootOfUnity(512, /*generator=*/0, root));  // length-256 nega
 }
 
-// ML-DSA's 8380417 is the other modulus driving this work, and unlike ML-KEM's
-// it has room to spare: 2-adicity 13 covers a length-256 negacyclic transform
-// (which needs a 512th root) with seven layers left over. No curated config
-// covers it either.
+// 8380417 has 2-adicity 13, which covers a length-256 negacyclic transform
+// (needing a 512th root) with seven layers to spare — the opposite end of the
+// range from 3329, and the reason ML-DSA transforms in one pass.
 TEST(RuntimeFieldTest, MlDsaSupportsTheFullTransformLength) {
-  unsigned char le[32] = {};
-  const uint32_t q = 8380417;
-  std::memcpy(le, &q, 4);
-  const PrimeField rt = PrimeField::Make(le, 4, /*is_mont=*/true);
+  const RuntimeField rt = RuntimeOfModulus(8380417);
   ASSERT_TRUE(rt.native);
   EXPECT_EQ(rt.TwoAdicity(), 13);
 
@@ -166,8 +165,11 @@ TEST(RuntimeFieldTest, MlDsaSupportsTheFullTransformLength) {
   EXPECT_TRUE(rt.RootOfUnity(8192, /*generator=*/0, root));
   EXPECT_FALSE(rt.RootOfUnity(16384, /*generator=*/0, root));
 
-  // The round trip the two motivating moduli have to survive.
-  for (uint64_t v : {1, 2, 1234, 8380416}) {
+  // encode -> mul -> decode against exact integer arithmetic, which is the
+  // round trip an uncurated modulus has to survive for a constant built through
+  // this path to mean anything.
+  constexpr uint64_t kQ = 8380417;
+  for (uint64_t v : {uint64_t{1}, uint64_t{2}, uint64_t{1234}, kQ - 1}) {
     unsigned char canon[4] = {}, stored[4], back[4], sq[4];
     const uint32_t v32 = static_cast<uint32_t>(v);
     std::memcpy(canon, &v32, 4);
@@ -176,7 +178,7 @@ TEST(RuntimeFieldTest, MlDsaSupportsTheFullTransformLength) {
     rt.Decode(sq, back);
     uint32_t got = 0;
     std::memcpy(&got, back, 4);
-    EXPECT_EQ(got, static_cast<uint32_t>((v * v) % q)) << "v=" << v;
+    EXPECT_EQ(got, static_cast<uint32_t>((v * v) % kQ)) << "v=" << v;
   }
 }
 
@@ -184,7 +186,7 @@ TEST(RuntimeFieldTest, MlDsaSupportsTheFullTransformLength) {
 // has to reject the ones that produce a plausible but non-primitive value —
 // they would silently corrupt every butterfly built on the result.
 TEST(RuntimeFieldTest, PinnedGeneratorThatIsNotPrimitiveIsRejected) {
-  const PrimeField rt = RuntimeOf<BabybearMont>();
+  const RuntimeField rt = RuntimeOf<BabybearMont>();
   unsigned char root[4];
   // 1^k == 1 for every k, so it "succeeds" at producing a value of order 1.
   EXPECT_FALSE(rt.RootOfUnity(1024, /*generator=*/1, root));
@@ -201,7 +203,7 @@ TEST(RuntimeFieldTest, PinnedGeneratorThatIsNotPrimitiveIsRejected) {
 // a curated config stores — any of the phi(n) primitive roots is as correct.
 // What must hold is the defining property.
 TEST(RuntimeFieldTest, SearchedRootHasExactlyOrderN) {
-  for (const PrimeField rt :
+  for (const RuntimeField rt :
        {RuntimeOf<BabybearMont>(), RuntimeOf<KoalabearMont>()}) {
     for (uint64_t n : {2, 4, 8, 256, 1024}) {
       unsigned char root[4], acc[4], one[4];
@@ -222,7 +224,7 @@ TEST(RuntimeFieldTest, SearchedRootHasExactlyOrderN) {
 // the same root every time, which is what a caller needing a *particular* root
 // uses instead of the search.
 TEST(RuntimeFieldTest, PinnedGeneratorIsDeterministic) {
-  const PrimeField rt = RuntimeOf<BabybearMont>();
+  const RuntimeField rt = RuntimeOf<BabybearMont>();
   unsigned char a[4], b[4];
   ASSERT_TRUE(rt.RootOfUnity(1024, /*generator=*/31, a));
   ASSERT_TRUE(rt.RootOfUnity(1024, /*generator=*/31, b));
@@ -236,6 +238,19 @@ TEST(RuntimeFieldTest, PinnedGeneratorIsDeterministic) {
   // pinned from below as well.
   rt.Pow(a, uint64_t{512}, acc);
   EXPECT_NE(0, std::memcmp(acc, one, 4));
+}
+
+// A width with no kernel has to be refused at construction rather than
+// half-initialized: Make copies the modulus into a fixed buffer, and a caller
+// serving a user-chosen field can pass any width at all.
+TEST(RuntimeFieldTest, UnsupportedWidthYieldsAnUnusableField) {
+  unsigned char le[RuntimeField::kMaxWidthBytes] = {};
+  le[0] = 7;
+  for (int width : {0, 1, 3, 12, 64, 1024}) {
+    const RuntimeField rt = RuntimeField::Make(le, width, /*is_mont=*/true);
+    EXPECT_FALSE(rt.native) << "width=" << width;
+    EXPECT_EQ(rt.width_bytes, 0) << "width=" << width;
+  }
 }
 
 }  // namespace

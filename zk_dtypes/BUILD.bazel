@@ -470,6 +470,7 @@ cc_library(
     deps = [
         ":big_int",
         ":binary_field_multiplication",
+        ":bits",
         ":modular_operations",
         ":mont_multiplication",
     ],
