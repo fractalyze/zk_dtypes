@@ -593,6 +593,7 @@ cc_test(
         "tests/field/goldilocksx3_unittest.cc",
         "tests/field/prime_field_unittest.cc",
         "tests/field/root_of_unity_unittest.cc",
+        "tests/field/runtime_field_unittest.cc",
         "tests/field/square_root_algorithms_unittest.cc",
     ],
     deps = [
@@ -601,6 +602,7 @@ cc_test(
         ":mersenne31x2x2",
         ":random",
         ":root_of_unity",
+        ":runtime_field",
         ":sw_test_curve_config",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",

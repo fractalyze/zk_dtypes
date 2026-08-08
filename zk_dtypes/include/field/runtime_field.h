@@ -81,6 +81,7 @@ struct PrimeField {
     PrimeField f;
     f.width_bytes = width_bytes;
     f.is_mont = is_mont;
+    std::memcpy(f.p_le, mod_le, width_bytes);
     uint64_t low = 0;
     std::memcpy(&low, mod_le, width_bytes < 8 ? width_bytes : 8);
     f.inv = ComputeInverse(low);
@@ -277,6 +278,223 @@ struct PrimeField {
       CanonMulBytes(a, b, o);
     }
   }
+
+  // --- values a caller needs to compute with, not just combine -------------
+  //
+  // The four above take stored representatives and hand back stored
+  // representatives, which is all a numpy ufunc loop needs. Materializing a
+  // constant needs more: an identity to start from, a way in and out of the
+  // storage encoding, and exponentiation.
+
+  // Multiplicative identity in storage form: canonical 1, or R mod p when
+  // Montgomery-encoded.
+  void One(unsigned char* o) const {
+    std::memset(o, 0, width_bytes);
+    o[0] = 1;
+    if (!is_mont) return;
+    // R mod p = 2^(8*width_bytes) mod p, by that many modular doublings of 1.
+    // ModAdd is the same kernel the stored values use, so no separate reduction
+    // path can disagree with it.
+    for (int i = 0; i < width_bytes * 8; ++i) Add(o, o, o);
+  }
+
+  // Canonical residue -> stored. Identity for canonical storage; c*R mod p for
+  // Montgomery, via MontMul(c, R^2) = c*R^2*R^-1.
+  void Encode(const unsigned char* c, unsigned char* o) const {
+    if (!is_mont) {
+      std::memcpy(o, c, width_bytes);
+      return;
+    }
+    unsigned char r2[kMaxWidthBytes];
+    std::memset(r2, 0, width_bytes);
+    r2[0] = 1;
+    for (int i = 0; i < width_bytes * 16; ++i) Add(r2, r2, r2);  // 2^(2w) mod p
+    MontMulBytes(c, r2, o);
+  }
+
+  // Stored -> canonical residue. MontMul(x, 1) = x*1*R^-1 undoes the encoding
+  // without needing R^-1 as a separate value.
+  void Decode(const unsigned char* x, unsigned char* o) const {
+    if (!is_mont) {
+      std::memcpy(o, x, width_bytes);
+      return;
+    }
+    unsigned char one_le[kMaxWidthBytes];
+    std::memset(one_le, 0, width_bytes);
+    one_le[0] = 1;
+    MontMulBytes(x, one_le, o);
+  }
+
+  // o = base^exp on stored representatives, exp little-endian. Square and
+  // multiply, most-significant bit first.
+  void Pow(const unsigned char* base, const unsigned char* exp_le,
+           int exp_bytes, unsigned char* o) const {
+    unsigned char acc[kMaxWidthBytes];
+    unsigned char b[kMaxWidthBytes];
+    One(acc);
+    std::memcpy(b, base, width_bytes);
+    int top = exp_bytes - 1;
+    while (top >= 0 && exp_le[top] == 0) --top;
+    if (top < 0) {  // exp == 0
+      std::memcpy(o, acc, width_bytes);
+      return;
+    }
+    bool started = false;
+    for (int byte = top; byte >= 0; --byte) {
+      for (int bit = 7; bit >= 0; --bit) {
+        if (started) Mul(acc, acc, acc);
+        if ((exp_le[byte] >> bit) & 1) {
+          if (started) {
+            Mul(acc, b, acc);
+          } else {
+            std::memcpy(acc, b, width_bytes);
+            started = true;
+          }
+        }
+      }
+    }
+    std::memcpy(o, acc, width_bytes);
+  }
+
+  void Pow(const unsigned char* base, uint64_t exp, unsigned char* o) const {
+    unsigned char e[8];
+    for (int i = 0; i < 8; ++i)
+      e[i] = static_cast<unsigned char>(exp >> (8 * i));
+    Pow(base, e, 8, o);
+  }
+
+  // Number of factors of two in p-1, i.e. the largest k with a 2^k-th root of
+  // unity. p is odd, so p-1 only clears the low bit of the low limb.
+  int TwoAdicity() const {
+    int adicity = 0;
+    for (int byte = 0; byte < width_bytes; ++byte) {
+      unsigned char v = p_le[byte];
+      if (byte == 0) v = static_cast<unsigned char>(v - 1);  // p odd
+      if (v != 0) {
+        while ((v & 1) == 0) {
+          ++adicity;
+          v = static_cast<unsigned char>(v >> 1);
+        }
+        return adicity;
+      }
+      adicity += 8;
+    }
+    return adicity;
+  }
+
+  // A primitive n-th root of unity for n a power of two dividing
+  // 2^TwoAdicity(), written to `o` in storage form. False when no such root
+  // exists.
+  //
+  // `generator` pins the subgroup generator g and yields g^((p-1)/n) — the form
+  // a caller uses to reproduce a specific root. 0 selects the smallest
+  // quadratic non-residue instead, which is deterministic but is NOT in general
+  // the root a curated config stores: those hold a chosen constant, and any of
+  // the φ(n) primitive n-th roots is as valid. A caller that needs a particular
+  // one must pin the generator.
+  bool RootOfUnity(uint64_t n, uint64_t generator, unsigned char* o) const {
+    if (n == 0 || (n & (n - 1)) != 0) return false;  // not a power of two
+    int log_n = 0;
+    while ((uint64_t{1} << log_n) < n) ++log_n;
+    if (log_n > TwoAdicity()) return false;
+
+    unsigned char exp[kMaxWidthBytes];  // (p-1) >> log_n
+    std::memcpy(exp, p_le, width_bytes);
+    exp[0] = static_cast<unsigned char>(exp[0] - 1);  // p odd
+    ShiftRight(exp, log_n);
+
+    unsigned char g[kMaxWidthBytes];
+    if (generator != 0) {
+      SetSmall(g, generator);
+      Pow(g, exp, width_bytes, o);
+      // A pinned generator is the caller's assertion, not a fact: g = 1 raises
+      // to 1 for every n, and any g that is a square gives a root of smaller
+      // order. Both would return a plausible value that silently corrupts every
+      // butterfly downstream, so the order is checked rather than assumed.
+      return HasOrder(o, n);
+    }
+    // g is a quadratic non-residue iff g^((p-1)/2) == -1; that makes
+    // g^((p-1)/2^k) have order exactly 2^k. Small candidates suffice — the
+    // non-residues have density 1/2.
+    unsigned char half[kMaxWidthBytes];
+    std::memcpy(half, p_le, width_bytes);
+    half[0] = static_cast<unsigned char>(half[0] - 1);
+    ShiftRight(half, 1);
+    unsigned char minus_one[kMaxWidthBytes];
+    unsigned char one_s[kMaxWidthBytes];
+    One(one_s);
+    std::memset(minus_one, 0, width_bytes);
+    Sub(minus_one, one_s, minus_one);  // 0 - 1 = p-1 in storage form
+    unsigned char probe[kMaxWidthBytes];
+    for (uint64_t cand = 2; cand < 4096; ++cand) {
+      SetSmall(g, cand);
+      Pow(g, half, width_bytes, probe);
+      if (std::memcmp(probe, minus_one, width_bytes) != 0) continue;
+      Pow(g, exp, width_bytes, o);
+      // Implied by the non-residue property; kept so both paths leave through
+      // the same guarantee rather than one of them by argument.
+      if (HasOrder(o, n)) return true;
+    }
+    return false;
+  }
+
+  // True when x has order exactly n: x^n == 1 and, for n > 1, x^(n/2) != 1.
+  // For n a power of two those two together are the whole condition, since any
+  // proper divisor of n divides n/2.
+  bool HasOrder(const unsigned char* x, uint64_t n) const {
+    unsigned char one_s[kMaxWidthBytes], acc[kMaxWidthBytes];
+    One(one_s);
+    Pow(x, n, acc);
+    if (std::memcmp(acc, one_s, width_bytes) != 0) return false;
+    if (n == 1) return true;
+    Pow(x, n / 2, acc);
+    return std::memcmp(acc, one_s, width_bytes) != 0;
+  }
+
+ private:
+  // Widest storage Make() accepts; sizes the scratch the helpers above use.
+  static constexpr int kMaxWidthBytes = 32;
+
+  // o = the storage-form element for the small canonical value v.
+  void SetSmall(unsigned char* o, uint64_t v) const {
+    // Reduced first: the kernels require inputs below the modulus, and a caller
+    // is free to hand over a generator that is not (p itself, say). Above 8
+    // bytes the modulus exceeds every uint64, so v is already reduced.
+    if (width_bytes == 4) {
+      v %= p32;
+    } else if (width_bytes == 8) {
+      v %= p64;
+    }
+    unsigned char c[kMaxWidthBytes];
+    std::memset(c, 0, width_bytes);
+    for (int i = 0; i < 8 && i < width_bytes; ++i) {
+      c[i] = static_cast<unsigned char>(v >> (8 * i));
+    }
+    Encode(c, o);
+  }
+
+  // In-place logical right shift of a little-endian buffer.
+  void ShiftRight(unsigned char* v, int bits) const {
+    while (bits >= 8) {
+      std::memmove(v, v + 1, width_bytes - 1);
+      v[width_bytes - 1] = 0;
+      bits -= 8;
+    }
+    if (bits == 0) return;
+    for (int i = 0; i < width_bytes; ++i) {
+      unsigned char hi =
+          (i + 1 < width_bytes)
+              ? static_cast<unsigned char>(v[i + 1] << (8 - bits))
+              : 0;
+      v[i] = static_cast<unsigned char>((v[i] >> bits) | hi);
+    }
+  }
+
+ public:
+  // Modulus, little-endian, exactly width_bytes. Kept so the exponent
+  // (p-1)/2^k and the adicity can be computed without the caller re-supplying
+  // it.
+  unsigned char p_le[kMaxWidthBytes] = {};
 };
 
 // Binary tower GF(2^(2^level)) multiply, levels 0..7 (1..128 bits). Returns
