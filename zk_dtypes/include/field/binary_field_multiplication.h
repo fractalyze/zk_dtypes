@@ -20,6 +20,12 @@ limitations under the License.
 #include <cstdint>
 #include <type_traits>
 
+#if defined(__aarch64__) && defined(__ARM_FEATURE_AES) && \
+    !defined(ZK_DTYPES_PORTABLE_ONLY)
+#define ZK_DTYPES_GHASH_PMULL 1
+#include <arm_neon.h>
+#endif
+
 #include "zk_dtypes/include/big_int.h"
 
 namespace zk_dtypes {
@@ -329,14 +335,37 @@ constexpr T BinaryInverse(T a) {
 // constant 0x87), natural (non-bit-reflected) bit order. An element is a
 // BigInt<2> whose limb 0 holds x⁰..x⁶³ and limb 1 holds x⁶⁴..x¹²⁷. This is
 // isomorphic to the tower GF(2¹²⁸) but a DIFFERENT, bit-incompatible basis: it
-// matches the GHASH/POLYVAL representation byte-for-byte. These are the
-// reference (portable, constexpr) semantics; a hardware carryless-multiply
-// lowering (PCLMULQDQ) lives downstream in the compiler.
+// matches the GHASH/POLYVAL representation byte-for-byte.
+//
+// Layering: the portable constexpr loop below is the reference semantics and
+// the sole constant-evaluation path. For consumers that have a compiler
+// underneath them (XLA / prime-ir), the hardware carryless-multiply lowering
+// belongs downstream (PCLMULQDQ today; aarch64 PMULL emission is tracked in
+// prime-ir — see fractalyze/prime-ir emitClmul64). The runtime PMULL branch
+// below serves the consumers that DON'T — the NumPy ufunc path and host
+// fallbacks compile this header directly, so an intrinsic here is their only
+// possible fast path. It is the same operation, not an alternative algorithm.
+// Define ZK_DTYPES_PORTABLE_ONLY to force the portable loop at runtime (for
+// differential tests of the two branches, or as a downstream off-switch).
 
-// Carryless (GF(2)[x]) 64×64 → 128 product, portable bit-serial. Writes the low
-// and high 64 bits of the product to `lo`/`hi`.
+// Carryless (GF(2)[x]) 64×64 → 128 product. Writes the low and high 64 bits
+// of the product to `lo`/`hi`. Constant evaluation (and targets without a
+// carryless-multiply unit) take the portable bit-serial loop; at runtime on
+// aarch64 with the crypto extension (every Apple Silicon and server Arm core
+// this library targets) a single PMULL issues instead — the loop is ~64
+// dependent iterations, so this is the difference between the host ghash
+// multiply being ~ns and ~µs scale.
 constexpr void GhashClmul64(uint64_t a, uint64_t b, uint64_t& lo,
                             uint64_t& hi) {
+#ifdef ZK_DTYPES_GHASH_PMULL
+  if (!__builtin_is_constant_evaluated()) {
+    const poly128_t p =
+        vmull_p64(static_cast<poly64_t>(a), static_cast<poly64_t>(b));
+    lo = static_cast<uint64_t>(p);
+    hi = static_cast<uint64_t>(p >> 64);
+    return;
+  }
+#endif
   lo = 0;
   hi = 0;
   for (size_t i = 0; i < 64; ++i) {
