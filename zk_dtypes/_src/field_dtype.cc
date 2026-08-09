@@ -40,7 +40,7 @@ limitations under the License.
 #include <vector>
 #include <cstring>
 
-#include "zk_dtypes/_src/field_modarith.h"
+#include "zk_dtypes/include/field/runtime_field.h"
 #include "zk_dtypes/_src/nep42_common.h"
 #include "zk_dtypes/_src/numpy.h"
 #include "zk_dtypes/_src/pyfield_ops.h"
@@ -1364,10 +1364,10 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
     }
     if (d->tower_level <= 7) {  // native recursive Karatsuba tower multiply
       for (npy_intp i = 0; i < n; ++i) {
-        modarith::BinaryTowerMul(d->tower_level,
-                                 reinterpret_cast<const unsigned char*>(a),
-                                 reinterpret_cast<const unsigned char*>(b),
-                                 reinterpret_cast<unsigned char*>(o));
+        runtime_field::BinaryTowerMul(d->tower_level,
+                                      reinterpret_cast<const unsigned char*>(a),
+                                      reinterpret_cast<const unsigned char*>(b),
+                                      reinterpret_cast<unsigned char*>(o));
         Advance(a, b, o, strides);
       }
       return 0;
@@ -1398,8 +1398,8 @@ int ArithLoop(PyArrayMethod_Context* context, char* const* data,
   // Odd field: native fixed-width path where supported, Python-int otherwise.
   unsigned char mod_le[32];
   if (pyfield::LongAsBytesLE(d->modulus, mod_le, wb) >= 0) {
-    modarith::PrimeField pf =
-        modarith::PrimeField::Make(mod_le, wb, d->is_montgomery);
+    runtime_field::RuntimeField pf =
+        runtime_field::RuntimeField::Make(mod_le, wb, d->is_montgomery);
     const int k = d->degree;
     // Add/sub: a monomorphic typed loop at single-word widths
     // (auto-vectorizes), BigInt per-element at 128/256-bit. Prime (k == 1) and
