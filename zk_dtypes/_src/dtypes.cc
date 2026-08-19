@@ -259,6 +259,98 @@ struct TypeDescriptorBase<vesta::FrMont> : FieldTypeDescriptor<vesta::FrMont> {
   static constexpr char kNpyDescrType = 'y';
 };
 
+template <>
+struct TypeDescriptorBase<curve25519::Fq>
+    : FieldTypeDescriptor<curve25519::Fq> {
+  static constexpr const char* kTpDoc =
+      "curve25519 base field values on standard domain";
+  static constexpr char kNpyDescrType = 'C';
+};
+
+template <>
+struct TypeDescriptorBase<curve25519::FqMont>
+    : FieldTypeDescriptor<curve25519::FqMont> {
+  static constexpr const char* kTpDoc =
+      "curve25519 base field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'c';
+};
+
+template <>
+struct TypeDescriptorBase<curve25519::Fr>
+    : FieldTypeDescriptor<curve25519::Fr> {
+  static constexpr const char* kTpDoc =
+      "curve25519 scalar field values on standard domain";
+  static constexpr char kNpyDescrType = 'E';
+};
+
+template <>
+struct TypeDescriptorBase<curve25519::FrMont>
+    : FieldTypeDescriptor<curve25519::FrMont> {
+  static constexpr const char* kTpDoc =
+      "curve25519 scalar field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'o';
+};
+
+template <>
+struct TypeDescriptorBase<secp256k1::Fq> : FieldTypeDescriptor<secp256k1::Fq> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 base field values on standard domain";
+  static constexpr char kNpyDescrType = 'K';
+};
+
+template <>
+struct TypeDescriptorBase<secp256k1::FqMont>
+    : FieldTypeDescriptor<secp256k1::FqMont> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 base field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'k';
+};
+
+template <>
+struct TypeDescriptorBase<secp256k1::Fr> : FieldTypeDescriptor<secp256k1::Fr> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 scalar field values on standard domain";
+  static constexpr char kNpyDescrType = 'T';
+};
+
+template <>
+struct TypeDescriptorBase<secp256k1::FrMont>
+    : FieldTypeDescriptor<secp256k1::FrMont> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 scalar field values on montgomery domain";
+  static constexpr char kNpyDescrType = 't';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::Fq> : FieldTypeDescriptor<secp256r1::Fq> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 base field values on standard domain";
+  static constexpr char kNpyDescrType = 'R';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::FqMont>
+    : FieldTypeDescriptor<secp256r1::FqMont> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 base field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'r';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::Fr> : FieldTypeDescriptor<secp256r1::Fr> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 scalar field values on standard domain";
+  static constexpr char kNpyDescrType = 'W';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::FrMont>
+    : FieldTypeDescriptor<secp256r1::FrMont> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 scalar field values on montgomery domain";
+  static constexpr char kNpyDescrType = 'w';
+};
+
 //===----------------------------------------------------------------------===//
 // ExtendedField TypeDescriptorBase
 //===----------------------------------------------------------------------===//

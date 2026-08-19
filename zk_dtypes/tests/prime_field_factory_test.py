@@ -845,16 +845,69 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
     self.assertEqual(int(b[0]), 0x12345)
 
   @parameterized.parameters(
-      "pallas_sf", "pallas_sf_mont", "vesta_sf", "vesta_sf_mont"
+      "pallas_sf",
+      "pallas_sf_mont",
+      "vesta_sf",
+      "vesta_sf_mont",
+      "curve25519_bf",
+      "curve25519_bf_mont",
+      "curve25519_sf",
+      "curve25519_sf_mont",
+      "secp256k1_bf",
+      "secp256k1_bf_mont",
+      "secp256k1_sf",
+      "secp256k1_sf_mont",
+      "secp256r1_bf",
+      "secp256r1_bf_mont",
+      "secp256r1_sf",
+      "secp256r1_sf_mont",
   )
   def test_curated_family_added_after_factory_resolves_to_legacy(self, name):
     # The curated maps are built by probing every registered dtype, so a family
-    # added to the legacy stack after this factory (pallas/vesta) resolves to
-    # its legacy dtype instead of minting a duplicate parametric one.
+    # added to the legacy stack after this factory (pallas/vesta, the classical
+    # signature curves) resolves to its legacy dtype instead of minting a
+    # duplicate parametric one.
     legacy = np.dtype(getattr(zk_dtypes, name))
     info = pfinfo(legacy)
     storage = "mont" if info.is_montgomery else "canonical"
     self.assertEqual(zk_dtypes.prime_field(info.modulus, storage), legacy)
+
+  @parameterized.parameters(
+      # (dtype name, the modulus its standard states)
+      ("curve25519_bf", 2**255 - 19),  # RFC 7748
+      (
+          "curve25519_sf",  # ed25519 subgroup order L, RFC 8032 §5.1
+          2**252 + 27742317777372353535851937790883648493,
+      ),
+      (
+          "secp256k1_bf",  # SEC 2 §2.4.1
+          0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F,
+      ),
+      (
+          "secp256k1_sf",
+          0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141,
+      ),
+      (
+          "secp256r1_bf",  # SEC 2 §2.4.2 (NIST P-256)
+          0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF,
+      ),
+      (
+          "secp256r1_sf",
+          0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551,
+      ),
+  )
+  def test_classical_curve_fields_carry_their_standards_moduli(
+      self, name, modulus
+  ):
+    # Both storage forms report the standard's modulus, and the arithmetic
+    # actually reduces by it: (modulus - 1)² ≡ 1.
+    for suffix in ("", "_mont"):
+      dt = np.dtype(getattr(zk_dtypes, name + suffix))
+      self.assertEqual(pfinfo(dt).modulus, modulus, name + suffix)
+      top = np.array([modulus - 1], dtype=dt)
+      self.assertTrue(
+          (top * top == np.array([1], dtype=dt)).all(), name + suffix
+      )
 
   def test_goldilocks_montgomery_deprecation_warning(self):
     # Montgomery goldilocks is inefficient (Solinas reduction); the factory

@@ -24,8 +24,20 @@ from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
 from zk_dtypes._zk_dtypes_ext import bn254_sf
 from zk_dtypes._zk_dtypes_ext import bn254_sf_mont
+from zk_dtypes._zk_dtypes_ext import curve25519_bf
+from zk_dtypes._zk_dtypes_ext import curve25519_bf_mont
+from zk_dtypes._zk_dtypes_ext import curve25519_sf
+from zk_dtypes._zk_dtypes_ext import curve25519_sf_mont
 from zk_dtypes._zk_dtypes_ext import pallas_sf
 from zk_dtypes._zk_dtypes_ext import pallas_sf_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_bf
+from zk_dtypes._zk_dtypes_ext import secp256k1_bf_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_sf
+from zk_dtypes._zk_dtypes_ext import secp256k1_sf_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_bf
+from zk_dtypes._zk_dtypes_ext import secp256r1_bf_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_sf
+from zk_dtypes._zk_dtypes_ext import secp256r1_sf_mont
 from zk_dtypes._zk_dtypes_ext import vesta_sf
 from zk_dtypes._zk_dtypes_ext import vesta_sf_mont
 
@@ -40,8 +52,20 @@ _koalabear_mont_dtype = np.dtype(koalabear_mont)
 _mersenne31_dtype = np.dtype(mersenne31)
 _bn254_sf_dtype = np.dtype(bn254_sf)
 _bn254_sf_mont_dtype = np.dtype(bn254_sf_mont)
+_curve25519_bf_dtype = np.dtype(curve25519_bf)
+_curve25519_bf_mont_dtype = np.dtype(curve25519_bf_mont)
+_curve25519_sf_dtype = np.dtype(curve25519_sf)
+_curve25519_sf_mont_dtype = np.dtype(curve25519_sf_mont)
 _pallas_sf_dtype = np.dtype(pallas_sf)
 _pallas_sf_mont_dtype = np.dtype(pallas_sf_mont)
+_secp256k1_bf_dtype = np.dtype(secp256k1_bf)
+_secp256k1_bf_mont_dtype = np.dtype(secp256k1_bf_mont)
+_secp256k1_sf_dtype = np.dtype(secp256k1_sf)
+_secp256k1_sf_mont_dtype = np.dtype(secp256k1_sf_mont)
+_secp256r1_bf_dtype = np.dtype(secp256r1_bf)
+_secp256r1_bf_mont_dtype = np.dtype(secp256r1_bf_mont)
+_secp256r1_sf_dtype = np.dtype(secp256r1_sf)
+_secp256r1_sf_mont_dtype = np.dtype(secp256r1_sf_mont)
 _vesta_sf_dtype = np.dtype(vesta_sf)
 _vesta_sf_mont_dtype = np.dtype(vesta_sf_mont)
 
@@ -55,6 +79,27 @@ _PALLAS_SF_MODULUS = (
 )
 _VESTA_SF_MODULUS = (
     0x40000000000000000000000000000000224698FC094CF91B992D30ED00000001
+)
+
+# curve25519 (RFC 7748): base field 2²⁵⁵ - 19; scalar field is the ed25519
+# prime-order subgroup size L (RFC 8032 §5.1).
+_CURVE25519_BF_MODULUS = 2**255 - 19
+_CURVE25519_SF_MODULUS = 2**252 + 27742317777372353535851937790883648493
+
+# secp256k1 (SEC 2 §2.4.1): base field p and group order n.
+_SECP256K1_BF_MODULUS = (
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+)
+_SECP256K1_SF_MODULUS = (
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+)
+
+# secp256r1, NIST P-256 (SEC 2 §2.4.2): base field p and group order n.
+_SECP256R1_BF_MODULUS = (
+    0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
+)
+_SECP256R1_SF_MODULUS = (
+    0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
 )
 
 
@@ -113,6 +158,46 @@ class pfinfo:  # pylint: disable=invalid-name,missing-class-docstring
       self.modulus_bits = 255
       self.modulus = _VESTA_SF_MODULUS
       self.is_montgomery = pf_type == _vesta_sf_mont_dtype
+    elif (
+        pf_type == _curve25519_bf_dtype or pf_type == _curve25519_bf_mont_dtype
+    ):
+      self.dtype = pf_type
+      self.storage_bits = 256
+      self.modulus_bits = 255
+      self.modulus = _CURVE25519_BF_MODULUS
+      self.is_montgomery = pf_type == _curve25519_bf_mont_dtype
+    elif (
+        pf_type == _curve25519_sf_dtype or pf_type == _curve25519_sf_mont_dtype
+    ):
+      self.dtype = pf_type
+      self.storage_bits = 256
+      self.modulus_bits = 253
+      self.modulus = _CURVE25519_SF_MODULUS
+      self.is_montgomery = pf_type == _curve25519_sf_mont_dtype
+    elif pf_type == _secp256k1_bf_dtype or pf_type == _secp256k1_bf_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 256
+      self.modulus_bits = 256
+      self.modulus = _SECP256K1_BF_MODULUS
+      self.is_montgomery = pf_type == _secp256k1_bf_mont_dtype
+    elif pf_type == _secp256k1_sf_dtype or pf_type == _secp256k1_sf_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 256
+      self.modulus_bits = 256
+      self.modulus = _SECP256K1_SF_MODULUS
+      self.is_montgomery = pf_type == _secp256k1_sf_mont_dtype
+    elif pf_type == _secp256r1_bf_dtype or pf_type == _secp256r1_bf_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 256
+      self.modulus_bits = 256
+      self.modulus = _SECP256R1_BF_MODULUS
+      self.is_montgomery = pf_type == _secp256r1_bf_mont_dtype
+    elif pf_type == _secp256r1_sf_dtype or pf_type == _secp256r1_sf_mont_dtype:
+      self.dtype = pf_type
+      self.storage_bits = 256
+      self.modulus_bits = 256
+      self.modulus = _SECP256R1_SF_MODULUS
+      self.is_montgomery = pf_type == _secp256r1_sf_mont_dtype
     elif getattr(pf_type, "modulus", None) is not None and (
         getattr(pf_type, "degree", None) == 1
     ):

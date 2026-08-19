@@ -24,6 +24,7 @@ limitations under the License.
 #include "zk_dtypes/include/elliptic_curve/curve25519/ed25519/g1.h"
 #include "zk_dtypes/include/elliptic_curve/pallas/g1.h"
 #include "zk_dtypes/include/elliptic_curve/secp256k1/g1.h"
+#include "zk_dtypes/include/elliptic_curve/secp256r1/g1.h"
 #include "zk_dtypes/include/elliptic_curve/vesta/g1.h"
 #include "zk_dtypes/include/field/babybear/babybear.h"
 #include "zk_dtypes/include/field/babybear/babybearx4.h"
@@ -72,24 +73,26 @@ ZK_DTYPES_PUBLIC_BINARY_FIELD_TYPE_LIST(V)      \
 // PrimeField Types
 //===----------------------------------------------------------------------===//
 
-#define ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)                         \
-WITH_MONT(V, ::zk_dtypes::Babybear, Babybear, BABYBEAR, babybear)         \
-V(::zk_dtypes::Mersenne31, Mersenne31, MERSENNE31, mersenne31)            \
-WITH_MONT(V, ::zk_dtypes::Goldilocks, Goldilocks, GOLDILOCKS, goldilocks) \
-WITH_MONT(V, ::zk_dtypes::Koalabear, Koalabear, KOALABEAR, koalabear)     \
-WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)         \
-WITH_MONT(V, ::zk_dtypes::pallas::Fr, PallasSf, PALLAS_SF, pallas_sf)     \
+#define ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)                                     \
+WITH_MONT(V, ::zk_dtypes::Babybear, Babybear, BABYBEAR, babybear)                     \
+V(::zk_dtypes::Mersenne31, Mersenne31, MERSENNE31, mersenne31)                        \
+WITH_MONT(V, ::zk_dtypes::Goldilocks, Goldilocks, GOLDILOCKS, goldilocks)             \
+WITH_MONT(V, ::zk_dtypes::Koalabear, Koalabear, KOALABEAR, koalabear)                 \
+WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)                     \
+WITH_MONT(V, ::zk_dtypes::curve25519::Fq, Curve25519Bf, CURVE25519_BF, curve25519_bf) \
+WITH_MONT(V, ::zk_dtypes::curve25519::Fr, Curve25519Sf, CURVE25519_SF, curve25519_sf) \
+WITH_MONT(V, ::zk_dtypes::pallas::Fr, PallasSf, PALLAS_SF, pallas_sf)                 \
+WITH_MONT(V, ::zk_dtypes::secp256k1::Fq, Secp256k1Bf, SECP256K1_BF, secp256k1_bf)     \
+WITH_MONT(V, ::zk_dtypes::secp256k1::Fr, Secp256k1Sf, SECP256K1_SF, secp256k1_sf)     \
+WITH_MONT(V, ::zk_dtypes::secp256r1::Fq, Secp256r1Bf, SECP256R1_BF, secp256r1_bf)     \
+WITH_MONT(V, ::zk_dtypes::secp256r1::Fr, Secp256r1Sf, SECP256R1_SF, secp256r1_sf)     \
 WITH_MONT(V, ::zk_dtypes::vesta::Fr, VestaSf, VESTA_SF, vesta_sf)
 
 #define ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V)                                        \
 ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)                                             \
 WITH_MONT(V, ::zk_dtypes::bn254::Fq, Bn254Bf, BN254_BF, bn254_bf)                     \
-WITH_MONT(V, ::zk_dtypes::secp256k1::Fq, Secp256k1Bf, SECP256K1_BF, secp256k1_bf)     \
-WITH_MONT(V, ::zk_dtypes::secp256k1::Fr, Secp256k1Sf, SECP256K1_SF, secp256k1_sf)     \
 WITH_MONT(V, ::zk_dtypes::bls12_381::Fq, Bls12381Bf, BLS12_381_BF, bls12_381_bf)      \
 WITH_MONT(V, ::zk_dtypes::bls12_381::Fr, Bls12381Sf, BLS12_381_SF, bls12_381_sf)      \
-WITH_MONT(V, ::zk_dtypes::curve25519::Fq, Curve25519Bf, CURVE25519_BF, curve25519_bf) \
-WITH_MONT(V, ::zk_dtypes::curve25519::Fr, Curve25519Sf, CURVE25519_SF, curve25519_sf) \
 WITH_MONT(V, ::zk_dtypes::pallas::Fq, PallasBf, PALLAS_BF, pallas_bf)                 \
 WITH_MONT(V, ::zk_dtypes::vesta::Fq, VestaBf, VESTA_BF, vesta_bf)
 

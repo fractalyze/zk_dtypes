@@ -80,11 +80,14 @@ struct FqMontConfig : public FqBaseConfig {
       UINT64_C(4294967294),
   };
 
+  // (p - 1)·R mod p — the Montgomery form of -1, the primitive 2nd root of
+  // unity. The previous value was not that under any reading; it failed the
+  // root-of-unity unittest the moment this config joined the registered lists.
   constexpr static BigInt<4> kTwoAdicRootOfUnity = {
       UINT64_C(18446744073709551614),
-      UINT64_C(18446744065119617023),
-      UINT64_C(18446744073709551615),
-      UINT64_C(4294967294),
+      UINT64_C(8589934591),
+      UINT64_C(0),
+      UINT64_C(18446744065119617026),
   };
 };
 

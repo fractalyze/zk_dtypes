@@ -71,7 +71,9 @@ struct FrMontConfig : public FrBaseConfig {
       UINT64_C(2901921493521525849),
       UINT64_C(7413256579398063648),
   };
-  constexpr static uint64_t kNPrime = UINT64_C(3687945983376704433);
+  // -n⁻¹ mod 2⁶⁴. The previous value was +n⁻¹ mod 2⁶⁴ — the negation was
+  // missing, so every Montgomery product in this field was wrong.
+  constexpr static uint64_t kNPrime = UINT64_C(14758798090332847183);
 
   constexpr static BigInt<4> kOne = {
       UINT64_C(884452912994769583),

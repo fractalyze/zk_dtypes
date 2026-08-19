@@ -43,8 +43,20 @@ __all__ = [
     # Big prime field types
     "bn254_sf",
     "bn254_sf_mont",
+    "curve25519_bf",
+    "curve25519_bf_mont",
+    "curve25519_sf",
+    "curve25519_sf_mont",
     "pallas_sf",
     "pallas_sf_mont",
+    "secp256k1_bf",
+    "secp256k1_bf_mont",
+    "secp256k1_sf",
+    "secp256k1_sf_mont",
+    "secp256r1_bf",
+    "secp256r1_bf_mont",
+    "secp256r1_sf",
+    "secp256r1_sf_mont",
     "vesta_sf",
     "vesta_sf_mont",
     # Extension field types
@@ -119,8 +131,20 @@ from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
 from zk_dtypes._zk_dtypes_ext import bn254_sf
 from zk_dtypes._zk_dtypes_ext import bn254_sf_mont
+from zk_dtypes._zk_dtypes_ext import curve25519_bf
+from zk_dtypes._zk_dtypes_ext import curve25519_bf_mont
+from zk_dtypes._zk_dtypes_ext import curve25519_sf
+from zk_dtypes._zk_dtypes_ext import curve25519_sf_mont
 from zk_dtypes._zk_dtypes_ext import pallas_sf
 from zk_dtypes._zk_dtypes_ext import pallas_sf_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_bf
+from zk_dtypes._zk_dtypes_ext import secp256k1_bf_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_sf
+from zk_dtypes._zk_dtypes_ext import secp256k1_sf_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_bf
+from zk_dtypes._zk_dtypes_ext import secp256r1_bf_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_sf
+from zk_dtypes._zk_dtypes_ext import secp256r1_sf_mont
 from zk_dtypes._zk_dtypes_ext import vesta_sf
 from zk_dtypes._zk_dtypes_ext import vesta_sf_mont
 from zk_dtypes._zk_dtypes_ext import babybearx4
@@ -184,8 +208,20 @@ koalabear_mont: Type[np.generic]
 mersenne31: Type[np.generic]
 bn254_sf: Type[np.generic]
 bn254_sf_mont: Type[np.generic]
+curve25519_bf: Type[np.generic]
+curve25519_bf_mont: Type[np.generic]
+curve25519_sf: Type[np.generic]
+curve25519_sf_mont: Type[np.generic]
 pallas_sf: Type[np.generic]
 pallas_sf_mont: Type[np.generic]
+secp256k1_bf: Type[np.generic]
+secp256k1_bf_mont: Type[np.generic]
+secp256k1_sf: Type[np.generic]
+secp256k1_sf_mont: Type[np.generic]
+secp256r1_bf: Type[np.generic]
+secp256r1_bf_mont: Type[np.generic]
+secp256r1_sf: Type[np.generic]
+secp256r1_sf_mont: Type[np.generic]
 vesta_sf: Type[np.generic]
 vesta_sf_mont: Type[np.generic]
 babybearx4: Type[np.generic]
