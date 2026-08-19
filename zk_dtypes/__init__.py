@@ -97,6 +97,18 @@ __all__ = [
     "pallas_g1_jacobian_mont",
     "pallas_g1_xyzz",
     "pallas_g1_xyzz_mont",
+    "secp256k1_g1_affine",
+    "secp256k1_g1_affine_mont",
+    "secp256k1_g1_jacobian",
+    "secp256k1_g1_jacobian_mont",
+    "secp256k1_g1_xyzz",
+    "secp256k1_g1_xyzz_mont",
+    "secp256r1_g1_affine",
+    "secp256r1_g1_affine_mont",
+    "secp256r1_g1_jacobian",
+    "secp256r1_g1_jacobian_mont",
+    "secp256r1_g1_xyzz",
+    "secp256r1_g1_xyzz_mont",
     "vesta_g1_affine",
     "vesta_g1_affine_mont",
     "vesta_g1_jacobian",
@@ -182,6 +194,18 @@ from zk_dtypes._zk_dtypes_ext import pallas_g1_jacobian
 from zk_dtypes._zk_dtypes_ext import pallas_g1_jacobian_mont
 from zk_dtypes._zk_dtypes_ext import pallas_g1_xyzz
 from zk_dtypes._zk_dtypes_ext import pallas_g1_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_affine
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_affine
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_xyzz_mont
 from zk_dtypes._zk_dtypes_ext import vesta_g1_affine
 from zk_dtypes._zk_dtypes_ext import vesta_g1_affine_mont
 from zk_dtypes._zk_dtypes_ext import vesta_g1_jacobian
@@ -259,6 +283,18 @@ pallas_g1_jacobian: Type[np.generic]
 pallas_g1_jacobian_mont: Type[np.generic]
 pallas_g1_xyzz: Type[np.generic]
 pallas_g1_xyzz_mont: Type[np.generic]
+secp256k1_g1_affine: Type[np.generic]
+secp256k1_g1_affine_mont: Type[np.generic]
+secp256k1_g1_jacobian: Type[np.generic]
+secp256k1_g1_jacobian_mont: Type[np.generic]
+secp256k1_g1_xyzz: Type[np.generic]
+secp256k1_g1_xyzz_mont: Type[np.generic]
+secp256r1_g1_affine: Type[np.generic]
+secp256r1_g1_affine_mont: Type[np.generic]
+secp256r1_g1_jacobian: Type[np.generic]
+secp256r1_g1_jacobian_mont: Type[np.generic]
+secp256r1_g1_xyzz: Type[np.generic]
+secp256r1_g1_xyzz_mont: Type[np.generic]
 vesta_g1_affine: Type[np.generic]
 vesta_g1_affine_mont: Type[np.generic]
 vesta_g1_jacobian: Type[np.generic]

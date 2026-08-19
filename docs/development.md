@@ -116,16 +116,43 @@ using curve25519::FqMont;
 1. **Field configs** (`fq.h`, `fr.h`): Compute Montgomery constants
    (`kRSquared`, `kNPrime`, `kOne`) via Python. Verify
    `kNPrime * p ≡ -1 mod 2⁶⁴`.
+
 1. **Curve config** (`g1.h`): Define `G1<Sw|Te>CurveConfig` with `kA`/`kB`/`kD`,
    generator coords, and Mont variant with `FromUnchecked`. Verify generator is
    on curve in a unittest.
+
 1. **BUILD.bazel**: Add `cc_library` targets in alphabetical position (see BUILD
    Target Ordering). Add to `all_types` deps and the appropriate type list
    macros in `all_types.h`.
+
 1. **numpy surface** (if the curve is exposed to numpy): add the curve to the
    `_CURVE_PARAMS` / `_build_meta` tables in `_ecinfo.py` and a modulus branch
    in `_pfinfo.py`. These are curve-list-driven, so no per-curve dispatch code
-   is needed.
+   is needed. Exposing the curve's *point* types additionally takes three wiring
+   points that are NOT list-driven:
+
+   - move/add the curve's rows into the `ZK_DTYPES_PUBLIC_R1_*_POINT_TYPE_LIST`
+     macros in `all_types.h` (see the PUBLIC-vs-ALL contract comment there), and
+     its `Fr` into `ZK_DTYPES_SCALAR_FIELD_TYPE_LIST` — the multiply-ufunc
+     registration derives the point↔scalar pairs from these lists via each point
+     type's `ScalarField` typedef, so there is no per-curve dispatch code to
+     forget;
+   - hand-write the twelve `TypeDescriptorBase<T>` specializations in
+     `_src/dtypes.cc` (descr chars follow the representation, `A/a`, `J/j`,
+     `X/x` — they repeat across curves by design; non-Mont docs end "on standard
+     domain", Mont docs "on montgomery domain");
+   - export the dtype names from `__init__.py` — in all three of its per-name
+     lists: `__all__`, the import block, and the `Type[np.generic]` annotation
+     block.
+
+   The exposed point surface is arithmetic (`+`, `-`, point × scalar), casts
+   between representations, and `from_raw` / `.raw` construction and readback.
+   No `lift_x` / point decompression is exposed: recovering y from an x encoding
+   (a compressed key, an x-only key) is a consumer-side operation over
+   `prime_field` today. fractalyze/sig-frx#139 is the revisit trigger — if the
+   substrate swap there wants the lift in-tree, it arrives as its own op with
+   its own tests, not as a side effect of a curve exposure.
+
 1. **Tests**: On-curve check, identity addition, inverse, double=add(self),
    Mont/non-Mont consistency. numpy EC point types are covered by adding the
    curve name to `_CURVES` in `tests/ec_point_test.py` (curve-list-driven — no
