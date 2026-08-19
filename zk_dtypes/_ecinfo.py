@@ -37,6 +37,22 @@ from zk_dtypes._zk_dtypes_ext import pallas_g1_jacobian
 from zk_dtypes._zk_dtypes_ext import pallas_g1_jacobian_mont
 from zk_dtypes._zk_dtypes_ext import pallas_g1_xyzz
 from zk_dtypes._zk_dtypes_ext import pallas_g1_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_sf
+from zk_dtypes._zk_dtypes_ext import secp256k1_sf_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_affine
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import secp256k1_g1_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_sf
+from zk_dtypes._zk_dtypes_ext import secp256r1_sf_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_affine
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_jacobian
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_jacobian_mont
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_xyzz
+from zk_dtypes._zk_dtypes_ext import secp256r1_g1_xyzz_mont
 from zk_dtypes._zk_dtypes_ext import vesta_sf
 from zk_dtypes._zk_dtypes_ext import vesta_sf_mont
 from zk_dtypes._zk_dtypes_ext import vesta_g1_affine
@@ -52,6 +68,10 @@ _bn254_sf_dtype = np.dtype(bn254_sf)
 _bn254_sf_mont_dtype = np.dtype(bn254_sf_mont)
 _pallas_sf_dtype = np.dtype(pallas_sf)
 _pallas_sf_mont_dtype = np.dtype(pallas_sf_mont)
+_secp256k1_sf_dtype = np.dtype(secp256k1_sf)
+_secp256k1_sf_mont_dtype = np.dtype(secp256k1_sf_mont)
+_secp256r1_sf_dtype = np.dtype(secp256r1_sf)
+_secp256r1_sf_mont_dtype = np.dtype(secp256r1_sf_mont)
 _vesta_sf_dtype = np.dtype(vesta_sf)
 _vesta_sf_mont_dtype = np.dtype(vesta_sf_mont)
 _bn254_g1_affine_dtype = np.dtype(bn254_g1_affine)
@@ -120,6 +140,28 @@ _PALLAS_G1_B_MONT = 289480223093290488558927462521719769624518501713131665941490
 _PALLAS_G1_GX_MONT = 182241262125678824361123049486740881412
 _PALLAS_G1_GY_MONT = 28948022309329048855892746252171976962998573957690203067232430665376485867513
 
+# secp256k1 (SEC 2 §2.4.1): y² = x³ + 7. Montgomery forms are
+# `value * R mod p` with `R = 2²⁵⁶ mod p`, matching the limb constants in
+# include/elliptic_curve/secp256k1/g1.h.
+_SECP256K1_A = 0
+_SECP256K1_B = 7
+_SECP256K1_G1_GX = 55066263022277343669578718895168534326250603453777594175500187360389116729240
+_SECP256K1_G1_GY = 32670510020758816978083085130507043184471273380659243275938904335757337482424
+_SECP256K1_G1_B_MONT = 30064777911
+_SECP256K1_G1_GX_MONT = 69433378337113668455105412783699478161510570509662971881309371014080806920343
+_SECP256K1_G1_GY_MONT = 93740989812233943577428291822008373258935927472951925563046116858250011585506
+
+# secp256r1 / P-256 (SEC 2 §2.4.2): a = p - 3, so unlike the curves above the
+# Montgomery entry carries a distinct a as well.
+_SECP256R1_A = 115792089210356248762697446949407573530086143415290314195533631308867097853948
+_SECP256R1_B = 41058363725152142129326129780047268409114441015993725554835256314039467401291
+_SECP256R1_G1_GX = 48439561293906451759052585252797914202762949526041747995844080717082404635286
+_SECP256R1_G1_GY = 36134250956749795798585127919587881956611106672985015071877198253568414405109
+_SECP256R1_G1_A_MONT = 115792089129476408780076832771566570560534619664239564663761773211729002495996
+_SECP256R1_G1_B_MONT = 99593677540221402957765480916910020772520766868399186769503856397241456836063
+_SECP256R1_G1_GX_MONT = 11110593207902424140321080247206512405358633331993495164878354046817554469948
+_SECP256R1_G1_GY_MONT = 60359023176204190920225817201443260813112970217682417638161152432929735267850
+
 _VESTA_A = 0
 _VESTA_B = 5
 _VESTA_G1_GX = 28948022309329048855892746252171976963363056481941647379679742748393362948096
@@ -173,6 +215,34 @@ _CURVE_PARAMS = {
         b=_PALLAS_G1_B_MONT,
         gx=_PALLAS_G1_GX_MONT,
         gy=_PALLAS_G1_GY_MONT,
+        non_residue=None,
+    ),
+    ('secp256k1', 'g1', False): dict(
+        a=_SECP256K1_A,
+        b=_SECP256K1_B,
+        gx=_SECP256K1_G1_GX,
+        gy=_SECP256K1_G1_GY,
+        non_residue=None,
+    ),
+    ('secp256k1', 'g1', True): dict(
+        a=_SECP256K1_A,
+        b=_SECP256K1_G1_B_MONT,
+        gx=_SECP256K1_G1_GX_MONT,
+        gy=_SECP256K1_G1_GY_MONT,
+        non_residue=None,
+    ),
+    ('secp256r1', 'g1', False): dict(
+        a=_SECP256R1_A,
+        b=_SECP256R1_B,
+        gx=_SECP256R1_G1_GX,
+        gy=_SECP256R1_G1_GY,
+        non_residue=None,
+    ),
+    ('secp256r1', 'g1', True): dict(
+        a=_SECP256R1_G1_A_MONT,
+        b=_SECP256R1_G1_B_MONT,
+        gx=_SECP256R1_G1_GX_MONT,
+        gy=_SECP256R1_G1_GY_MONT,
         non_residue=None,
     ),
     ('vesta', 'g1', False): dict(
@@ -276,6 +346,34 @@ _EC_DTYPE_META = {
             ('g1', 'jacobian', True): pallas_g1_jacobian_mont,
             ('g1', 'xyzz', False): pallas_g1_xyzz,
             ('g1', 'xyzz', True): pallas_g1_xyzz_mont,
+        },
+    ),
+    **_build_meta(
+        'secp256k1',
+        256,
+        _secp256k1_sf_dtype,
+        _secp256k1_sf_mont_dtype,
+        {
+            ('g1', 'affine', False): secp256k1_g1_affine,
+            ('g1', 'affine', True): secp256k1_g1_affine_mont,
+            ('g1', 'jacobian', False): secp256k1_g1_jacobian,
+            ('g1', 'jacobian', True): secp256k1_g1_jacobian_mont,
+            ('g1', 'xyzz', False): secp256k1_g1_xyzz,
+            ('g1', 'xyzz', True): secp256k1_g1_xyzz_mont,
+        },
+    ),
+    **_build_meta(
+        'secp256r1',
+        256,
+        _secp256r1_sf_dtype,
+        _secp256r1_sf_mont_dtype,
+        {
+            ('g1', 'affine', False): secp256r1_g1_affine,
+            ('g1', 'affine', True): secp256r1_g1_affine_mont,
+            ('g1', 'jacobian', False): secp256r1_g1_jacobian,
+            ('g1', 'jacobian', True): secp256r1_g1_jacobian_mont,
+            ('g1', 'xyzz', False): secp256r1_g1_xyzz,
+            ('g1', 'xyzz', True): secp256r1_g1_xyzz_mont,
         },
     ),
     **_build_meta(

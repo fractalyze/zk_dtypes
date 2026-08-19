@@ -28,7 +28,7 @@ import numpy as np
 
 # Curve-list-driven fixtures. Adding a curve here (and to _GROUPS, if a curve
 # lacks g2) regenerates every per-type fixture below.
-_CURVES = ["bn254", "pallas", "vesta"]
+_CURVES = ["bn254", "pallas", "secp256k1", "secp256r1", "vesta"]
 _GROUPS = ["g1", "g2"]
 
 EC_STD_POINT_TYPES = []
@@ -78,6 +78,10 @@ for _curve in _CURVES:
       ]
 
 EC_POINT_TYPES = EC_STD_POINT_TYPES + EC_MONT_POINT_TYPES
+
+# Membership is checked across the full type × type product below, and the
+# pair count grows quadratically with _CURVES — a set keeps that scan O(1).
+_ALLOWED_CASTS = frozenset(_ALLOWED_CASTS)
 
 INT_CAST_DTYPES = [
     np.int8,

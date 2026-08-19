@@ -624,6 +624,102 @@ struct TypeDescriptorBase<pallas::G1PointXyzzMont>
 };
 
 template <>
+struct TypeDescriptorBase<secp256k1::G1AffinePoint>
+    : EcPointTypeDescriptor<secp256k1::G1AffinePoint> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 G1 elliptic curve affine point on standard domain";
+  static constexpr char kNpyDescrType = 'A';
+};
+
+template <>
+struct TypeDescriptorBase<secp256k1::G1AffinePointMont>
+    : EcPointTypeDescriptor<secp256k1::G1AffinePointMont> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 G1 elliptic curve affine point on montgomery domain";
+  static constexpr char kNpyDescrType = 'a';
+};
+
+template <>
+struct TypeDescriptorBase<secp256k1::G1JacobianPoint>
+    : EcPointTypeDescriptor<secp256k1::G1JacobianPoint> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 G1 elliptic curve jacobian point on standard domain";
+  static constexpr char kNpyDescrType = 'J';
+};
+
+template <>
+struct TypeDescriptorBase<secp256k1::G1JacobianPointMont>
+    : EcPointTypeDescriptor<secp256k1::G1JacobianPointMont> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 G1 elliptic curve jacobian point on montgomery domain";
+  static constexpr char kNpyDescrType = 'j';
+};
+
+template <>
+struct TypeDescriptorBase<secp256k1::G1PointXyzz>
+    : EcPointTypeDescriptor<secp256k1::G1PointXyzz> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 G1 elliptic curve xyzz point on standard domain";
+  static constexpr char kNpyDescrType = 'X';
+};
+
+template <>
+struct TypeDescriptorBase<secp256k1::G1PointXyzzMont>
+    : EcPointTypeDescriptor<secp256k1::G1PointXyzzMont> {
+  static constexpr const char* kTpDoc =
+      "secp256k1 G1 elliptic curve xyzz point on montgomery domain";
+  static constexpr char kNpyDescrType = 'x';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::G1AffinePoint>
+    : EcPointTypeDescriptor<secp256r1::G1AffinePoint> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 G1 elliptic curve affine point on standard domain";
+  static constexpr char kNpyDescrType = 'A';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::G1AffinePointMont>
+    : EcPointTypeDescriptor<secp256r1::G1AffinePointMont> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 G1 elliptic curve affine point on montgomery domain";
+  static constexpr char kNpyDescrType = 'a';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::G1JacobianPoint>
+    : EcPointTypeDescriptor<secp256r1::G1JacobianPoint> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 G1 elliptic curve jacobian point on standard domain";
+  static constexpr char kNpyDescrType = 'J';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::G1JacobianPointMont>
+    : EcPointTypeDescriptor<secp256r1::G1JacobianPointMont> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 G1 elliptic curve jacobian point on montgomery domain";
+  static constexpr char kNpyDescrType = 'j';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::G1PointXyzz>
+    : EcPointTypeDescriptor<secp256r1::G1PointXyzz> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 G1 elliptic curve xyzz point on standard domain";
+  static constexpr char kNpyDescrType = 'X';
+};
+
+template <>
+struct TypeDescriptorBase<secp256r1::G1PointXyzzMont>
+    : EcPointTypeDescriptor<secp256r1::G1PointXyzzMont> {
+  static constexpr const char* kTpDoc =
+      "secp256r1 G1 elliptic curve xyzz point on montgomery domain";
+  static constexpr char kNpyDescrType = 'x';
+};
+
+template <>
 struct TypeDescriptorBase<vesta::G1AffinePoint>
     : EcPointTypeDescriptor<vesta::G1AffinePoint> {
   static constexpr const char* kTpDoc =

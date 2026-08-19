@@ -88,6 +88,10 @@ WITH_MONT(V, ::zk_dtypes::secp256r1::Fq, Secp256r1Bf, SECP256R1_BF, secp256r1_bf
 WITH_MONT(V, ::zk_dtypes::secp256r1::Fr, Secp256r1Sf, SECP256R1_SF, secp256r1_sf)     \
 WITH_MONT(V, ::zk_dtypes::vesta::Fr, VestaSf, VESTA_SF, vesta_sf)
 
+// PUBLIC lists are what the numpy extension registers and python exports.
+// The ALL lists are the superset that downstream C++ consumers iterate
+// (prime-ir's runtime codegen walks ZK_DTYPES_ALL_TYPE_LIST), so a row that
+// appears only in an ALL list is reachable from C++ alone.
 #define ZK_DTYPES_ALL_PRIME_FIELD_TYPE_LIST(V)                                        \
 ZK_DTYPES_PUBLIC_PRIME_FIELD_TYPE_LIST(V)                                             \
 WITH_MONT(V, ::zk_dtypes::bn254::Fq, Bn254Bf, BN254_BF, bn254_bf)                     \
@@ -130,18 +134,22 @@ ZK_DTYPES_ALL_BINARY_FIELD_TYPE_LIST(V)
 // ScalarField Types
 //===----------------------------------------------------------------------===//
 
-#define ZK_DTYPES_SCALAR_FIELD_TYPE_LIST(V)                          \
-WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)    \
-WITH_MONT(V, ::zk_dtypes::pallas::Fr, PallasSf, PALLAS_SF, pallas_sf) \
+#define ZK_DTYPES_SCALAR_FIELD_TYPE_LIST(V)                                       \
+WITH_MONT(V, ::zk_dtypes::bn254::Fr, Bn254Sf, BN254_SF, bn254_sf)                 \
+WITH_MONT(V, ::zk_dtypes::pallas::Fr, PallasSf, PALLAS_SF, pallas_sf)             \
+WITH_MONT(V, ::zk_dtypes::secp256k1::Fr, Secp256k1Sf, SECP256K1_SF, secp256k1_sf) \
+WITH_MONT(V, ::zk_dtypes::secp256r1::Fr, Secp256r1Sf, SECP256R1_SF, secp256r1_sf) \
 WITH_MONT(V, ::zk_dtypes::vesta::Fr, VestaSf, VESTA_SF, vesta_sf)
 
 //===----------------------------------------------------------------------===//
 // AffinePoint Types
 //===----------------------------------------------------------------------===//
 
-#define ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)                                              \
-WITH_MONT(V, ::zk_dtypes::bn254::G1AffinePoint, Bn254G1Affine, BN254_G1_AFFINE, bn254_g1_affine)    \
-WITH_MONT(V, ::zk_dtypes::pallas::G1AffinePoint, PallasG1Affine, PALLAS_G1_AFFINE, pallas_g1_affine) \
+#define ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)                                                            \
+WITH_MONT(V, ::zk_dtypes::bn254::G1AffinePoint, Bn254G1Affine, BN254_G1_AFFINE, bn254_g1_affine)                 \
+WITH_MONT(V, ::zk_dtypes::pallas::G1AffinePoint, PallasG1Affine, PALLAS_G1_AFFINE, pallas_g1_affine)             \
+WITH_MONT(V, ::zk_dtypes::secp256k1::G1AffinePoint, Secp256k1G1Affine, SECP256K1_G1_AFFINE, secp256k1_g1_affine) \
+WITH_MONT(V, ::zk_dtypes::secp256r1::G1AffinePoint, Secp256r1G1Affine, SECP256R1_G1_AFFINE, secp256r1_g1_affine) \
 WITH_MONT(V, ::zk_dtypes::vesta::G1AffinePoint, VestaG1Affine, VESTA_G1_AFFINE, vesta_g1_affine)
 
 #define ZK_DTYPES_PUBLIC_R2_AFFINE_POINT_TYPE_LIST(V) \
@@ -151,10 +159,9 @@ WITH_MONT(V, ::zk_dtypes::bn254::G2AffinePoint, Bn254G2Affine, BN254_G2_AFFINE, 
 ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)      \
 ZK_DTYPES_PUBLIC_R2_AFFINE_POINT_TYPE_LIST(V)
 
-#define ZK_DTYPES_ALL_R1_AFFINE_POINT_TYPE_LIST(V)                                                               \
-ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)                                                                    \
-WITH_MONT(V, ::zk_dtypes::secp256k1::G1AffinePoint, Secp256k1G1Affine, SECP256K1_G1_AFFINE, secp256k1_g1_affine) \
-WITH_MONT(V, ::zk_dtypes::bls12_381::G1AffinePoint, Bls12381G1Affine, BLS12_381_G1_AFFINE, bls12_381_g1_affine)  \
+#define ZK_DTYPES_ALL_R1_AFFINE_POINT_TYPE_LIST(V)                                                              \
+ZK_DTYPES_PUBLIC_R1_AFFINE_POINT_TYPE_LIST(V)                                                                   \
+WITH_MONT(V, ::zk_dtypes::bls12_381::G1AffinePoint, Bls12381G1Affine, BLS12_381_G1_AFFINE, bls12_381_g1_affine) \
 WITH_MONT(V, ::zk_dtypes::ed25519::G1AffinePoint, Ed25519G1Affine, ED25519_G1_AFFINE, ed25519_g1_affine)
 
 #define ZK_DTYPES_ALL_R2_AFFINE_POINT_TYPE_LIST(V) \
@@ -168,9 +175,11 @@ ZK_DTYPES_ALL_R2_AFFINE_POINT_TYPE_LIST(V)
 // JacobianPoint Types
 //===----------------------------------------------------------------------===//
 
-#define ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)                                                        \
-WITH_MONT(V, ::zk_dtypes::bn254::G1JacobianPoint, Bn254G1Jacobian, BN254_G1_JACOBIAN, bn254_g1_jacobian)        \
-WITH_MONT(V, ::zk_dtypes::pallas::G1JacobianPoint, PallasG1Jacobian, PALLAS_G1_JACOBIAN, pallas_g1_jacobian)     \
+#define ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)                                                                  \
+WITH_MONT(V, ::zk_dtypes::bn254::G1JacobianPoint, Bn254G1Jacobian, BN254_G1_JACOBIAN, bn254_g1_jacobian)                 \
+WITH_MONT(V, ::zk_dtypes::pallas::G1JacobianPoint, PallasG1Jacobian, PALLAS_G1_JACOBIAN, pallas_g1_jacobian)             \
+WITH_MONT(V, ::zk_dtypes::secp256k1::G1JacobianPoint, Secp256k1G1Jacobian, SECP256K1_G1_JACOBIAN, secp256k1_g1_jacobian) \
+WITH_MONT(V, ::zk_dtypes::secp256r1::G1JacobianPoint, Secp256r1G1Jacobian, SECP256R1_G1_JACOBIAN, secp256r1_g1_jacobian) \
 WITH_MONT(V, ::zk_dtypes::vesta::G1JacobianPoint, VestaG1Jacobian, VESTA_G1_JACOBIAN, vesta_g1_jacobian)
 
 #define ZK_DTYPES_PUBLIC_R2_JACOBIAN_POINT_TYPE_LIST(V) \
@@ -180,9 +189,8 @@ WITH_MONT(V, ::zk_dtypes::bn254::G2JacobianPoint, Bn254G2Jacobian, BN254_G2_JACO
 ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)      \
 ZK_DTYPES_PUBLIC_R2_JACOBIAN_POINT_TYPE_LIST(V)
 
-#define ZK_DTYPES_ALL_R1_JACOBIAN_POINT_TYPE_LIST(V)                                                                     \
-ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)                                                                          \
-WITH_MONT(V, ::zk_dtypes::secp256k1::G1JacobianPoint, Secp256k1G1Jacobian, SECP256K1_G1_JACOBIAN, secp256k1_g1_jacobian) \
+#define ZK_DTYPES_ALL_R1_JACOBIAN_POINT_TYPE_LIST(V)                                                                    \
+ZK_DTYPES_PUBLIC_R1_JACOBIAN_POINT_TYPE_LIST(V)                                                                         \
 WITH_MONT(V, ::zk_dtypes::bls12_381::G1JacobianPoint, Bls12381G1Jacobian, BLS12_381_G1_JACOBIAN, bls12_381_g1_jacobian)
 
 #define ZK_DTYPES_ALL_R2_JACOBIAN_POINT_TYPE_LIST(V) \
@@ -196,9 +204,11 @@ ZK_DTYPES_ALL_R2_JACOBIAN_POINT_TYPE_LIST(V)
 // PointXyzz Types
 //===----------------------------------------------------------------------===//
 
-#define ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)                                        \
-WITH_MONT(V, ::zk_dtypes::bn254::G1PointXyzz, Bn254G1Xyzz, BN254_G1_XYZZ, bn254_g1_xyzz)    \
-WITH_MONT(V, ::zk_dtypes::pallas::G1PointXyzz, PallasG1Xyzz, PALLAS_G1_XYZZ, pallas_g1_xyzz) \
+#define ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)                                                      \
+WITH_MONT(V, ::zk_dtypes::bn254::G1PointXyzz, Bn254G1Xyzz, BN254_G1_XYZZ, bn254_g1_xyzz)                 \
+WITH_MONT(V, ::zk_dtypes::pallas::G1PointXyzz, PallasG1Xyzz, PALLAS_G1_XYZZ, pallas_g1_xyzz)             \
+WITH_MONT(V, ::zk_dtypes::secp256k1::G1PointXyzz, Secp256k1G1Xyzz, SECP256K1_G1_XYZZ, secp256k1_g1_xyzz) \
+WITH_MONT(V, ::zk_dtypes::secp256r1::G1PointXyzz, Secp256r1G1Xyzz, SECP256R1_G1_XYZZ, secp256r1_g1_xyzz) \
 WITH_MONT(V, ::zk_dtypes::vesta::G1PointXyzz, VestaG1Xyzz, VESTA_G1_XYZZ, vesta_g1_xyzz)
 
 #define ZK_DTYPES_PUBLIC_R2_XYZZ_POINT_TYPE_LIST(V) \
@@ -208,9 +218,8 @@ WITH_MONT(V, ::zk_dtypes::bn254::G2PointXyzz, Bn254G2Xyzz, BN254_G2_XYZZ, bn254_
 ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)      \
 ZK_DTYPES_PUBLIC_R2_XYZZ_POINT_TYPE_LIST(V)
 
-#define ZK_DTYPES_ALL_R1_XYZZ_POINT_TYPE_LIST(V)                                                         \
-ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)                                                              \
-WITH_MONT(V, ::zk_dtypes::secp256k1::G1PointXyzz, Secp256k1G1Xyzz, SECP256K1_G1_XYZZ, secp256k1_g1_xyzz) \
+#define ZK_DTYPES_ALL_R1_XYZZ_POINT_TYPE_LIST(V)                                                        \
+ZK_DTYPES_PUBLIC_R1_XYZZ_POINT_TYPE_LIST(V)                                                             \
 WITH_MONT(V, ::zk_dtypes::bls12_381::G1PointXyzz, Bls12381G1Xyzz, BLS12_381_G1_XYZZ, bls12_381_g1_xyzz)
 
 #define ZK_DTYPES_ALL_R2_XYZZ_POINT_TYPE_LIST(V) \
