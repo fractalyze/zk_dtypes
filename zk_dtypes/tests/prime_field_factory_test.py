@@ -70,6 +70,34 @@ class PrimeFieldFactoryTest(parameterized.TestCase):
         np.dtype(zk_dtypes.bn254_sf_mont),
     )
 
+  def test_curated_opt_out_mints_the_runtime_form(self):
+    # A curated-matching modulus with curated=False takes the runtime mint —
+    # the escape for consumers whose stack (frx) supports runtime-modulus
+    # fields generically but curated dtypes only per name (#178). The value
+    # semantics must be identical either way.
+    info = zk_dtypes.pfinfo(zk_dtypes.curve25519_bf)
+    runtime = zk_dtypes.prime_field(info.modulus, "std", curated=False)
+    self.assertNotEqual(runtime, np.dtype(zk_dtypes.curve25519_bf))
+    self.assertEqual(
+        zk_dtypes.prime_field(info.modulus, "std"),
+        np.dtype(zk_dtypes.curve25519_bf),
+    )
+    a = np.array([info.modulus - 1], dtype=runtime)
+    b = a * a  # (-1)^2 = 1
+    self.assertEqual(int(b.astype(object)[0]), 1)
+
+  def test_extension_curated_opt_out_mints_the_runtime_form(self):
+    info = zk_dtypes.efinfo(zk_dtypes.babybearx4)
+    base = zk_dtypes.pfinfo(info.base_field_dtype).modulus
+    runtime = zk_dtypes.extension_field(
+        base, info.degree, info.non_residue, "std", curated=False
+    )
+    self.assertNotEqual(runtime, np.dtype(zk_dtypes.babybearx4))
+    self.assertEqual(
+        zk_dtypes.extension_field(base, info.degree, info.non_residue, "std"),
+        np.dtype(zk_dtypes.babybearx4),
+    )
+
   def test_composite_modulus_rejected(self):
     # 2^31 (even) and a Carmichael number — the latter passes Fermat but must
     # fail Miller-Rabin.

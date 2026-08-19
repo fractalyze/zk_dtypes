@@ -200,13 +200,22 @@ _CURATED_BINARY = {
 }
 
 
-def prime_field(modulus: int, storage: str = "mont") -> np.dtype:
+def prime_field(
+    modulus: int, storage: str = "mont", *, curated: bool = True
+) -> np.dtype:
   """Resolves a prime modulus + storage form to a field dtype.
 
   Args:
     modulus: the field characteristic p. Validated prime (Miller-Rabin).
     storage: 'mont'/'montgomery' for Montgomery-form buffers, 'std'/'canonical'
       for canonical residues.
+    curated: when True (the default), a modulus matching a curated family
+      resolves to that family's named dtype and its fused kernels. False
+      forces the runtime-modulus mint. The escape exists because the two
+      forms differ downstream: frx supports runtime-modulus fields
+      generically but curated dtypes per name, so a consumer tracing through
+      frx breaks whenever the curated set grows past what its frx pin knows
+      (#178) — opting out keeps such a caller on the form its stack accepts.
 
   Returns:
     The numpy dtype for Z/pZ in the requested storage form.
@@ -229,14 +238,20 @@ def prime_field(modulus: int, storage: str = "mont") -> np.dtype:
     )
   _warn_if_inefficient_montgomery(modulus, is_montgomery)
   width = _storage_width(modulus.bit_length())
-  curated = _CURATED_PRIME.get((modulus, is_montgomery))
-  if curated is not None:
-    return np.dtype(curated)
+  if curated:
+    match = _CURATED_PRIME.get((modulus, is_montgomery))
+    if match is not None:
+      return np.dtype(match)
   return _field_descr(modulus, 1, 0, width, is_montgomery)
 
 
 def extension_field(
-    base_modulus: int, degree: int, non_residue: int, storage: str = "mont"
+    base_modulus: int,
+    degree: int,
+    non_residue: int,
+    storage: str = "mont",
+    *,
+    curated: bool = True,
 ) -> np.dtype:
   """Resolves a binomial extension field Fp[X]/(X^degree - non_residue).
 
@@ -247,6 +262,8 @@ def extension_field(
       Must be a non-residue for the field to be a field (the caller is trusted
       on irreducibility — it cannot be checked cheaply).
     storage: per-coefficient storage form, as in ``prime_field``.
+    curated: as in ``prime_field`` — False forces the runtime mint even for a
+      curated-matching extension (#178).
 
   Returns:
     The numpy dtype for the extension field. Elements are ``degree`` base-field
@@ -282,9 +299,10 @@ def extension_field(
         " zero divisors, so the quotient is not a field"
     )
   base_width = _storage_width(base_modulus.bit_length())
-  curated = _CURATED_EXT.get((base_modulus, degree, non_residue, is_montgomery))
-  if curated is not None:
-    return np.dtype(curated)
+  if curated:
+    match = _CURATED_EXT.get((base_modulus, degree, non_residue, is_montgomery))
+    if match is not None:
+      return np.dtype(match)
   return _field_descr(
       base_modulus, degree, non_residue, base_width, is_montgomery
   )
