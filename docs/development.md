@@ -137,10 +137,14 @@ using curve25519::FqMont;
      registration derives the point↔scalar pairs from these lists via each point
      type's `ScalarField` typedef, so there is no per-curve dispatch code to
      forget;
-   - hand-write the twelve `TypeDescriptorBase<T>` specializations in
-     `_src/dtypes.cc` (descr chars follow the representation, `A/a`, `J/j`,
-     `X/x` — they repeat across curves by design; non-Mont docs end "on standard
-     domain", Mont docs "on montgomery domain");
+   - hand-write the `TypeDescriptorBase<T>` specializations in `_src/dtypes.cc`,
+     one per exposed dtype: six for a short-Weierstrass curve (affine/jacobian/
+     xyzz × std/mont), four for a twisted-Edwards curve (affine/extended ×
+     std/mont). Descr chars follow the representation and repeat across curves
+     by design: `A/a`, `J/j`, `X/x`, and `E`/`t` for extended (`e` is numpy's
+     float16 typecode, which `descr_char_test` forbids shadowing, so the
+     montgomery variant takes `t`). Non-Mont docs end "on standard domain", Mont
+     docs "on montgomery domain";
    - export the dtype names from `__init__.py` — in all three of its per-name
      lists: `__all__`, the import block, and the `Type[np.generic]` annotation
      block.
@@ -153,10 +157,20 @@ using curve25519::FqMont;
    substrate swap there wants the lift in-tree, it arrives as its own op with
    its own tests, not as a side effect of a curve exposure.
 
+   Two twisted-Edwards-specific notes. `_CURVE_PARAMS` entries carry `(a, d)`
+   with no `b` (`ecinfo` exposes whichever the family defines, `None` for the
+   other). And `np.zeros` is identity-valued only for short-Weierstrass types,
+   whose infinity sentinel (affine `(0, 0)`, projective `Z = 0`) happens to be
+   the all-zero byte pattern; the twisted-Edwards identity is the on-curve point
+   `(0, 1)`, so `np.zeros` there yields zero-initialized storage that is not
+   identity-valued — build identity arrays by casting integer zeros.
+
 1. **Tests**: On-curve check, identity addition, inverse, double=add(self),
    Mont/non-Mont consistency. numpy EC point types are covered by adding the
    curve name to `_CURVES` in `tests/ec_point_test.py` (curve-list-driven — no
-   per-curve test file).
+   per-curve test file; a curve whose scalar-field dtype is not named
+   `{curve}_sf` also needs a `_SCALAR_FIELD_CURVE` entry there, e.g. ed25519 →
+   curve25519).
 
 ## Downstream Integration
 

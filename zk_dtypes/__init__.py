@@ -91,6 +91,10 @@ __all__ = [
     "bn254_g2_jacobian_mont",
     "bn254_g2_xyzz",
     "bn254_g2_xyzz_mont",
+    "ed25519_g1_affine",
+    "ed25519_g1_affine_mont",
+    "ed25519_g1_extended",
+    "ed25519_g1_extended_mont",
     "pallas_g1_affine",
     "pallas_g1_affine_mont",
     "pallas_g1_jacobian",
@@ -188,6 +192,10 @@ from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian
 from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian_mont
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import ed25519_g1_affine
+from zk_dtypes._zk_dtypes_ext import ed25519_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import ed25519_g1_extended
+from zk_dtypes._zk_dtypes_ext import ed25519_g1_extended_mont
 from zk_dtypes._zk_dtypes_ext import pallas_g1_affine
 from zk_dtypes._zk_dtypes_ext import pallas_g1_affine_mont
 from zk_dtypes._zk_dtypes_ext import pallas_g1_jacobian
@@ -277,6 +285,10 @@ bn254_g2_jacobian: Type[np.generic]
 bn254_g2_jacobian_mont: Type[np.generic]
 bn254_g2_xyzz: Type[np.generic]
 bn254_g2_xyzz_mont: Type[np.generic]
+ed25519_g1_affine: Type[np.generic]
+ed25519_g1_affine_mont: Type[np.generic]
+ed25519_g1_extended: Type[np.generic]
+ed25519_g1_extended_mont: Type[np.generic]
 pallas_g1_affine: Type[np.generic]
 pallas_g1_affine_mont: Type[np.generic]
 pallas_g1_jacobian: Type[np.generic]
