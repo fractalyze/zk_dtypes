@@ -576,6 +576,42 @@ struct TypeDescriptorBase<bn254::G2PointXyzzMont>
 };
 
 template <>
+struct TypeDescriptorBase<ed25519::G1AffinePoint>
+    : EcPointTypeDescriptor<ed25519::G1AffinePoint> {
+  static constexpr const char* kTpDoc =
+      "ed25519 G1 elliptic curve affine point on standard domain";
+  static constexpr char kNpyDescrType = 'A';
+};
+
+template <>
+struct TypeDescriptorBase<ed25519::G1AffinePointMont>
+    : EcPointTypeDescriptor<ed25519::G1AffinePointMont> {
+  static constexpr const char* kTpDoc =
+      "ed25519 G1 elliptic curve affine point on montgomery domain";
+  static constexpr char kNpyDescrType = 'a';
+};
+
+// The extended representation's natural char pair would be E/e, but numpy
+// claims 'e' for float16 (descr_char_test forbids shadowing a builtin
+// typecode), so the montgomery variant takes 't' — the same escape
+// goldilocksx3 used when numpy 2 claimed its 'T'.
+template <>
+struct TypeDescriptorBase<ed25519::G1ExtendedPoint>
+    : EcPointTypeDescriptor<ed25519::G1ExtendedPoint> {
+  static constexpr const char* kTpDoc =
+      "ed25519 G1 elliptic curve extended point on standard domain";
+  static constexpr char kNpyDescrType = 'E';
+};
+
+template <>
+struct TypeDescriptorBase<ed25519::G1ExtendedPointMont>
+    : EcPointTypeDescriptor<ed25519::G1ExtendedPointMont> {
+  static constexpr const char* kTpDoc =
+      "ed25519 G1 elliptic curve extended point on montgomery domain";
+  static constexpr char kNpyDescrType = 't';
+};
+
+template <>
 struct TypeDescriptorBase<pallas::G1AffinePoint>
     : EcPointTypeDescriptor<pallas::G1AffinePoint> {
   static constexpr const char* kTpDoc =

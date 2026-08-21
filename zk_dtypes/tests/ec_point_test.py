@@ -28,14 +28,20 @@ import numpy as np
 
 # Curve-list-driven fixtures. Adding a curve here (and to _GROUPS, if a curve
 # lacks g2) regenerates every per-type fixture below.
-_CURVES = ["bn254", "pallas", "secp256k1", "secp256r1", "vesta"]
+_CURVES = ["bn254", "ed25519", "pallas", "secp256k1", "secp256r1", "vesta"]
 _GROUPS = ["g1", "g2"]
+
+# ed25519 is named for the signature curve but rides curve25519's fields, so
+# its scalar-field dtype does not follow the `{curve}_sf` pattern.
+_SCALAR_FIELD_CURVE = {"ed25519": "curve25519"}
 
 EC_STD_POINT_TYPES = []
 EC_MONT_POINT_TYPES = []
 AFFINE_TYPES = []
 JACOBIAN_TYPES = []
 XYZZ_TYPES = []
+EXTENDED_TYPES = []
+TE_POINT_TYPES = []
 VALUES = {}
 ADD_OP_RESULT_TYPES = {}
 SCALAR_FIELD_TYPES = {}
@@ -45,12 +51,40 @@ _ALLOWED_CASTS = []
 for _curve in _CURVES:
   for _suffix in ("", "_mont"):
     _std_list = EC_STD_POINT_TYPES if _suffix == "" else EC_MONT_POINT_TYPES
-    _sf = getattr(zk_dtypes, f"{_curve}_sf{_suffix}")
+    _sf = getattr(
+        zk_dtypes, f"{_SCALAR_FIELD_CURVE.get(_curve, _curve)}_sf{_suffix}"
+    )
     for _group in _GROUPS:
       # Skip a group the curve does not define (e.g. G1-only curves have no G2).
       if not hasattr(zk_dtypes, f"{_curve}_{_group}_affine{_suffix}"):
         continue
       _aff = getattr(zk_dtypes, f"{_curve}_{_group}_affine{_suffix}")
+
+      # A twisted-Edwards curve pairs affine with extended; a short-Weierstrass
+      # curve pairs it with jacobian + xyzz. Detect by which sibling exists.
+      if hasattr(zk_dtypes, f"{_curve}_{_group}_extended{_suffix}"):
+        _ext = getattr(zk_dtypes, f"{_curve}_{_group}_extended{_suffix}")
+
+        _std_list += [_aff, _ext]
+        AFFINE_TYPES.append(_aff)
+        EXTENDED_TYPES.append(_ext)
+        TE_POINT_TYPES += [_aff, _ext]
+
+        for _t in (_aff, _ext):
+          VALUES[_t] = [_t(3), _t(4)]
+          SCALAR_FIELD_TYPES[_t] = _sf
+        ADD_OP_RESULT_TYPES[_aff] = _ext
+        ADD_OP_RESULT_TYPES[_ext] = _ext
+
+        _MIXED_ADD_PARAMS += [(_aff, _ext, _ext), (_ext, _aff, _ext)]
+        _ALLOWED_CASTS += [
+            (_aff, _aff),
+            (_aff, _ext),
+            (_ext, _aff),
+            (_ext, _ext),
+        ]
+        continue
+
       _jac = getattr(zk_dtypes, f"{_curve}_{_group}_jacobian{_suffix}")
       _xyzz = getattr(zk_dtypes, f"{_curve}_{_group}_xyzz{_suffix}")
 
@@ -66,7 +100,12 @@ for _curve in _CURVES:
       ADD_OP_RESULT_TYPES[_jac] = _jac
       ADD_OP_RESULT_TYPES[_xyzz] = _xyzz
 
-      _MIXED_ADD_PARAMS += [(_aff, _jac), (_aff, _xyzz)]
+      _MIXED_ADD_PARAMS += [
+          (_aff, _jac, _jac),
+          (_aff, _xyzz, _xyzz),
+          (_jac, _aff, _jac),
+          (_xyzz, _aff, _xyzz),
+      ]
       _ALLOWED_CASTS += [
           (_aff, _aff),
           (_aff, _jac),
@@ -120,11 +159,11 @@ class ScalarTest(parameterized.TestCase):
     self.assertEqual(out, scalar_type(7))
 
   @parameterized.product(param=_MIXED_ADD_PARAMS)
-  def testAffineMixedAddop(self, param):
-    a, b = param
+  def testMixedAddop(self, param):
+    a, b, result_type = param
     out = VALUES[a][0] + VALUES[b][1]
-    self.assertIsInstance(out, b)
-    self.assertEqual(out, b(7))
+    self.assertIsInstance(out, result_type)
+    self.assertEqual(out, result_type(7))
 
   @parameterized.product(scalar_type=EC_POINT_TYPES)
   def testNegop(self, scalar_type):
@@ -212,6 +251,22 @@ class ArrayTest(parameterized.TestCase):
     for i in range(len(x)):
       self.assertEqual(ufunc(x[i], x[i]), y[i])
 
+  @parameterized.product(
+      param=_MIXED_ADD_PARAMS,
+      ufunc=[
+          np.add,
+          np.subtract,
+      ],
+  )
+  def testMixedBinaryUfuncs(self, param, ufunc):
+    a, b, result_type = param
+    x = np.array(VALUES[a], dtype=a)
+    y = np.array(VALUES[b], dtype=b)
+    out = ufunc(x, y)
+    self.assertEqual(out.dtype, np.dtype(result_type))
+    for i in range(len(x)):
+      self.assertEqual(ufunc(x[i], y[i]), out[i])
+
   @parameterized.product(scalar_type=EC_POINT_TYPES)
   def testMulUfunc(self, scalar_type):
     x = np.array(VALUES[scalar_type], dtype=scalar_type)
@@ -236,6 +291,13 @@ class ArrayTest(parameterized.TestCase):
   def testZerosArray(self, scalar_type):
     x = np.zeros(3, dtype=scalar_type)
     self.assertEqual(x.dtype, np.dtype(scalar_type))
+    if scalar_type in TE_POINT_TYPES:
+      # np.zeros writes byte-zero, which encodes the identity only under the
+      # short-Weierstrass infinity sentinel (affine (0, 0) / projective Z = 0).
+      # The twisted-Edwards identity is the on-curve point (0, 1), so np.zeros
+      # there is zero-initialized storage that is not identity-valued —
+      # identity arrays come from casting integer zeros (testCastFromZero).
+      return
     for i in range(3):
       self.assertEqual(x[i], scalar_type(0))
 
@@ -282,6 +344,15 @@ class EcPointRawConversionTest(parameterized.TestCase):
     x = scalar_type(3)
     raw = x.raw
     self.assertEqual(len(raw), 4, msg="XYZZ point should have 4 coordinates")
+
+  @parameterized.product(scalar_type=EXTENDED_TYPES)
+  def testRawPropertyLengthExtended(self, scalar_type):
+    """Test that raw property returns tuple of length 4 for extended points."""
+    x = scalar_type(3)
+    raw = x.raw
+    self.assertEqual(
+        len(raw), 4, msg="Extended point should have 4 coordinates"
+    )
 
   @parameterized.product(scalar_type=EC_POINT_TYPES)
   def testFromRawExists(self, scalar_type):
@@ -335,6 +406,12 @@ class EcPointRawConversionTest(parameterized.TestCase):
     """Test that from_raw raises error with wrong tuple length."""
     with self.assertRaises(TypeError):
       scalar_type.from_raw((0, 0, 0))  # 3 elements for xyzz (expects 4)
+
+  @parameterized.product(scalar_type=EXTENDED_TYPES)
+  def testFromRawWrongLengthExtendedRaisesError(self, scalar_type):
+    """Test that from_raw raises error with wrong tuple length."""
+    with self.assertRaises(TypeError):
+      scalar_type.from_raw((0, 0, 0))  # 3 elements for extended (expects 4)
 
 
 if __name__ == "__main__":

@@ -29,6 +29,12 @@ from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian
 from zk_dtypes._zk_dtypes_ext import bn254_g2_jacobian_mont
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz
 from zk_dtypes._zk_dtypes_ext import bn254_g2_xyzz_mont
+from zk_dtypes._zk_dtypes_ext import curve25519_sf
+from zk_dtypes._zk_dtypes_ext import curve25519_sf_mont
+from zk_dtypes._zk_dtypes_ext import ed25519_g1_affine
+from zk_dtypes._zk_dtypes_ext import ed25519_g1_affine_mont
+from zk_dtypes._zk_dtypes_ext import ed25519_g1_extended
+from zk_dtypes._zk_dtypes_ext import ed25519_g1_extended_mont
 from zk_dtypes._zk_dtypes_ext import pallas_sf
 from zk_dtypes._zk_dtypes_ext import pallas_sf_mont
 from zk_dtypes._zk_dtypes_ext import pallas_g1_affine
@@ -66,6 +72,8 @@ import numpy as np
 
 _bn254_sf_dtype = np.dtype(bn254_sf)
 _bn254_sf_mont_dtype = np.dtype(bn254_sf_mont)
+_curve25519_sf_dtype = np.dtype(curve25519_sf)
+_curve25519_sf_mont_dtype = np.dtype(curve25519_sf_mont)
 _pallas_sf_dtype = np.dtype(pallas_sf)
 _pallas_sf_mont_dtype = np.dtype(pallas_sf_mont)
 _secp256k1_sf_dtype = np.dtype(secp256k1_sf)
@@ -128,6 +136,19 @@ _BN254_G2_GY_MONT = [
     6170940445994484564222204938066213705353407449799250191249554538140978927342,
 ]
 _BN254_G2_NON_RESIDUE_MONT = 15537367993719455909907449462855742678907882278146377936676643359958227611562
+
+# ed25519 (RFC 8032 §5.1): -x² + y² = 1 + d·x²y² over GF(2²⁵⁵ - 19), so the
+# curve carries (a, d) rather than the Weierstrass (a, b). Montgomery forms are
+# `value * R mod p` with `R = 2²⁵⁶ mod p`, matching the limb constants in
+# include/elliptic_curve/curve25519/ed25519/g1.h.
+_ED25519_A = 57896044618658097711785492504343953926634992332820282019728792003956564819948
+_ED25519_D = 37095705934669439343138083508754565189542113879843219016388785533085940283555
+_ED25519_G1_GX = 15112221349535400772501151409588531511454012693041857206046113283949847762202
+_ED25519_G1_GY = 46316835694926478169428394003475163141307993866256225615783033603165251855960
+_ED25519_A_MONT = 57896044618658097711785492504343953926634992332820282019728792003956564819911
+_ED25519_D_MONT = 20131754669644349956395353228418582963360511446355554149282842162308175096314
+_ED25519_G1_GX_MONT = 53200009714422349948974321025268612095537551340208035652193176754485131584135
+_ED25519_G1_GY_MONT = 23158417847463239084714197001737581570653996933128112807891516801582625928010
 
 # Pasta G1: y² = x³ + 5, generator (-1, 2). Standard gx is `modulus - 1`;
 # Montgomery forms are `value * R mod base-field modulus` (arkworks ark-pallas /
@@ -203,6 +224,21 @@ _CURVE_PARAMS = {
         gy=_BN254_G2_GY_MONT,
         non_residue=_BN254_G2_NON_RESIDUE_MONT,
     ),
+    # Twisted Edwards: (a, d) coefficients, no b.
+    ('ed25519', 'g1', False): dict(
+        a=_ED25519_A,
+        d=_ED25519_D,
+        gx=_ED25519_G1_GX,
+        gy=_ED25519_G1_GY,
+        non_residue=None,
+    ),
+    ('ed25519', 'g1', True): dict(
+        a=_ED25519_A_MONT,
+        d=_ED25519_D_MONT,
+        gx=_ED25519_G1_GX_MONT,
+        gy=_ED25519_G1_GY_MONT,
+        non_residue=None,
+    ),
     ('pallas', 'g1', False): dict(
         a=_PALLAS_A,
         b=_PALLAS_B,
@@ -268,6 +304,7 @@ _EC_LAYOUT = [
     ('g1', 'affine', 2, 1),
     ('g1', 'jacobian', 3, 1),
     ('g1', 'xyzz', 4, 1),
+    ('g1', 'extended', 4, 1),
     ('g2', 'affine', 2, 2),
     ('g2', 'jacobian', 3, 2),
     ('g2', 'xyzz', 4, 2),
@@ -335,6 +372,18 @@ _EC_DTYPE_META = {
         },
     ),
     **_build_meta(
+        'ed25519',
+        256,
+        _curve25519_sf_dtype,
+        _curve25519_sf_mont_dtype,
+        {
+            ('g1', 'affine', False): ed25519_g1_affine,
+            ('g1', 'affine', True): ed25519_g1_affine_mont,
+            ('g1', 'extended', False): ed25519_g1_extended,
+            ('g1', 'extended', True): ed25519_g1_extended_mont,
+        },
+    ),
+    **_build_meta(
         'pallas',
         256,
         _pallas_sf_dtype,
@@ -396,11 +445,14 @@ _EC_DTYPE_META = {
 class ecinfo:  # pylint: disable=invalid-name,missing-class-docstring
   base_field_dtype: np.dtype
   storage_bits: int
-  point_repr: str  # 'affine', 'jacobian', or 'xyzz'
+  point_repr: str  # 'affine', 'jacobian', 'xyzz', or 'extended'
   curve_group: str  # 'g1' or 'g2'
   is_montgomery: bool
-  a: int | list[int]  # curve coefficient a in y² = x³ + ax + b
-  b: int | list[int]  # curve coefficient b
+  # Coefficient a: y² = x³ + ax + b (short Weierstrass) or
+  # ax² + y² = 1 + dx²y² (twisted Edwards).
+  a: int | list[int]
+  b: int | list[int] | None  # Weierstrass coefficient b (None for Edwards)
+  d: int | None  # Edwards coefficient d (None for Weierstrass)
   gx: int | list[int]  # generator x-coordinate
   gy: int | list[int]  # generator y-coordinate
   non_residue: int | None  # Fp² non-residue (None for G1, int for G2)
@@ -422,7 +474,8 @@ class ecinfo:  # pylint: disable=invalid-name,missing-class-docstring
 
     params = _CURVE_PARAMS[(curve, group, is_mont)]
     self.a = params['a']
-    self.b = params['b']
+    self.b = params.get('b')
+    self.d = params.get('d')
     self.gx = params['gx']
     self.gy = params['gy']
     self.non_residue = params['non_residue']

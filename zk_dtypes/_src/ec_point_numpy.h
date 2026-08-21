@@ -37,6 +37,19 @@ namespace zk_dtypes {
 constexpr char kEcPointOutOfRange[] =
     "out of range value cannot be converted to elliptic curve point";
 
+// The affine template is shared by both curve families, but the family decides
+// which non-affine representations exist alongside it (short Weierstrass:
+// jacobian + xyzz; twisted Edwards: extended). Every dispatch below that
+// enumerates sibling representations must split on the family, not just on
+// IsAffinePoint.
+template <typename T>
+constexpr bool IsSwAffinePoint =
+    IsAffinePoint<T> && T::Curve::kType == CurveType::kShortWeierstrass;
+
+template <typename T>
+constexpr bool IsTeAffinePoint =
+    IsAffinePoint<T> && T::Curve::kType == CurveType::kTwistedEdwards;
+
 template <typename T>
 struct EcPointTypeDescriptor {
   static int Dtype() { return npy_type; }
@@ -132,7 +145,7 @@ bool CastToEcPoint(PyObject* arg, T* output) {
                      "ec point takes exactly three arguments, got %d", size);
         return false;
       }
-    } else if constexpr (IsPointXyzz<T>) {
+    } else if constexpr (IsPointXyzz<T> || IsExtendedPoint<T>) {
       if (size != 4) {
         PyErr_Format(PyExc_TypeError,
                      "ec point takes exactly four arguments, got %d", size);
@@ -165,21 +178,23 @@ bool CastToEcPoint(PyObject* arg, T* output) {
       }
       *output = T(x, y, z);
       return true;
-    } else if constexpr (IsPointXyzz<T>) {
+    } else if constexpr (IsPointXyzz<T> || IsExtendedPoint<T>) {
+      // xyzz carries (x, y, zz, zzz); extended carries (x, y, z, t). Both are
+      // four base-field coordinates handed to the four-argument constructor.
       PyObject* arg2 = PyTuple_GetItem(arg, 2);
       PyObject* arg3 = PyTuple_GetItem(arg, 3);
-      BaseField zz, zzz;
-      if (!CastToField(arg2, &zz)) {
+      BaseField c2, c3;
+      if (!CastToField(arg2, &c2)) {
         PyErr_Format(PyExc_TypeError, "expected base field, got %s",
                      Py_TYPE(arg2)->tp_name);
         return false;
       }
-      if (!CastToField(arg3, &zzz)) {
+      if (!CastToField(arg3, &c3)) {
         PyErr_Format(PyExc_TypeError, "expected base field, got %s",
                      Py_TYPE(arg3)->tp_name);
         return false;
       }
-      *output = T(x, y, zz, zzz);
+      *output = T(x, y, c2, c3);
       return true;
     }
   } else {
@@ -264,7 +279,7 @@ PyObject* PyEcPoint_nb_add_or_sub(PyObject* a, PyObject* b) {
       return PyEcPoint_FromValue(x - ay).release();
     }
   }
-  if constexpr (IsAffinePoint<T>) {
+  if constexpr (IsSwAffinePoint<T>) {
     using JacobianPoint = typename T::JacobianPoint;
     using PointXyzz = typename T::PointXyzz;
 
@@ -282,6 +297,17 @@ PyObject* PyEcPoint_nb_add_or_sub(PyObject* a, PyObject* b) {
         return PyEcPoint_FromValue(x + xy).release();
       } else {
         return PyEcPoint_FromValue(x - xy).release();
+      }
+    }
+  } else if constexpr (IsTeAffinePoint<T>) {
+    using ExtendedPoint = typename T::ExtendedPoint;
+
+    ExtendedPoint ey;
+    if (PyEcPoint_Value(b, &ey)) {
+      if constexpr (kIsAdd) {
+        return PyEcPoint_FromValue(x + ey).release();
+      } else {
+        return PyEcPoint_FromValue(x - ey).release();
       }
     }
   } else {
@@ -362,6 +388,10 @@ Py_hash_t PyEcPoint_Hash(PyObject* self) {
     hash ^= PyField_Hash_Impl(x.y());
     hash ^= PyField_Hash_Impl(x.zz());
     hash ^= PyField_Hash_Impl(x.zzz());
+  } else if constexpr (IsExtendedPoint<T>) {
+    hash ^= PyField_Hash_Impl(x.y());
+    hash ^= PyField_Hash_Impl(x.z());
+    hash ^= PyField_Hash_Impl(x.t());
   }
 
   // Hash functions must not return -1.
@@ -428,6 +458,8 @@ PyObject* PyEcPoint_GetRaw(PyObject* self, void* closure) {
     return MakeRawTuple(p.x(), p.y(), p.z());
   } else if constexpr (IsPointXyzz<T>) {
     return MakeRawTuple(p.x(), p.y(), p.zz(), p.zzz());
+  } else if constexpr (IsExtendedPoint<T>) {
+    return MakeRawTuple(p.x(), p.y(), p.z(), p.t());
   }
   return nullptr;
 }
@@ -441,6 +473,8 @@ constexpr const char* EcPointTypeName() {
     return "jacobian";
   else if constexpr (IsPointXyzz<T>)
     return "xyzz";
+  else if constexpr (IsExtendedPoint<T>)
+    return "extended";
   return "unknown";
 }
 
@@ -460,7 +494,7 @@ T ConstructEcPoint(const std::array<BaseField, N>& c) {
     return T(c[0], c[1]);
   else if constexpr (IsJacobianPoint<T>)
     return T(c[0], c[1], c[2]);
-  else if constexpr (IsPointXyzz<T>)
+  else if constexpr (IsPointXyzz<T> || IsExtendedPoint<T>)
     return T(c[0], c[1], c[2], c[3]);
 }
 
@@ -633,7 +667,9 @@ npy_bool NPyEcPoint_NonZero(void* data, void* arr) {
 template <typename T>
 int NPyEcPoint_Fill(void* buffer_raw, npy_intp length, void* ignored) {
   if constexpr (IsAffinePoint<T>) {
-    using R = typename T::JacobianPoint;
+    // The working representation is whatever affine addition closes into:
+    // jacobian for short-Weierstrass curves, extended for twisted-Edwards.
+    using R = typename AddResult<T>::Type;
 
     std::vector<R> tmp_buffers;
     tmp_buffers.resize(length);
@@ -641,8 +677,13 @@ int NPyEcPoint_Fill(void* buffer_raw, npy_intp length, void* ignored) {
     R* tmp_buffer = const_cast<R*>(tmp_buffers.data());
     const T start(buffer[0]);
     const R delta = static_cast<T>(buffer[1]) - start;
-    tmp_buffers[0] = start.ToJacobian();
-    tmp_buffers[1] = static_cast<T>(buffer[1]).ToJacobian();
+    if constexpr (IsSwAffinePoint<T>) {
+      tmp_buffers[0] = start.ToJacobian();
+      tmp_buffers[1] = static_cast<T>(buffer[1]).ToJacobian();
+    } else {
+      tmp_buffers[0] = start.ToExtended();
+      tmp_buffers[1] = static_cast<T>(buffer[1]).ToExtended();
+    }
     for (npy_intp i = 2; i < length; ++i) {
       tmp_buffer[i] = tmp_buffer[i - 1] + delta;
     }
@@ -679,6 +720,8 @@ void NPyEcPoint_PointCast(void* from_void, void* to_void, npy_intp n,
     for (npy_intp i = 0; i < n; ++i) {
       if constexpr (IsJacobianPoint<DstType>) {
         to[i] = from[i].ToJacobian();
+      } else if constexpr (IsExtendedPoint<DstType>) {
+        to[i] = from[i].ToExtended();
       } else {
         to[i] = from[i].ToXyzz();
       }
@@ -729,7 +772,23 @@ bool RegisterEcPointCast_Impl(
 
 template <typename T>
 bool RegisterEcPointCast() {
-  if constexpr (IsAffinePoint<T>) {
+  if constexpr (IsTeAffinePoint<T>) {
+    using E = typename T::ExtendedPoint;
+
+    if (!RegisterEcPointCast_Impl<T, E>()) {
+      return false;
+    }
+    if (PyArray_RegisterCanCast(TypeDescriptor<T>::npy_descr,
+                                EcPointTypeDescriptor<E>::Dtype(),
+                                NPY_NOSCALAR) < 0) {
+      return false;
+    }
+    if (PyArray_RegisterCanCast(TypeDescriptor<E>::npy_descr,
+                                EcPointTypeDescriptor<T>::Dtype(),
+                                NPY_NOSCALAR) < 0) {
+      return false;
+    }
+  } else if constexpr (IsAffinePoint<T>) {
     using J = typename T::JacobianPoint;
     using X = typename T::PointXyzz;
 
@@ -868,7 +927,7 @@ bool RegisterEcPointMultiplyUFunc(PyObject* numpy) {
 
 template <typename T, template <typename, typename> class Functor>
 bool RegisterEcPointAddOrSubUFunc_Impl(PyObject* numpy, const char* name) {
-  if constexpr (IsAffinePoint<T>) {
+  if constexpr (IsSwAffinePoint<T>) {
     using A = T;
     using J = typename T::JacobianPoint;
     using X = typename T::PointXyzz;
@@ -876,6 +935,12 @@ bool RegisterEcPointAddOrSubUFunc_Impl(PyObject* numpy, const char* name) {
     return RegisterUFunc<UFunc<Functor<A, A>, J, A, A>, A>(numpy, name) &&
            RegisterUFunc<UFunc<Functor<A, J>, J, A, J>, A>(numpy, name) &&
            RegisterUFunc<UFunc<Functor<A, X>, X, A, X>, A>(numpy, name);
+  } else if constexpr (IsTeAffinePoint<T>) {
+    using A = T;
+    using E = typename T::ExtendedPoint;
+
+    return RegisterUFunc<UFunc<Functor<A, A>, E, A, A>, A>(numpy, name) &&
+           RegisterUFunc<UFunc<Functor<A, E>, E, A, E>, A>(numpy, name);
   } else {
     using A = typename T::AffinePoint;
 

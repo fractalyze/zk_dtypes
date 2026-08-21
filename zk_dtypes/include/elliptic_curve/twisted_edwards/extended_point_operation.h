@@ -55,6 +55,14 @@ class ExtendedPointOperation<
     return DoAdd(other.ToExtended());
   }
 
+  constexpr ExtendedPoint& operator+=(const ExtendedPoint& other) {
+    return static_cast<ExtendedPoint&>(*this) = operator+(other);
+  }
+
+  constexpr ExtendedPoint& operator+=(const AffinePoint& other) {
+    return static_cast<ExtendedPoint&>(*this) = operator+(other);
+  }
+
   constexpr ExtendedPoint operator-(const ExtendedPoint& other) const {
     return operator+(-other);
   }
