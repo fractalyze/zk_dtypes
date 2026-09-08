@@ -36,7 +36,6 @@ __all__ = [
     "babybear",
     "babybear_mont",
     "goldilocks",
-    "goldilocks_mont",
     "koalabear",
     "koalabear_mont",
     "mersenne31",
@@ -63,7 +62,6 @@ __all__ = [
     "babybearx4",
     "babybearx4_mont",
     "goldilocksx3",
-    "goldilocksx3_mont",
     "koalabearx4",
     "koalabearx4_mont",
     "mersenne31x2",
@@ -121,6 +119,7 @@ __all__ = [
     "vesta_g1_xyzz_mont",
 ]
 
+import warnings
 from typing import Type
 
 from zk_dtypes._ecinfo import ecinfo
@@ -141,7 +140,6 @@ from zk_dtypes._zk_dtypes_ext import uint256
 from zk_dtypes._zk_dtypes_ext import babybear
 from zk_dtypes._zk_dtypes_ext import babybear_mont
 from zk_dtypes._zk_dtypes_ext import goldilocks
-from zk_dtypes._zk_dtypes_ext import goldilocks_mont
 from zk_dtypes._zk_dtypes_ext import koalabear
 from zk_dtypes._zk_dtypes_ext import koalabear_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31
@@ -166,7 +164,6 @@ from zk_dtypes._zk_dtypes_ext import vesta_sf_mont
 from zk_dtypes._zk_dtypes_ext import babybearx4
 from zk_dtypes._zk_dtypes_ext import babybearx4_mont
 from zk_dtypes._zk_dtypes_ext import goldilocksx3
-from zk_dtypes._zk_dtypes_ext import goldilocksx3_mont
 from zk_dtypes._zk_dtypes_ext import koalabearx4
 from zk_dtypes._zk_dtypes_ext import koalabearx4_mont
 from zk_dtypes._zk_dtypes_ext import mersenne31x2
@@ -234,7 +231,6 @@ uint256: Type[np.generic]
 babybear: Type[np.generic]
 babybear_mont: Type[np.generic]
 goldilocks: Type[np.generic]
-goldilocks_mont: Type[np.generic]
 koalabear: Type[np.generic]
 koalabear_mont: Type[np.generic]
 mersenne31: Type[np.generic]
@@ -259,7 +255,6 @@ vesta_sf_mont: Type[np.generic]
 babybearx4: Type[np.generic]
 babybearx4_mont: Type[np.generic]
 goldilocksx3: Type[np.generic]
-goldilocksx3_mont: Type[np.generic]
 koalabearx4: Type[np.generic]
 koalabearx4_mont: Type[np.generic]
 mersenne31x2: Type[np.generic]
@@ -315,3 +310,27 @@ vesta_g1_xyzz: Type[np.generic]
 vesta_g1_xyzz_mont: Type[np.generic]
 
 del np, Type
+
+
+# Goldilocks (p = 2^64 - 2^32 + 1) reduces by the Solinas structure of its
+# modulus; Montgomery storage only adds a multiply per multiply. The dtypes stay
+# registered for interop, but reach them through here and you get a warning.
+_DEPRECATED_DTYPES = {
+    "goldilocks_mont": "goldilocks",
+    "goldilocksx3_mont": "goldilocksx3",
+}
+
+
+def __getattr__(name: str):
+  if name in _DEPRECATED_DTYPES:
+    from zk_dtypes import _zk_dtypes_ext  # noqa: PLC0415
+
+    warnings.warn(
+        f"zk_dtypes.{name} is deprecated: Goldilocks reduces by its Solinas"
+        f" structure, so Montgomery storage only costs an extra multiply. Use"
+        f" zk_dtypes.{_DEPRECATED_DTYPES[name]}.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return getattr(_zk_dtypes_ext, name)
+  raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
