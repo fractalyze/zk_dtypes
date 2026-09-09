@@ -25,6 +25,7 @@ from absl.testing import absltest
 import numpy as np
 
 import zk_dtypes
+from zk_dtypes import _zk_dtypes_ext
 
 # name -> shadowed builtin char. Frozen as of binary_field_gf8_aes ('8', the
 # first dtype gated by this test); each entry predates the test.
@@ -51,8 +52,11 @@ _GRANDFATHERED_BUILTIN_CHARS = {
 
 
 def _all_scalar_types():
-  for name in zk_dtypes.__all__:
-    t = getattr(zk_dtypes, name)
+  # Every registered dtype, including ones deprecated off the public surface
+  # (goldilocks_mont, goldilocksx3_mont): a typecode clash is a registration
+  # property, not a surface one.
+  for name in sorted(dir(_zk_dtypes_ext)):
+    t = getattr(_zk_dtypes_ext, name)
     if isinstance(t, type) and issubclass(t, np.generic):
       yield name, t
 
