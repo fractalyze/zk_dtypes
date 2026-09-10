@@ -199,4 +199,36 @@ TEST(Secp256k1FqMontTest, MontMulReduceCarry) {
   EXPECT_TRUE((near_p * near_p.Inverse()).IsOne());
 }
 
+// Regression test for signed overflow in the single-word Montgomery reduction.
+//
+// m * modulus must be formed in the unsigned 2n-bit type: both factors reach
+// 2ⁿ - 1, so for a full-width modulus (Goldilocks, n = 64) the product exceeds
+// the signed 128-bit maximum. Forming it signed is undefined behaviour, which
+// clang >= 19 at -c opt exploited — GoldilocksMont values then compared unequal
+// to the very values they printed.
+//
+// Constant evaluation is the compiler-independent guard: signed overflow is not
+// a constant expression, so a regression is a build error on every toolchain
+// rather than a wrong answer on some hosts.
+constexpr uint64_t GoldilocksMontReduce(uint64_t a) {
+  uint64_t ret = 0;
+  MontReduce<GoldilocksMontConfig>(a, ret);
+  return ret;
+}
+
+// Both inputs drive m = a * p⁻¹ mod 2⁶⁴ past 2⁶³, where m * p overflows a
+// signed 128-bit integer: R mod p (the Montgomery form of 1), and p - 1 (the
+// largest representable limb, whose reduction is 2³²).
+static_assert(GoldilocksMontReduce(GoldilocksMontConfig::kOne) == 1);
+static_assert(GoldilocksMontReduce(GoldilocksMontConfig::kModulus - 1) ==
+              uint64_t{1} << 32);
+
+TEST(GoldilocksMontTest, MontReduceSignedOverflow) {
+  EXPECT_TRUE(GoldilocksMont::One().MontReduce().IsOne());
+
+  GoldilocksMont largest_limb =
+      GoldilocksMont::FromUnchecked(GoldilocksMontConfig::kModulus - 1);
+  EXPECT_EQ(largest_limb.MontReduce(), Goldilocks(uint64_t{1} << 32));
+}
+
 }  // namespace zk_dtypes

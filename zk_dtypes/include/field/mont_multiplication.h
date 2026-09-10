@@ -48,15 +48,20 @@ constexpr bool CanUseNoCarryMulOptimization(const BigInt<N>& modulus) {
 template <typename T,
           std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 64>* = nullptr>
 constexpr void MontReduce(T a, T& b, T modulus, T n_prime) {
-  using SignedT = std::make_signed_t<T>;
-  using SignedExtT = internal::make_promoted_t<SignedT>;
+  using ExtT = internal::make_promoted_t<T>;
 
+  // m ≡ a * p⁻¹ (mod 2ⁿ), so m * modulus = mn * 2ⁿ + a and a ≡ -mn * 2ⁿ
+  // (mod p), giving a * (2ⁿ)⁻¹ ≡ -mn (mod p).
+  //
+  // The product must be formed in the *unsigned* 2n-bit type: both factors
+  // reach 2ⁿ - 1, so for a full-width modulus (Goldilocks, n = 64) the product
+  // exceeds the signed 2n-bit maximum and signed overflow is undefined.
   T m = a * n_prime;
-  auto mn = (SignedExtT{m} * modulus) >> (sizeof(T) * 8);
+  T mn = static_cast<T>((ExtT{m} * modulus) >> (sizeof(T) * 8));
   if (mn == 0) {
     b = 0;
   } else {
-    b = modulus - static_cast<T>(mn);
+    b = modulus - mn;
   }
 }
 
