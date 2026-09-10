@@ -21,7 +21,7 @@ limitations under the License.
 #include <iterator>
 #include <limits>
 
-#include "absl/base/internal/endian.h"
+#include "absl/base/config.h"
 
 #include "zk_dtypes/include/bit_traits_forward.h"
 

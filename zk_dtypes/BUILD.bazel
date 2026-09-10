@@ -96,7 +96,7 @@ cc_library(
     hdrs = ["include/bit_iterator.h"],
     deps = [
         ":bit_traits_forward",
-        "@com_google_absl//absl/base:endian",
+        "@com_google_absl//absl/base:config",
     ],
 )
 
