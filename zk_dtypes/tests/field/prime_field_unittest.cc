@@ -199,4 +199,32 @@ TEST(Secp256k1FqMontTest, MontMulReduceCarry) {
   EXPECT_TRUE((near_p * near_p.Inverse()).IsOne());
 }
 
+// Regression test for the unsigned 2n-bit product in MontReduce(): forming it
+// signed overflows for a full-width modulus, and undefined overflow leaves the
+// compiler free to miscompile the reduction.
+//
+// Constant evaluation is the compiler-independent guard: signed overflow is not
+// a constant expression, so a regression is a build error on every toolchain
+// rather than a wrong answer on some hosts.
+constexpr uint64_t GoldilocksMontReduce(uint64_t a) {
+  uint64_t ret = 0;
+  MontReduce<GoldilocksMontConfig>(a, ret);
+  return ret;
+}
+
+// Both inputs drive m = a * p⁻¹ mod 2⁶⁴ past 2⁶³, where m * p overflows a
+// signed 128-bit integer: R mod p (the Montgomery form of 1), and p - 1 (the
+// largest representable limb, whose reduction is 2³²).
+static_assert(GoldilocksMontReduce(GoldilocksMontConfig::kOne) == 1);
+static_assert(GoldilocksMontReduce(GoldilocksMontConfig::kModulus - 1) ==
+              uint64_t{1} << 32);
+
+TEST(GoldilocksMontTest, MontReduceSignedOverflow) {
+  EXPECT_TRUE(GoldilocksMont::One().MontReduce().IsOne());
+
+  GoldilocksMont largest_limb =
+      GoldilocksMont::FromUnchecked(GoldilocksMontConfig::kModulus - 1);
+  EXPECT_EQ(largest_limb.MontReduce(), Goldilocks(uint64_t{1} << 32));
+}
+
 }  // namespace zk_dtypes
