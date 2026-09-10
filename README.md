@@ -85,6 +85,30 @@ used in Zero Knowledge libraries inspired by
    bazel test //...
    ```
 
+### Depending on zk_dtypes from another Bazel repo
+
+`WORKSPACE.bazel` is the default and stays the supported path for Bazel 7
+consumers. `MODULE.bazel` declares the same dependency set for bzlmod consumers,
+and `--config=bzlmod` builds this repo through it:
+
+```sh
+bazel test --config=bzlmod //...
+```
+
+A consumer picks the repo up with `bazel_dep` plus an override:
+
+```py
+bazel_dep(name = "zk_dtypes", version = "0.0.17")
+git_override(
+    module_name = "zk_dtypes",
+    remote = "https://github.com/fractalyze/zk_dtypes",
+    commit = "<commit>",
+)
+```
+
+Where the registry cannot carry a WORKSPACE pin, `MODULE.bazel` records the
+version it resolves to instead, at the dependency.
+
 ## Installation
 
 The `zk_dtypes` package is tested with Python versions 3.11-3.13, and can be

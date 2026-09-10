@@ -23,6 +23,12 @@ build --announce_rc
 
 common --noenable_bzlmod
 
+# Bzlmod lane. Ignores WORKSPACE.bazel entirely, so what it builds is what a
+# consumer depending on this repo with `bazel_dep` resolves. Opt-in: the
+# WORKSPACE build stays the default for Bazel 7 consumers.
+common:bzlmod --enable_bzlmod
+common:bzlmod --noenable_workspace
+
 # Enable platform specific configurations by default depending on host machine.
 common --enable_platform_specific_config
 

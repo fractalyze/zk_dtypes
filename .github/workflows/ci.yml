@@ -35,6 +35,24 @@ jobs:
         if: ${{ failure() }}
         uses: fractalyze/.github/.github/actions/upload-bazel-testlogs@main
 
+  # The same tests, resolved through MODULE.bazel instead of WORKSPACE.bazel.
+  build-and-test-bzlmod:
+    runs-on: [self-hosted, cpu]
+    steps:
+      - name: Checkout zk_dtypes
+        uses: actions/checkout@v4
+
+      - name: Run `bazel test`
+        run: |
+          bazel --bazelrc=.bazelrc.ci test \
+            --config=ci \
+            --config=bzlmod \
+            //...
+
+      - name: Upload bazel test logs
+        if: ${{ failure() }}
+        uses: fractalyze/.github/.github/actions/upload-bazel-testlogs@main
+
   pre-commit-style:
     runs-on: [self-hosted, cpu]
     steps:

@@ -1,6 +1,112 @@
-###############################################################################
-# Bazel now uses Bzlmod by default to manage external dependencies.
-# Please consider migrating your external dependencies from WORKSPACE to MODULE.bazel.
+# Copyright 2026 The zk_dtypes Authors.
 #
-# For more details, please check https://github.com/bazelbuild/bazel/issues/18958
-###############################################################################
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+"""zk_dtypes as a Bazel module.
+
+The WORKSPACE build stays the default; `--config=bzlmod` builds through this
+file, which is also what a consumer gets when it declares a `bazel_dep` on
+zk_dtypes. Keep the two in step: a dependency added to `zk_dtypes_deps.bzl`
+needs a `bazel_dep` here, or an entry in `//bazel:non_module_deps.bzl` when it
+publishes no Bazel module of its own.
+"""
+
+module(
+    name = "zk_dtypes",
+    version = "0.0.17",
+    compatibility_level = 1,
+)
+
+# Repo names match the WORKSPACE build so that first-party BUILD files read the
+# same under both. Versions are the WORKSPACE pins where the registry carries
+# them; where it does not, the nearest release is used and noted.
+bazel_dep(name = "abseil-cpp", version = "20250814.0", repo_name = "com_google_absl")
+bazel_dep(name = "bazel_skylib", version = "1.8.1")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_cc", version = "0.2.0")
+bazel_dep(name = "rules_python", version = "1.6.0")
+
+# abseil-cpp already requires googletest 1.17.0, so the WORKSPACE pin
+# (release-1.12.1) cannot be held here without pinning abseil-cpp back too.
+bazel_dep(name = "googletest", version = "1.17.0", repo_name = "com_google_googletest")
+
+# The WORKSPACE build pins a benchmark commit that predates any registry entry;
+# 1.8.2 is the first release that carries one. Not a `dev_dependency`, so that a
+# consumer building `@zk_dtypes//...` resolves the benchmark targets too.
+bazel_dep(name = "google_benchmark", version = "1.8.2", repo_name = "com_google_benchmark")
+
+non_module_deps = use_extension("//bazel:non_module_deps.bzl", "non_module_deps")
+use_repo(non_module_deps, "eigen_archive")
+
+PYTHON_VERSIONS = [
+    "3.11",
+    "3.12",
+    "3.13",
+]
+
+DEFAULT_PYTHON_VERSION = "3.11"
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+
+[
+    python.toolchain(
+        is_default = version == DEFAULT_PYTHON_VERSION,
+        python_version = version,
+    )
+    for version in PYTHON_VERSIONS
+]
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+
+# The C++ extension compiles against numpy's headers, which the wheel ships but
+# does not expose as a `cc_library`.
+pip.whl_mods(
+    additive_build_content = """\
+cc_library(
+    name = "numpy_headers_2",
+    hdrs = glob(["site-packages/numpy/_core/include/**/*.h"]),
+    strip_include_prefix = "site-packages/numpy/_core/include/",
+)
+
+cc_library(
+    name = "numpy_headers_1",
+    hdrs = glob(["site-packages/numpy/core/include/**/*.h"]),
+    strip_include_prefix = "site-packages/numpy/core/include/",
+)
+
+cc_library(
+    name = "numpy_headers",
+    deps = [
+        ":numpy_headers_1",
+        ":numpy_headers_2",
+    ],
+)
+""",
+    hub_name = "whl_mods",
+    whl_name = "numpy",
+)
+use_repo(pip, "whl_mods")
+
+[
+    pip.parse(
+        extra_hub_aliases = {"numpy": ["numpy_headers"]},
+        hub_name = "pypi",
+        python_version = version,
+        requirements_lock = "//:requirements_lock_{}.txt".format(version.replace(".", "_")),
+        whl_modifications = {"@whl_mods//:numpy.json": "numpy"},
+    )
+    for version in PYTHON_VERSIONS
+]
+
+use_repo(pip, "pypi")
