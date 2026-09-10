@@ -13,6 +13,17 @@
 # limitations under the License.
 # ==============================================================================
 
-# Read by //third_party/py/numpy:numpy_headers_sync_test, which checks the
-# inlined numpy build snippet against its canonical file.
-exports_files(["python_init_pip.bzl"])
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+# How a consumer actually uses zk_dtypes: depend on a field target and compile
+# against it. The CI lane additionally builds `@zk_dtypes//zk_dtypes/...`, which
+# is what covers the targets no consumer depends on directly — the ones reaching
+# eigen and the numpy headers through module extensions.
+cc_test(
+    name = "consume_zk_dtypes_test",
+    srcs = ["consume_zk_dtypes_test.cc"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "@zk_dtypes//zk_dtypes:goldilocks",
+    ],
+)

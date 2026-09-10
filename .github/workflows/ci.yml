@@ -35,6 +35,53 @@ jobs:
         if: ${{ failure() }}
         uses: fractalyze/.github/.github/actions/upload-bazel-testlogs@main
 
+  # The same tests, resolved through MODULE.bazel instead of WORKSPACE.bazel.
+  build-and-test-bzlmod:
+    runs-on: [self-hosted, cpu]
+    steps:
+      - name: Checkout zk_dtypes
+        uses: actions/checkout@v4
+
+      - name: Run `bazel test`
+        run: |
+          bazel --bazelrc=.bazelrc.ci test \
+            --config=ci \
+            --config=bzlmod \
+            //...
+
+      - name: Upload bazel test logs
+        if: ${{ failure() }}
+        uses: fractalyze/.github/.github/actions/upload-bazel-testlogs@main
+
+  # zk_dtypes' own bzlmod lane builds it as the *root* module, where patches and
+  # overrides still apply; a consumer resolves it as a non-root module, where
+  # they do not. Only a separate module can tell the two apart, so this lane
+  # builds one — the second acceptance criterion of #187.
+  bzlmod-consumer:
+    runs-on: [self-hosted, cpu]
+    steps:
+      - name: Checkout zk_dtypes
+        uses: actions/checkout@v4
+
+      - name: Run `bazel test` in the consumer module
+        working-directory: bazel/bzlmod_consumer
+        run: |
+          bazel --bazelrc="${GITHUB_WORKSPACE}/.bazelrc.ci" test \
+            --config=ci \
+            //...
+
+      - name: Resolve every zk_dtypes target as a dependency
+        working-directory: bazel/bzlmod_consumer
+        run: |
+          bazel --bazelrc="${GITHUB_WORKSPACE}/.bazelrc.ci" build \
+            --config=ci \
+            @zk_dtypes//zk_dtypes/... \
+            @zk_dtypes//third_party/...
+
+      - name: Upload bazel test logs
+        if: ${{ failure() }}
+        uses: fractalyze/.github/.github/actions/upload-bazel-testlogs@main
+
   pre-commit-style:
     runs-on: [self-hosted, cpu]
     steps:

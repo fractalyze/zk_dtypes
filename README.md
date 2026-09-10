@@ -85,6 +85,36 @@ used in Zero Knowledge libraries inspired by
    bazel test //...
    ```
 
+### Depending on zk_dtypes from another Bazel repo
+
+`WORKSPACE.bazel` is the default and stays the supported path for Bazel 7
+consumers. `MODULE.bazel` covers the same first-party targets for bzlmod
+consumers, and `--config=bzlmod` builds this repo through it:
+
+```sh
+bazel test --config=bzlmod //...
+```
+
+A consumer picks the repo up with `bazel_dep` plus an override. The override
+supplies the source, so no version is needed on the `bazel_dep`:
+
+```py
+bazel_dep(name = "zk_dtypes")
+git_override(
+    module_name = "zk_dtypes",
+    remote = "https://github.com/fractalyze/zk_dtypes",
+    commit = "<commit>",
+)
+```
+
+The two paths resolve different versions of a few dependencies, and drop the
+WORKSPACE patches entirely, because a patch or `single_version_override` applies
+only for the root module and would not reach a consumer. `MODULE.bazel` records
+each deviation at the dependency it affects.
+
+`bazel/bzlmod_consumer` is a worked example of the above and runs in CI, so the
+consumer path stays exercised rather than assumed.
+
 ## Installation
 
 The `zk_dtypes` package is tested with Python versions 3.11-3.13, and can be

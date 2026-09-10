@@ -1,0 +1,40 @@
+# Copyright 2026 The zk_dtypes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+"""A standalone module that depends on zk_dtypes, exactly as a consumer does.
+
+zk_dtypes' own `--config=bzlmod` lane builds it as the *root* module, where
+patches and `single_version_override` still apply. A consumer resolves it as a
+non-root module, where they do not — so only a separate module like this one can
+show that `//MODULE.bazel` stands on its own. This is the second acceptance
+criterion of fractalyze/zk_dtypes#187.
+
+`local_path_override` stands in for the `archive_override` / `git_override` a
+real consumer writes: it pins no revision, but resolution treats zk_dtypes as a
+non-root dependency either way, which is the property under test.
+"""
+
+module(name = "zk_dtypes_bzlmod_consumer")
+
+bazel_dep(name = "zk_dtypes")
+local_path_override(
+    module_name = "zk_dtypes",
+    path = "../..",
+)
+
+# A consumer declares the rules and test framework it uses itself; neither is
+# inherited from zk_dtypes.
+bazel_dep(name = "rules_cc", version = "0.2.0")
+bazel_dep(name = "googletest", version = "1.17.0", repo_name = "com_google_googletest")

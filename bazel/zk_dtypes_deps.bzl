@@ -17,6 +17,7 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+load("//bazel:non_module_deps.bzl", "zk_dtypes_non_module_deps")
 
 def zk_dtypes_deps():
     """zk_dtypes dependencies."""
@@ -27,8 +28,6 @@ def zk_dtypes_deps():
         sha256 = "9b2b72d4e8367c0b843fa2bcfa2b08debbe3cee34f7aaa27de55a6cbb3e843db",
         strip_prefix = "abseil-cpp-20250814.0",
         urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20250814.0.tar.gz"],
-        patches = ["@zk_dtypes//third_party/absl:endian.patch"],
-        patch_args = ["-p1"],
         repo_mapping = {
             "@googletest": "@com_google_googletest",
         },
@@ -57,11 +56,4 @@ def zk_dtypes_deps():
         urls = ["https://github.com/google/benchmark/archive/{commit}.tar.gz".format(commit = BM_COMMIT)],
     )
 
-    EIGEN_COMMIT = "4c38131a16803130b66266a912029504f2cf23cd"
-    http_archive(
-        name = "eigen_archive",
-        build_file = "@zk_dtypes//third_party/eigen3:eigen_archive.BUILD",
-        sha256 = "1a432ccbd597ea7b9faa1557b1752328d6adc1a3db8969f6fe793ff704be3bf0",
-        strip_prefix = "eigen-{commit}".format(commit = EIGEN_COMMIT),
-        urls = ["https://gitlab.com/libeigen/eigen/-/archive/{commit}/eigen-{commit}.tar.gz".format(commit = EIGEN_COMMIT)],
-    )
+    zk_dtypes_non_module_deps()

@@ -24,22 +24,34 @@ load(
 )
 
 def python_init_pip():
+    # Kept byte-identical to //third_party/py/numpy:numpy_headers.BUILD, which
+    # MODULE.bazel reads directly. `package_annotation` takes only a string and
+    # MODULE.bazel cannot `load()` a shared constant, so the text is repeated
+    # here and //third_party/py/numpy:numpy_headers_sync_test guards the pair.
     numpy_annotations = {
         "numpy": package_annotation(
             additive_build_content = """\
+# numpy ships its C headers inside the wheel but exposes no cc_library for
+# them, and the include root moved from `core` to `_core` in numpy 2, so both
+# are declared and the wrapper depends on whichever glob matched.
 cc_library(
     name = "numpy_headers_2",
     hdrs = glob(["site-packages/numpy/_core/include/**/*.h"]),
-    strip_include_prefix="site-packages/numpy/_core/include/",
+    strip_include_prefix = "site-packages/numpy/_core/include/",
 )
+
 cc_library(
     name = "numpy_headers_1",
     hdrs = glob(["site-packages/numpy/core/include/**/*.h"]),
-    strip_include_prefix="site-packages/numpy/core/include/",
+    strip_include_prefix = "site-packages/numpy/core/include/",
 )
+
 cc_library(
     name = "numpy_headers",
-    deps = [":numpy_headers_2", ":numpy_headers_1"],
+    deps = [
+        ":numpy_headers_1",
+        ":numpy_headers_2",
+    ],
 )
 """,
         ),
