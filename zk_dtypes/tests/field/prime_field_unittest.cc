@@ -199,13 +199,9 @@ TEST(Secp256k1FqMontTest, MontMulReduceCarry) {
   EXPECT_TRUE((near_p * near_p.Inverse()).IsOne());
 }
 
-// Regression test for signed overflow in the single-word Montgomery reduction.
-//
-// m * modulus must be formed in the unsigned 2n-bit type: both factors reach
-// 2ⁿ - 1, so for a full-width modulus (Goldilocks, n = 64) the product exceeds
-// the signed 128-bit maximum. Forming it signed is undefined behaviour, which
-// clang >= 19 at -c opt exploited — GoldilocksMont values then compared unequal
-// to the very values they printed.
+// Regression test for the unsigned 2n-bit product in MontReduce(): forming it
+// signed overflows for a full-width modulus, and undefined overflow leaves the
+// compiler free to miscompile the reduction.
 //
 // Constant evaluation is the compiler-independent guard: signed overflow is not
 // a constant expression, so a regression is a build error on every toolchain
