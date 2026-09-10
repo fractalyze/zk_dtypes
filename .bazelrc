@@ -23,9 +23,11 @@ build --announce_rc
 
 common --noenable_bzlmod
 
-# Bzlmod lane. Ignores WORKSPACE.bazel entirely, so what it builds is what a
-# consumer depending on this repo with `bazel_dep` resolves. Opt-in: the
-# WORKSPACE build stays the default for Bazel 7 consumers.
+# Bzlmod lane. Ignores WORKSPACE.bazel entirely and resolves through
+# MODULE.bazel instead. This builds zk_dtypes as the *root* module, where
+# patches and overrides still apply, so it does not by itself prove what a
+# consumer gets — //bazel/bzlmod_consumer covers that. Opt-in: the WORKSPACE
+# build stays the default for Bazel 7 consumers.
 common:bzlmod --enable_bzlmod
 common:bzlmod --noenable_workspace
 

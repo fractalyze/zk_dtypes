@@ -14,7 +14,21 @@
 # limitations under the License.
 # ==============================================================================
 
+load("@rules_python//python:defs.bzl", "py_test")
+
 licenses(["restricted"])
+
+exports_files(["numpy_headers.BUILD"])
+
+py_test(
+    name = "numpy_headers_sync_test",
+    srcs = ["numpy_headers_sync_test.py"],
+    data = [
+        "numpy_headers.BUILD",
+        "//third_party/py:python_init_pip.bzl",
+    ],
+    deps = ["@pypi//absl_py"],
+)
 
 package(default_visibility = ["//visibility:public"])
 
