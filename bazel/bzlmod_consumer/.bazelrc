@@ -1,0 +1,11 @@
+# Standalone module: this file is not the repository root's .bazelrc.
+common --enable_bzlmod
+common --noenable_workspace
+
+build -c opt
+build --enable_platform_specific_config
+build:linux --cxxopt=-std=c++17
+build:linux --host_cxxopt=-std=c++17
+build:linux --cxxopt=-Wno-sign-compare
+build:macos --cxxopt=-std=c++17
+build:macos --host_cxxopt=-std=c++17
