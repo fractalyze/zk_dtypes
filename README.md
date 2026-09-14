@@ -87,13 +87,11 @@ used in Zero Knowledge libraries inspired by
 
 ### Depending on zk_dtypes from another Bazel repo
 
-`WORKSPACE.bazel` is the default and stays the supported path for Bazel 7
-consumers. `MODULE.bazel` covers the same first-party targets for bzlmod
-consumers, and `--config=bzlmod` builds this repo through it:
-
-```sh
-bazel test --config=bzlmod //...
-```
+`MODULE.bazel` is how zk_dtypes builds and how a bzlmod consumer resolves it.
+The loader `.bzl` files — `//bazel:zk_dtypes_deps.bzl` and the
+`//third_party/py:python_init_*.bzl` set — are still shipped for consumers that
+have not moved off `WORKSPACE`, and `MODULE.bazel` is kept in step with them,
+but this repo no longer has a `WORKSPACE.bazel` of its own.
 
 A consumer picks the repo up with `bazel_dep` plus an override. The override
 supplies the source, so no version is needed on the `bazel_dep`:
@@ -107,10 +105,10 @@ git_override(
 )
 ```
 
-The two paths resolve different versions of a few dependencies, and drop the
-WORKSPACE patches entirely, because a patch or `single_version_override` applies
-only for the root module and would not reach a consumer. `MODULE.bazel` records
-each deviation at the dependency it affects.
+The two paths resolve different versions of a few dependencies, and the module
+path drops the loader files' patches entirely, because a patch or
+`single_version_override` applies only for the root module and would not reach a
+consumer. `MODULE.bazel` records each deviation at the dependency it affects.
 
 `bazel/bzlmod_consumer` is a worked example of the above and runs in CI, so the
 consumer path stays exercised rather than assumed.

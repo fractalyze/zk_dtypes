@@ -21,16 +21,6 @@ build -c opt
 # Make Bazel print out all options from rc files.
 build --announce_rc
 
-common --noenable_bzlmod
-
-# Bzlmod lane. Ignores WORKSPACE.bazel entirely and resolves through
-# MODULE.bazel instead. This builds zk_dtypes as the *root* module, where
-# patches and overrides still apply, so it does not by itself prove what a
-# consumer gets — //bazel/bzlmod_consumer covers that. Opt-in: the WORKSPACE
-# build stays the default for Bazel 7 consumers.
-common:bzlmod --enable_bzlmod
-common:bzlmod --noenable_workspace
-
 # Enable platform specific configurations by default depending on host machine.
 common --enable_platform_specific_config
 
