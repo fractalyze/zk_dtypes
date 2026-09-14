@@ -17,30 +17,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # zk_dtypes resolves through MODULE.bazel only, so this is the whole build.
   build-and-test:
     runs-on: [self-hosted, cpu]
-    steps:
-      - name: Checkout zk_dtypes
-        uses: actions/checkout@v4
-
-      # CI_BAZEL_CONFIG is unset here, so the script resolves through
-      # WORKSPACE.bazel and, with no bazel-diff arguments, runs the full suite.
-      - name: Run `bazel test`
-        run: ./build_tools/github_actions/ci_build_bazel.sh
-
-      # Capture the runner-local test.log a failed test leaves behind — the CI
-      # stream only carries the FAIL summary, not the gtest output.
-      - name: Upload bazel test logs
-        if: ${{ failure() }}
-        uses: fractalyze/.github/.github/actions/upload-bazel-testlogs@main
-
-  # The same tests, resolved through MODULE.bazel instead of WORKSPACE.bazel.
-  # bazel-diff runs under `--config=bzlmod` throughout, hashing included, so the
-  # impacted set is computed against the module graph this lane actually builds.
-  build-and-test-bzlmod:
-    runs-on: [self-hosted, cpu]
-    env:
-      CI_BAZEL_CONFIG: bzlmod
     steps:
       # Full history so bazel-diff can check out and hash the PR base revision.
       - name: Checkout zk_dtypes
@@ -70,11 +49,13 @@ jobs:
         if: github.event_name != 'pull_request'
         run: ./build_tools/github_actions/ci_build_bazel.sh
 
+      # Capture the runner-local test.log a failed test leaves behind — the CI
+      # stream only carries the FAIL summary, not the gtest output.
       - name: Upload bazel test logs
         if: ${{ failure() }}
         uses: fractalyze/.github/.github/actions/upload-bazel-testlogs@main
 
-  # zk_dtypes' own bzlmod lane builds it as the *root* module, where patches and
+  # The lane above builds zk_dtypes as the *root* module, where patches and
   # overrides still apply; a consumer resolves it as a non-root module, where
   # they do not. Only a separate module can tell the two apart, so this lane
   # builds one — the second acceptance criterion of #187.
@@ -101,8 +82,8 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # `*.bazel*` covers MODULE.bazel(.lock), WORKSPACE.bazel, BUILD.bazel,
-          # .bazelrc*, .bazelversion and .bazelignore at any depth: pathspecs use
+          # `*.bazel*` covers MODULE.bazel(.lock), BUILD.bazel, .bazelrc*,
+          # .bazelversion and .bazelignore at any depth: pathspecs use
           # git's default wildmatch, where `*` also crosses `/`. The pip locks are
           # read by `pip.parse` in MODULE.bazel, so they change what a consumer
           # resolves. The last entry re-runs the lane when its own definition

@@ -15,10 +15,10 @@
 
 """A standalone module that depends on zk_dtypes, exactly as a consumer does.
 
-zk_dtypes' own `--config=bzlmod` lane builds it as the *root* module, where
-patches and `single_version_override` still apply. A consumer resolves it as a
-non-root module, where they do not — so only a separate module like this one can
-show that `//MODULE.bazel` stands on its own. This is the second acceptance
+zk_dtypes' own build resolves it as the *root* module, where patches and
+`single_version_override` still apply. A consumer resolves it as a non-root
+module, where they do not — so only a separate module like this one can show
+that `//MODULE.bazel` stands on its own. This is the second acceptance
 criterion of fractalyze/zk_dtypes#187.
 
 `local_path_override` stands in for the `archive_override` / `git_override` a

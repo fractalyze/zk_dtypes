@@ -15,64 +15,71 @@
 
 """zk_dtypes as a Bazel module.
 
-The WORKSPACE build stays the default; `--config=bzlmod` builds through this
-file, which is also what a consumer gets when it declares a `bazel_dep` on
-zk_dtypes. Two files hold the WORKSPACE side of that pairing and both have to
-be kept in step with this one: `//bazel:zk_dtypes_deps.bzl` (the C++
-dependencies) and `//third_party/py:python_init_rules.bzl` (the Python
-toolchain and its patches). A dependency added to either needs a `bazel_dep`
-here, or an entry in `//bazel:non_module_deps.bzl` when it publishes no Bazel
-module of its own.
+This is the only way zk_dtypes builds, and it is also what a consumer gets when
+it declares a `bazel_dep` on zk_dtypes. The repo still ships the loader `.bzl`
+files a WORKSPACE-mode consumer calls, and both have to be kept in step with
+this file: `//bazel:zk_dtypes_deps.bzl` (the C++ dependencies) and
+`//third_party/py:python_init_rules.bzl` (the Python toolchain and its
+patches). A dependency added to either needs a `bazel_dep` here, or an entry in
+`//bazel:non_module_deps.bzl` when it publishes no Bazel module of its own.
+
+Building this repo makes zk_dtypes the *root* module, where patches and
+overrides still apply, so a green build here does not by itself prove what a
+consumer gets — `//bazel/bzlmod_consumer` covers that.
 
 Nothing here may carry a patch or a `single_version_override`. Bazel applies
 both only for the root module, so a consumer would silently resolve the
 unpatched dependency and lose whatever the patch provided — the reason commit
-`6faac22` removed the abseil `endian` patch rather than porting it. Where the
-WORKSPACE build patches a dependency, this file must either not need the patch
-or say why the difference is safe.
+`6faac22` removed the abseil `endian` patch rather than porting it. Where a
+loader file patches a dependency, this file must either not need the patch or
+say why the difference is safe.
 """
 
 module(
     # Tracks `__version__` in `zk_dtypes/__init__.py`; bump both together.
     name = "zk_dtypes",
     version = "0.0.17",
-    compatibility_level = 1,
 )
 
-# Repo names match the WORKSPACE build so that first-party BUILD files read the
-# same under both. Versions are the WORKSPACE pins where the registry carries
-# them; every deviation is noted at the dependency.
+# Repo names match the loader files so that a first-party BUILD file reads the
+# same for a consumer on either path. Versions are the loader pins where the
+# registry carries them; every deviation is noted at the dependency.
 bazel_dep(name = "abseil-cpp", version = "20250814.0", repo_name = "com_google_absl")
 bazel_dep(name = "bazel_skylib", version = "1.8.1")
 bazel_dep(name = "platforms", version = "1.0.0")
 
-# The WORKSPACE build pins rules_cc 0.1.0 and patches it to re-export
+# `zk_dtypes_deps.bzl` pins rules_cc 0.1.0 and patches it to re-export
 # `cc_proto_library`, which that version dropped while the protobuf it pins
 # still loads it from there. abseil-cpp requires 0.2.0, which resolution picks
 # regardless, and the patch is moot here: no first-party target declares a
 # proto rule, and the registry's protobuf loads `cc_proto_library` from its own
 # `//bazel:cc_proto_library.bzl`. protobuf and re2 likewise have no `bazel_dep`
-# — the WORKSPACE entries exist to feed `protobuf_deps()`, and rules_python
-# brings protobuf in transitively for the targets that need it.
+# — the loader entries exist to feed `protobuf_deps()`, and rules_python brings
+# protobuf in transitively for the targets that need it.
 bazel_dep(name = "rules_cc", version = "0.2.0")
 
-# The WORKSPACE build applies three patches to this same 1.6.0 release: a newer
-# vendored pip and packaging wheel, free-threaded interpreter support, and a
-# Python 3.14 entry. The registry copy is the unpatched release, and none of
+# `python_init_rules.bzl` applies three patches to this same 1.6.0 release: a
+# newer vendored pip and packaging wheel, free-threaded interpreter support, and
+# a Python 3.14 entry. The registry copy is the unpatched release, and none of
 # the three is reachable from here — the toolchains below are 3.11-3.13 and not
 # free-threaded, and the three requirement locks resolve on the vendored pip as
 # shipped. Should that change, the patch cannot simply be added; see the
 # root-module note above.
 bazel_dep(name = "rules_python", version = "1.6.0")
 
-# abseil-cpp already requires googletest 1.17.0, so the WORKSPACE pin
-# (release-1.12.1) cannot be held here without pinning abseil-cpp back too.
-bazel_dep(name = "googletest", version = "1.17.0", repo_name = "com_google_googletest")
+# abseil-cpp already requires a googletest newer than the loader pin
+# (release-1.12.1), which therefore cannot be held here without pinning
+# abseil-cpp back too. 1.18.0 is the first release whose BUILD file loads
+# `cc_library` rather than calling the native rule Bazel 9 removed.
+bazel_dep(name = "googletest", version = "1.18.0.bcr.1", repo_name = "com_google_googletest")
 
-# The WORKSPACE build pins a benchmark commit that predates any registry entry;
-# 1.8.2 is the first release that carries one. Not a `dev_dependency`, so that a
-# consumer building `@zk_dtypes//...` resolves the benchmark targets too.
-bazel_dep(name = "google_benchmark", version = "1.8.2", repo_name = "com_google_benchmark")
+# The loader `.bzl` pins a benchmark commit that predates any registry entry.
+# Anything below 1.9.2 requires rules_foreign_cc 0.9.0, which calls
+# `rule(incompatible_use_toolchain_transition = ...)` and so does not load on
+# Bazel 9; 1.9.2 dropped that dependency, so the pin has to stay at or above it.
+# Not a `dev_dependency`, so that a consumer building `@zk_dtypes//...` resolves
+# the benchmark targets too.
+bazel_dep(name = "google_benchmark", version = "1.9.5", repo_name = "com_google_benchmark")
 
 non_module_deps = use_extension("//bazel:non_module_deps.bzl", "non_module_deps")
 use_repo(non_module_deps, "eigen_archive")
@@ -99,8 +106,8 @@ pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 
 # The C++ extension compiles against numpy's headers, which the wheel ships but
 # does not expose as a `cc_library`. The snippet is read from the file rather
-# than inlined so that the WORKSPACE build's copy in
-# `//third_party/py:python_init_pip.bzl` has one text to be checked against.
+# than inlined so that the copy in `//third_party/py:python_init_pip.bzl`, which
+# a WORKSPACE-mode consumer uses, has one text to be checked against.
 pip.whl_mods(
     additive_build_content_file = "//third_party/py/numpy:numpy_headers.BUILD",
     hub_name = "whl_mods",

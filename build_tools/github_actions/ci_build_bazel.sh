@@ -30,28 +30,16 @@ if [[ $# -ne 0 && $# -ne 3 ]] ; then
   exit 1
 fi
 
-# CI options live in .bazelrc.ci as :ci-namespaced configs. CI_BAZEL_CONFIG
-# layers a second one on top: `build-and-test` leaves it empty and resolves
-# through WORKSPACE.bazel, `build-and-test-bzlmod` sets `bzlmod` and resolves
-# through MODULE.bazel.
+# CI options live in .bazelrc.ci as :ci-namespaced configs.
 #
-# Every bazel invocation below carries it, bazel-diff's own queries included --
-# hashing under one resolution and building under the other would compare
-# graphs whose repositories are not even named the same. Both variables hold
-# whitespace-separated flags and are expanded unquoted on purpose.
-LANE_CONFIG_FLAG=""
-BAZEL_DIFF_LANE_OPTS=""
-if [[ -n "${CI_BAZEL_CONFIG:-}" ]]; then
-  LANE_CONFIG_FLAG="--config=${CI_BAZEL_CONFIG}"
-  # :bzlmod implies --noenable_workspace, which makes bazel-diff's default
-  # //external:all-targets query an error. bazel-diff skips that query on its
-  # own only when its `bazel mod graph` probe reports bzlmod, and that probe
-  # does not carry --config, so say so outright.
-  BAZEL_DIFF_LANE_OPTS="-co ${LANE_CONFIG_FLAG} --excludeExternalTargets"
-fi
+# There is no WORKSPACE, so bazel-diff's default //external:all-targets query is
+# an error. bazel-diff skips it on its own when its `bazel mod graph` probe
+# reports bzlmod, but say so outright rather than rely on the probe. The
+# variable holds whitespace-separated flags and is expanded unquoted on purpose.
+BAZEL_DIFF_OPTS="--excludeExternalTargets"
 
 bazel-ci() {
-  bazel --bazelrc=.bazelrc.ci "$@" --config ci $LANE_CONFIG_FLAG
+  bazel --bazelrc=.bazelrc.ci "$@" --config ci
 }
 
 bazel-test-all() {
@@ -89,8 +77,8 @@ bazel-test-diff() {
   #
   # The globs deliberately over-seed: `bazel/*.bzl` catches extension files yet
   # to be written, at the cost of a full run when `zk_dtypes_deps.bzl` -- which
-  # only the WORKSPACE resolution loads -- changes. Under-seeding fails
-  # silently, over-seeding only costs time.
+  # only a WORKSPACE-mode consumer loads, never this build -- changes.
+  # Under-seeding fails silently, over-seeding only costs time.
   SEED_FILEPATHS="$SCRATCH_DIR/seed_filepaths.txt"
   seed-filepaths() {
     : > "$SEED_FILEPATHS"
@@ -98,7 +86,6 @@ bazel-test-diff() {
     for f in "$WORKSPACE_PATH"/.bazelrc \
              "$WORKSPACE_PATH"/.bazelrc.ci \
              "$WORKSPACE_PATH"/.bazelversion \
-             "$WORKSPACE_PATH"/WORKSPACE.bazel \
              "$WORKSPACE_PATH"/MODULE.bazel \
              "$WORKSPACE_PATH"/bazel/*.bzl \
              "$WORKSPACE_PATH"/third_party/*/*.patch \
@@ -117,7 +104,7 @@ bazel-test-diff() {
   echo "Generating Hashes for Revision '$PREVIOUS_REV'"
   seed-filepaths
   bazel-diff generate-hashes -w "$WORKSPACE_PATH" -b "$BAZEL_PATH" \
-    $BAZEL_DIFF_LANE_OPTS -s "$SEED_FILEPATHS" $STARTING_HASHES_JSON
+    $BAZEL_DIFF_OPTS -s "$SEED_FILEPATHS" $STARTING_HASHES_JSON
 
   UNCOMMITTED_CHANGES="$(git status -s)"
   if [[ -n "$UNCOMMITTED_CHANGES" ]]; then
@@ -131,7 +118,7 @@ bazel-test-diff() {
   echo "Generating Hashes for Revision '$FINAL_REV'"
   seed-filepaths
   bazel-diff generate-hashes -w "$WORKSPACE_PATH" -b "$BAZEL_PATH" \
-    $BAZEL_DIFF_LANE_OPTS -s "$SEED_FILEPATHS" $FINAL_HASHES_JSON
+    $BAZEL_DIFF_OPTS -s "$SEED_FILEPATHS" $FINAL_HASHES_JSON
 
   echo "Determining Impacted Targets"
   bazel-diff get-impacted-targets -sh $STARTING_HASHES_JSON -fh $FINAL_HASHES_JSON -o $IMPACTED_TARGETS_PATH -w "$WORKSPACE_PATH"
@@ -164,7 +151,7 @@ bazel-test-diff() {
       tr '\n' ' ' < "$FILTERED_TARGETS_PATH"
       printf ') in kind(rule, $t) except attr("tags", "(^\\[|, )manual(, |\\]$)", $t)'
     } > "$QUERY_FILE"
-    bazel query $LANE_CONFIG_FLAG --query_file="$QUERY_FILE" \
+    bazel query --query_file="$QUERY_FILE" \
       > "$FILTERED_TARGETS_PATH.rules"
     mv "$FILTERED_TARGETS_PATH.rules" "$FILTERED_TARGETS_PATH"
   fi

@@ -45,7 +45,6 @@ EIGEN_HEADERS = glob(
 EIGEN_SOURCES = glob(
     [
         "Eigen/src/Core/**/*.h",
-        "Eigen/src/plugins/*.h",
         "Eigen/src/plugins/*.inc",
         "unsupported/Eigen/src/**/*.h",
         "unsupported/Eigen/CXX11/src/**/*.h",
