@@ -36,14 +36,16 @@ fi
 # an error. bazel-diff skips it on its own when its `bazel mod graph` probe
 # reports bzlmod, but say so outright rather than rely on the probe.
 #
-# Its hash runs need the same --lockfile_mode as the build below, because they
-# come first: left in the default `update` mode they would rewrite a stale
-# committed lock in place, and the build would then check a lock that only
-# became current a moment ago.
+# Nothing ahead of the `bazel-ci test` below may read or write
+# MODULE.bazel.lock, which is why the hash runs are pinned to `off`. The default
+# `update` would rewrite a stale lock in place, leaving that step to check one
+# that became current a moment earlier; `error` would instead enforce the lock
+# of the *base* revision, failing a PR for drift its author cannot fix from the
+# head.
 #
 # The variable holds whitespace-separated flags and is expanded unquoted on
 # purpose.
-BAZEL_DIFF_OPTS="--excludeExternalTargets --bazelCommandOptions=--lockfile_mode=error"
+BAZEL_DIFF_OPTS="--excludeExternalTargets --bazelCommandOptions=--lockfile_mode=off"
 
 bazel-ci() {
   bazel --bazelrc=.bazelrc.ci "$@" --config ci
@@ -158,7 +160,7 @@ bazel-test-diff() {
       tr '\n' ' ' < "$FILTERED_TARGETS_PATH"
       printf ') in kind(rule, $t) except attr("tags", "(^\\[|, )manual(, |\\]$)", $t)'
     } > "$QUERY_FILE"
-    bazel query --query_file="$QUERY_FILE" \
+    bazel query --lockfile_mode=off --query_file="$QUERY_FILE" \
       > "$FILTERED_TARGETS_PATH.rules"
     mv "$FILTERED_TARGETS_PATH.rules" "$FILTERED_TARGETS_PATH"
   fi

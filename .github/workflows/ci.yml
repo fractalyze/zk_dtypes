@@ -104,8 +104,9 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         working-directory: bazel/bzlmod_consumer
         run: |
-          # This fixture's own lock is deliberately unpinned, so it overrides
-          # the `--lockfile_mode=error` .bazelrc.ci sets for the root build.
+          # Every invocation in this fixture overrides the
+          # `--lockfile_mode=error` .bazelrc.ci sets for the root build: the
+          # fixture's own lock is deliberately unpinned.
           bazel --bazelrc="${GITHUB_WORKSPACE}/.bazelrc.ci" test \
             --config=ci \
             --lockfile_mode=update \
@@ -115,8 +116,11 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         working-directory: bazel/bzlmod_consumer
         run: |
+          # These targets reach extensions the test above never evaluated, so
+          # they extend the fixture's unpinned lock rather than match it.
           bazel --bazelrc="${GITHUB_WORKSPACE}/.bazelrc.ci" build \
             --config=ci \
+            --lockfile_mode=update \
             @zk_dtypes//zk_dtypes/... \
             @zk_dtypes//third_party/...
 
