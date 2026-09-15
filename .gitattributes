@@ -1,0 +1,15 @@
+# A tracked lock makes a build's resolution reproducible and a dependency change
+# reviewable. `linguist-generated` keeps a diff nobody edits by hand from
+# burying the rest of a review.
+#
+# The merge attribute names a driver rather than defining one — git only ever
+# takes a driver from git config, never from a clone — so two branches that both
+# regenerated the lock merge structurally where the driver is registered, and
+# fall back to git's three-way merge where it is not. The driver is Bazel's own,
+# at https://github.com/bazelbuild/bazel/blob/8220c6198837d5c13d53fea211cf3282aa12408a/scripts/bazel-lockfile-merge.jq
+# and is registered once per machine (it needs jq >= 1.5) with:
+#   git config merge.bazel-lockfile-merge.name "Bazel lockfile merge"
+#   git config merge.bazel-lockfile-merge.driver \
+#     "jq -s -f /path/to/bazel-lockfile-merge.jq -- %O %A %B > %A.tmp && mv %A.tmp %A"
+MODULE.bazel.lock linguist-generated=true
+MODULE.bazel.lock merge=bazel-lockfile-merge
