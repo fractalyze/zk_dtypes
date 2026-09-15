@@ -3,10 +3,3 @@ build:ci --action_env=CC=/usr/bin/clang
 build:ci --action_env=CXX=/usr/bin/clang++
 build:ci --test_tag_filters=
 test:ci --test_output=errors
-
-# MODULE.bazel.lock is committed (see .gitattributes), so a lock that has
-# drifted from MODULE.bazel has to fail the build rather than be rewritten in
-# place, which would go green on a resolution nobody reviewed. The bzlmod
-# consumer fixture overrides this back to `update` in ci.yml: its own lock is
-# deliberately unpinned, so there is nothing there to check against.
-build:ci --lockfile_mode=error

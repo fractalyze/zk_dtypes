@@ -49,6 +49,20 @@ jobs:
         if: github.event_name != 'pull_request'
         run: ./build_tools/github_actions/ci_build_bazel.sh
 
+      # Bazel rewrites MODULE.bazel.lock in place whenever it does not match
+      # MODULE.bazel, so a lock left dirty by the steps above was stale in git.
+      # This is a check after the fact rather than `--lockfile_mode=error` on
+      # the build because that flag never fires here: bazel-diff's hash passes
+      # run first and refresh the lock, and they ignore the `--lockfile_mode`
+      # threaded through `--bazelCommandOptions`. Reading the tree afterwards
+      # catches every writer, whichever one it was.
+      - name: Check MODULE.bazel.lock is current
+        run: |
+          git diff --exit-code -- MODULE.bazel.lock || {
+            echo "::error file=MODULE.bazel.lock::Stale: CI regenerated it. Run 'bazel mod deps --lockfile_mode=update', build, and commit the result."
+            exit 1
+          }
+
       # Capture the runner-local test.log a failed test leaves behind — the CI
       # stream only carries the FAIL summary, not the gtest output.
       - name: Upload bazel test logs
@@ -104,23 +118,16 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         working-directory: bazel/bzlmod_consumer
         run: |
-          # Every invocation in this fixture overrides the
-          # `--lockfile_mode=error` .bazelrc.ci sets for the root build: the
-          # fixture's own lock is deliberately unpinned.
           bazel --bazelrc="${GITHUB_WORKSPACE}/.bazelrc.ci" test \
             --config=ci \
-            --lockfile_mode=update \
             //...
 
       - name: Resolve every zk_dtypes target as a dependency
         if: steps.changes.outputs.run == 'true'
         working-directory: bazel/bzlmod_consumer
         run: |
-          # These targets reach extensions the test above never evaluated, so
-          # they extend the fixture's unpinned lock rather than match it.
           bazel --bazelrc="${GITHUB_WORKSPACE}/.bazelrc.ci" build \
             --config=ci \
-            --lockfile_mode=update \
             @zk_dtypes//zk_dtypes/... \
             @zk_dtypes//third_party/...
 
