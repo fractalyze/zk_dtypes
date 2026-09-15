@@ -104,8 +104,11 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         working-directory: bazel/bzlmod_consumer
         run: |
+          # This fixture's own lock is deliberately unpinned, so it overrides
+          # the `--lockfile_mode=error` .bazelrc.ci sets for the root build.
           bazel --bazelrc="${GITHUB_WORKSPACE}/.bazelrc.ci" test \
             --config=ci \
+            --lockfile_mode=update \
             //...
 
       - name: Resolve every zk_dtypes target as a dependency

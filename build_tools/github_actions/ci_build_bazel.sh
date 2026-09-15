@@ -34,9 +34,16 @@ fi
 #
 # There is no WORKSPACE, so bazel-diff's default //external:all-targets query is
 # an error. bazel-diff skips it on its own when its `bazel mod graph` probe
-# reports bzlmod, but say so outright rather than rely on the probe. The
-# variable holds whitespace-separated flags and is expanded unquoted on purpose.
-BAZEL_DIFF_OPTS="--excludeExternalTargets"
+# reports bzlmod, but say so outright rather than rely on the probe.
+#
+# Its hash runs need the same --lockfile_mode as the build below, because they
+# come first: left in the default `update` mode they would rewrite a stale
+# committed lock in place, and the build would then check a lock that only
+# became current a moment ago.
+#
+# The variable holds whitespace-separated flags and is expanded unquoted on
+# purpose.
+BAZEL_DIFF_OPTS="--excludeExternalTargets --bazelCommandOptions=--lockfile_mode=error"
 
 bazel-ci() {
   bazel --bazelrc=.bazelrc.ci "$@" --config ci
